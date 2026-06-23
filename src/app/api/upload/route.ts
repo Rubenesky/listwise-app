@@ -1,16 +1,12 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
-import { eq, and, count } from "drizzle-orm";
+import { eq, count } from "drizzle-orm";
 import { parse } from "csv-parse/sync";
 import { v4 as uuidv4 } from "uuid";
 import { PLAN_LIMITS } from "@/lib/constants";
 import { ratelimit } from "@/lib/rate-limit";
 
-// ELIMINA ESTA LÍNEA:
-// import { triggerClient } from "../../../trigger";
-
-// AÑADE ESTA FUNCIÓN PARA REEMPLAZAR triggerClient:
 async function sendTriggerEvent(userId: string, batchId: string) {
   const response = await fetch("https://api.trigger.dev/v1/events", {
     method: "POST",
@@ -28,7 +24,8 @@ async function sendTriggerEvent(userId: string, batchId: string) {
   });
 
   if (!response.ok) {
-    console.error("Error sending trigger event:", await response.text());
+    const errorText = await response.text();
+    console.error("Error sending trigger event:", errorText);
     throw new Error("Failed to send trigger event");
   }
 
@@ -141,7 +138,7 @@ export async function POST(req: Request) {
 
     await db.insert(schema.listings).values(listings);
 
-    // 7. Disparar el worker de Trigger.dev usando fetch directo
+    // 7. Disparar el worker de Trigger.dev
     const batchId = uuidv4();
     await sendTriggerEvent(userId, batchId);
 
