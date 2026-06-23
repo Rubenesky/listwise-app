@@ -3,15 +3,16 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio",
-    "trigger:dev": "npx trigger.dev@latest dev"
-  },
+  "dev": "next dev",
+  "build": "next build",
+  "start": "next start",
+  "lint": "next lint",
+  "db:generate": "drizzle-kit generate",
+  "db:migrate": "drizzle-kit migrate",
+  "db:studio": "drizzle-kit studio",
+  "trigger:dev": "npx trigger.dev@latest dev",
+  "start:pm2": "pm2-runtime start ecosystem.config.js"
+},
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.3",
     "@clerk/nextjs": "^6.12.0",
