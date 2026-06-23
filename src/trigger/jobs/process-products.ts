@@ -32,6 +32,7 @@ export const processProductsTask = task({
     factor: 2,
   },
   run: async (payload: BatchProcessPayload) => {
+    console.log(`📦 [Trigger] Procesando batch para usuario: ${payload.userId}`);
     console.log(`[process-batch] ▶ Iniciando para userId: ${payload.userId}`);
     const { userId } = payload;
 
@@ -51,6 +52,7 @@ export const processProductsTask = task({
       throw dbError;
     }
 
+    console.log(`📦 [Trigger] Productos pendientes: ${pendingListings.length}`);
     console.log(`[process-batch] Listings PENDING encontrados: ${pendingListings.length}`);
 
     if (pendingListings.length === 0) {

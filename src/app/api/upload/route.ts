@@ -37,6 +37,7 @@ export async function POST(req: Request) {
     if (!userId) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
+    console.log(`📤 [Upload] Usuario ${userId} subiendo archivo`);
 
     const { success } = await ratelimit.limit(userId);
     if (!success) {
@@ -135,10 +136,12 @@ export async function POST(req: Request) {
       createdAt: Math.floor(Date.now() / 1000),
     }));
 
+    console.log(`📤 [Upload] Productos: ${listings.length}`);
     await db.insert(schema.listings).values(listings);
 
     // 7. Disparar el worker de Trigger.dev
     const batchId = uuidv4();
+    console.log(`📤 [Upload] Batch ID: ${batchId}`);
     await sendTriggerEvent(userId, batchId);
 
     return NextResponse.json({

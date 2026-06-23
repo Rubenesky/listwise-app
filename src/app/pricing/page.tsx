@@ -126,9 +126,9 @@ export default function PricingPage() {
                 </div>
               )}
               <div className="p-6">
-                <h3 className="text-2xl font-bold text-gray-900">{plan.name}</h3>
+                <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
                 <div className="mt-4 flex items-baseline">
-                  <span className="text-4xl font-extrabold text-gray-900">
+                  <span className="text-3xl font-extrabold text-gray-900">
                     {plan.price}
                   </span>
                   <span className="ml-1 text-gray-500">/mes</span>

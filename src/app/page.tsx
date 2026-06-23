@@ -34,7 +34,7 @@ export default function HomePage() {
             alt="ListWise"
             width={320}
             height={100}
-            className="h-24 w-auto drop-shadow-xl"
+            className="h-32 w-auto drop-shadow-xl"
             priority
           />
         </div>
