@@ -35,7 +35,7 @@ export const processProductsTask = task({
     console.log(`[process-batch] ▶ Iniciando para userId: ${payload.userId}`);
     const { userId } = payload;
 
-    let pendingListings: Awaited<ReturnType<typeof db.select>>[];
+    let pendingListings: (typeof schema.listings.$inferSelect)[];
     try {
       pendingListings = await db
         .select()
