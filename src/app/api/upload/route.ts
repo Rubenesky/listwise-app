@@ -4,7 +4,7 @@ import { db, schema } from "@/db";
 import { eq, and, count } from "drizzle-orm";
 import { parse } from "csv-parse/sync";
 import { v4 as uuidv4 } from "uuid";
-
+import { triggerClient } from "../../../trigger";
 import { PLAN_LIMITS } from "@/lib/constants";
 import { ratelimit } from "@/lib/rate-limit";
 
