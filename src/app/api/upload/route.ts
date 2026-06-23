@@ -4,9 +4,36 @@ import { db, schema } from "@/db";
 import { eq, and, count } from "drizzle-orm";
 import { parse } from "csv-parse/sync";
 import { v4 as uuidv4 } from "uuid";
-import { triggerClient } from "../../../trigger";
 import { PLAN_LIMITS } from "@/lib/constants";
 import { ratelimit } from "@/lib/rate-limit";
+
+// ELIMINA ESTA LÍNEA:
+// import { triggerClient } from "../../../trigger";
+
+// AÑADE ESTA FUNCIÓN PARA REEMPLAZAR triggerClient:
+async function sendTriggerEvent(userId: string, batchId: string) {
+  const response = await fetch("https://api.trigger.dev/v1/events", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.TRIGGER_SECRET_KEY}`,
+    },
+    body: JSON.stringify({
+      name: "process-batch",
+      payload: {
+        userId: userId,
+        batchId: batchId,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    console.error("Error sending trigger event:", await response.text());
+    throw new Error("Failed to send trigger event");
+  }
+
+  return response.json();
+}
 
 export async function POST(req: Request) {
   try {
@@ -114,15 +141,9 @@ export async function POST(req: Request) {
 
     await db.insert(schema.listings).values(listings);
 
-    // 7. Disparar el worker de Trigger.dev para procesar los productos
+    // 7. Disparar el worker de Trigger.dev usando fetch directo
     const batchId = uuidv4();
-    await triggerClient.sendEvent({
-      name: "process-batch",
-      payload: {
-        userId: userId,
-        batchId: batchId,
-      },
-    });
+    await sendTriggerEvent(userId, batchId);
 
     return NextResponse.json({
       success: true,
