@@ -8,14 +8,13 @@ import { PLAN_LIMITS } from "@/lib/constants";
 import { ratelimit } from "@/lib/rate-limit";
 
 async function sendTriggerEvent(userId: string, batchId: string) {
-  const response = await fetch("https://api.trigger.dev/v1/events", {
+  const response = await fetch("https://api.trigger.dev/api/v1/tasks/process-batch/trigger", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${process.env.TRIGGER_SECRET_KEY}`,
     },
     body: JSON.stringify({
-      name: "process-batch",
       payload: {
         userId: userId,
         batchId: batchId,
