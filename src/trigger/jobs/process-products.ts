@@ -32,6 +32,7 @@ export const processProductsTask = task({
     factor: 2,
   },
   run: async (payload: BatchProcessPayload) => {
+    console.log(`[process-batch] ▶ Iniciando para userId: ${payload.userId}`);
     const { userId } = payload;
 
     const pendingListings = await db

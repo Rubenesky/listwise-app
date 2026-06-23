@@ -14,17 +14,22 @@ function getInstance(): Db {
   const url = process.env.TURSO_DATABASE_URL;
   const authToken = process.env.TURSO_AUTH_TOKEN;
 
+  console.log(`[DB] TURSO_DATABASE_URL: ${url ? "✅ presente" : "❌ ausente"}`);
+  console.log(`[DB] TURSO_AUTH_TOKEN: ${authToken ? "✅ presente" : "❌ ausente"}`);
+
   if (!url || !authToken) {
     throw new Error("❌ Faltan variables de entorno: TURSO_DATABASE_URL o TURSO_AUTH_TOKEN");
   }
 
   _instance = drizzle(createClient({ url, authToken }), { schema });
+  console.log("[DB] ✅ Conexión a Turso establecida");
   return _instance;
 }
 
-// Proxy: misma API que antes, pero la conexión se crea solo en el primer uso real
 export const db = new Proxy({} as Db, {
   get(_target, prop: string | symbol) {
-    return getInstance()[prop as keyof Db];
+    const instance = getInstance();
+    const value = Reflect.get(instance, prop);
+    return typeof value === "function" ? value.bind(instance) : value;
   },
 });
