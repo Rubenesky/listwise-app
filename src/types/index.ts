@@ -24,7 +24,7 @@ export interface ListingRow {
   generatedDescription: string | null;
   status: ListingStatus;
   errorMessage: string | null;
-  createdAt: Date;
+  createdAt: number;
 }
 
 export interface BatchProcessPayload {
