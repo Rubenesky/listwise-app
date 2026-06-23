@@ -5,13 +5,12 @@
   "scripts": {
   "dev": "next dev",
   "build": "next build",
-  "start": "next start",
+  "start": "concurrently \"npm run dev\" \"npm run trigger:dev\"",
   "lint": "next lint",
   "db:generate": "drizzle-kit generate",
   "db:migrate": "drizzle-kit migrate",
   "db:studio": "drizzle-kit studio",
-  "trigger:dev": "npx trigger.dev@latest dev",
-  "start:pm2": "pm2-runtime start ecosystem.config.js"
+  "trigger:dev": "npx trigger.dev@latest dev"
 },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.3",
