@@ -44,6 +44,9 @@
     "uuid": "^11.0.5",
     "zod": "^3.24.1"
   },
+  "optionalDependencies": {
+    "@libsql/linux-x64-gnu": "0.4.7"
+  },
   "devDependencies": {
     "@types/node": "^22.13.4",
     "@types/react": "^19.0.8",
