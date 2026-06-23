@@ -7,6 +7,117 @@ import { v4 as uuidv4 } from "uuid";
 import { PLAN_LIMITS } from "@/lib/constants";
 import { ratelimit } from "@/lib/rate-limit";
 
+// ─── Validation ───────────────────────────────────────────────────────────────
+
+const SUPPORTED_CATEGORIES = new Set([
+  "ropa", "moda", "calzado", "accesorios", "complementos",
+  "electrónica", "electronica", "tecnología", "tecnologia",
+  "informática", "informatica", "teléfonos", "telefonos", "tablets",
+  "hogar", "cocina", "decoración", "decoracion", "muebles",
+  "iluminación", "iluminacion", "jardín", "jardin", "baño", "bano",
+  "deportes", "fitness", "outdoor", "ciclismo", "natación", "natacion",
+  "alimentación", "alimentacion", "bebidas", "gourmet", "dietética",
+  "dietetica", "suplementos",
+  "cosmética", "cosmetica", "belleza", "perfumes", "salud",
+  "bienestar", "farmacia",
+  "juguetes", "bebés", "bebes", "niños", "ninos", "juegos",
+  "libros", "librería", "libreria", "arte", "música", "musica",
+  "películas", "peliculas", "series",
+  "mascotas", "animales",
+  "automoción", "automocion", "automóvil", "automovil", "motos",
+  "bicicletas",
+  "viajes", "turismo",
+  "oficina", "papelería", "papeleria", "escuela",
+  "joyería", "joyeria", "bisutería", "bisuteria", "relojes",
+  "fotografía", "fotografia", "cámaras", "camaras",
+  "videojuegos", "gaming", "consolas",
+]);
+
+const PRICE_RE = /^[€$£¥]?\s*\d{1,10}([.,]\d{1,3})*([.,]\d{1,2})?\s*[€$£¥]?$/;
+
+function isValidPrice(raw: string): boolean {
+  return PRICE_RE.test(raw.trim());
+}
+
+interface ValidationResult {
+  errors: string[];
+  warnings: string[];
+}
+
+function validateRows(records: Record<string, string>[]): ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const MAX_ERRORS = 20;
+
+  if (records.length === 0) return { errors, warnings };
+
+  const headers = Object.keys(records[0]);
+
+  if (!headers.includes("productName")) {
+    errors.push('El CSV debe incluir la columna "productName"');
+    return { errors, warnings };
+  }
+
+  const hasPrice = headers.includes("price");
+  const hasCategory = headers.includes("category");
+
+  for (let i = 0; i < records.length && errors.length < MAX_ERRORS; i++) {
+    const row = i + 2; // row 1 = header, data starts at row 2
+    const record = records[i];
+
+    // productName: required, max 500 chars
+    const name = record.productName?.trim() ?? "";
+    if (!name) {
+      errors.push(`Fila ${row}: el nombre del producto es obligatorio`);
+    } else if (name.length > 500) {
+      errors.push(
+        `Fila ${row}: el nombre del producto es demasiado largo ` +
+        `(${name.length} caracteres, máximo 500)`
+      );
+    }
+
+    // price: valid numeric format if column exists and value is non-empty
+    if (hasPrice && record.price?.trim()) {
+      if (!isValidPrice(record.price)) {
+        errors.push(
+          `Fila ${row}: formato de precio no válido — "${record.price}" ` +
+          `(usa formato numérico como "29.99" o "29,99€")`
+        );
+      }
+    }
+
+    // category: warn if unrecognized (non-blocking — AI handles any category)
+    if (hasCategory && record.category?.trim()) {
+      const normalized = record.category.trim().toLowerCase();
+      if (!SUPPORTED_CATEGORIES.has(normalized)) {
+        warnings.push(
+          `Fila ${row}: categoría "${record.category}" no está en la lista de ` +
+          `categorías conocidas — se procesará igualmente`
+        );
+      }
+    }
+
+    // attributes: warn if malformed JSON (non-blocking — we ignore it silently)
+    if (record.attributes?.trim()) {
+      try {
+        JSON.parse(record.attributes);
+      } catch {
+        warnings.push(
+          `Fila ${row}: los atributos no son JSON válido — se ignorarán durante el procesamiento`
+        );
+      }
+    }
+  }
+
+  if (errors.length >= MAX_ERRORS) {
+    errors.push(`... y más errores. Corrige los primeros ${MAX_ERRORS} y vuelve a subir.`);
+  }
+
+  return { errors, warnings };
+}
+
+// ─── Trigger ──────────────────────────────────────────────────────────────────
+
 async function sendTriggerEvent(userId: string, batchId: string) {
   const response = await fetch("https://api.trigger.dev/api/v1/tasks/process-batch/trigger", {
     method: "POST",
@@ -97,7 +208,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "El CSV está vacío" }, { status: 400 });
     }
 
-    // 4. Verificar límite de productos
+    // 4. Validar filas (errores bloquean; warnings se incluyen en la respuesta)
+    const { errors: rowErrors, warnings } = validateRows(
+      records as Record<string, string>[]
+    );
+    if (rowErrors.length > 0) {
+      return NextResponse.json(
+        {
+          error: `El CSV contiene ${rowErrors.length} error${rowErrors.length === 1 ? "" : "es"} que deben corregirse antes de subir`,
+          validationErrors: rowErrors,
+        },
+        { status: 422 }
+      );
+    }
+
+    // 5. Verificar límite de productos
     const newProductsCount = records.length;
     const totalAfterUpload = currentCount + newProductsCount;
 
@@ -109,13 +234,6 @@ export async function POST(req: Request) {
         attempting: newProductsCount,
         plan: userPlan,
       }, { status: 403 });
-    }
-
-    // 5. Validar que existe la columna productName
-    if (!records[0].productName) {
-      return NextResponse.json({
-        error: 'El CSV debe tener una columna llamada "productName"'
-      }, { status: 400 });
     }
 
     // 6. Insertar productos en la base de datos
@@ -149,7 +267,8 @@ export async function POST(req: Request) {
       count: listings.length,
       batchId: batchId,
       plan: userPlan,
-      remaining: planLimit - totalAfterUpload,
+      remaining: planLimit === Infinity ? null : planLimit - totalAfterUpload,
+      ...(warnings.length > 0 && { warnings }),
     });
 
   } catch (error) {

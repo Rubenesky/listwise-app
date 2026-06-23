@@ -37,6 +37,8 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [file, setFile] = useState<File | null>(null);
+  const [uploadErrors, setUploadErrors] = useState<string[]>([]);
+  const [uploadWarnings, setUploadWarnings] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -154,6 +156,8 @@ export default function DashboardPage() {
   const handleUpload = async () => {
     if (!file) return;
     setUploading(true);
+    setUploadErrors([]);
+    setUploadWarnings([]);
     try {
       const formData = new FormData();
       formData.append("file", file);
@@ -161,16 +165,21 @@ export default function DashboardPage() {
         method: "POST",
         body: formData,
       });
+      const data = await res.json();
       if (!res.ok) {
-        const error = await res.json();
-        alert(`Error: ${error.error || "Error al subir el archivo"}`);
+        if (data.validationErrors?.length > 0) {
+          setUploadErrors(data.validationErrors);
+        } else {
+          setUploadErrors([data.error || "Error al subir el archivo"]);
+        }
         return;
       }
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = "";
+      if (data.warnings?.length > 0) setUploadWarnings(data.warnings);
       await fetchListings();
     } catch {
-      alert("Error al subir el archivo. Inténtalo de nuevo.");
+      setUploadErrors(["Error de red al subir el archivo. Inténtalo de nuevo."]);
     } finally {
       setUploading(false);
     }
@@ -407,6 +416,74 @@ export default function DashboardPage() {
           )}
         </div>
       </div>
+
+      {/* Validation errors */}
+      {uploadErrors.length > 0 && (
+        <div className="border border-red-200 bg-red-50 rounded-lg p-4">
+          <div className="flex items-start gap-2">
+            <svg className="w-5 h-5 text-red-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-red-800 mb-2">
+                {uploadErrors.length === 1
+                  ? "El archivo tiene un error que debes corregir:"
+                  : `El archivo tiene ${uploadErrors.length} errores que debes corregir:`}
+              </p>
+              <ul className="space-y-1">
+                {uploadErrors.map((err, i) => (
+                  <li key={i} className="text-sm text-red-700 flex items-start gap-1.5">
+                    <span className="shrink-0 mt-0.5">•</span>
+                    <span>{err}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <button
+              onClick={() => setUploadErrors([])}
+              className="shrink-0 text-red-400 hover:text-red-600"
+              aria-label="Cerrar"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Validation warnings */}
+      {uploadWarnings.length > 0 && (
+        <div className="border border-yellow-200 bg-yellow-50 rounded-lg p-4">
+          <div className="flex items-start gap-2">
+            <svg className="w-5 h-5 text-yellow-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-semibold text-yellow-800 mb-2">
+                Advertencias — los productos se han subido correctamente:
+              </p>
+              <ul className="space-y-1">
+                {uploadWarnings.map((w, i) => (
+                  <li key={i} className="text-sm text-yellow-700 flex items-start gap-1.5">
+                    <span className="shrink-0 mt-0.5">•</span>
+                    <span>{w}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <button
+              onClick={() => setUploadWarnings([])}
+              className="shrink-0 text-yellow-400 hover:text-yellow-600"
+              aria-label="Cerrar"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Upload area */}
       <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors">
