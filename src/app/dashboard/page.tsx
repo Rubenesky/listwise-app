@@ -486,6 +486,20 @@ export default function DashboardPage() {
       )}
 
       {/* Upload area */}
+      <div className="flex justify-between items-center">
+        <h2 className="text-lg font-semibold text-gray-900">Subir CSV</h2>
+        <a
+          href="/api/template/csv"
+          download="plantilla_listwise.csv"
+          className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+          </svg>
+          Descargar plantilla CSV
+        </a>
+      </div>
+
       <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors">
         <div className="flex flex-col items-center gap-3">
           {file ? (
