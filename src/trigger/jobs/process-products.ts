@@ -35,17 +35,26 @@ export const processProductsTask = task({
     console.log(`[process-batch] ▶ Iniciando para userId: ${payload.userId}`);
     const { userId } = payload;
 
-    const pendingListings = await db
-      .select()
-      .from(schema.listings)
-      .where(
-        and(
-          eq(schema.listings.userId, userId),
-          eq(schema.listings.status, "PENDING")
-        )
-      );
+    let pendingListings: Awaited<ReturnType<typeof db.select>>[];
+    try {
+      pendingListings = await db
+        .select()
+        .from(schema.listings)
+        .where(
+          and(
+            eq(schema.listings.userId, userId),
+            eq(schema.listings.status, "PENDING")
+          )
+        ) as any;
+    } catch (dbError) {
+      console.error("[process-batch] ❌ Error al consultar la BD:", dbError);
+      throw dbError;
+    }
+
+    console.log(`[process-batch] Listings PENDING encontrados: ${pendingListings.length}`);
 
     if (pendingListings.length === 0) {
+      console.log(`[process-batch] ℹ️ No hay listings PENDING para userId: ${userId}`);
       return { processed: 0, message: "No pending listings found." };
     }
 
