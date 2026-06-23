@@ -3,7 +3,7 @@ import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { groq } from "@/lib/ai/client-groq";
-import { SYSTEM_PROMPT, buildUserPrompt } from "@/lib/ai/prompts";
+import { SYSTEM_PROMPT, buildUserPrompt, MODE_CONFIG, type GenerationMode } from "@/lib/ai/prompts";
 import type { GeneratedContent, BatchProcessPayload } from "@/types";
 
 const generatedContentSchema = z.object({
@@ -34,7 +34,9 @@ export const processProductsTask = task({
   run: async (payload: BatchProcessPayload) => {
     console.log(`📦 [Trigger] Procesando batch para usuario: ${payload.userId}`);
     console.log(`[process-batch] ▶ Iniciando para userId: ${payload.userId}`);
-    const { userId } = payload;
+    const { userId, mode } = payload;
+    const safeMode = (mode && mode in MODE_CONFIG ? mode : "creative") as GenerationMode;
+    const temperature = MODE_CONFIG[safeMode].temperature;
 
     let pendingListings: (typeof schema.listings.$inferSelect)[];
     try {
@@ -87,9 +89,10 @@ export const processProductsTask = task({
                   productName: safeName,
                   category: safeCategory,
                   attributes: product.attributes as Record<string, string> | null,
+                  mode: safeMode,
                 })},
               ],
-              temperature: 0.7,
+              temperature,
               max_tokens: 1024,
               response_format: { type: "json_object" },
             });

@@ -1,3 +1,23 @@
+export type GenerationMode = "creative" | "professional" | "seo";
+
+export const MODE_CONFIG: Record<GenerationMode, { label: string; systemPrompt: string; temperature: number }> = {
+  creative: {
+    label: "Creativo",
+    systemPrompt: `Estilo de escritura: CREATIVO y emocional. Conecta con los sueños y aspiraciones del cliente. Usa un lenguaje vívido y persuasivo. Destaca la experiencia de usar el producto.`,
+    temperature: 0.9,
+  },
+  professional: {
+    label: "Profesional",
+    systemPrompt: `Estilo de escritura: PROFESIONAL y técnico. Sé claro, preciso y formal. Destaca características técnicas y especificaciones. Usa lenguaje directo centrado en funcionalidad y durabilidad.`,
+    temperature: 0.5,
+  },
+  seo: {
+    label: "SEO",
+    systemPrompt: `Estilo de escritura: SEO optimizado. Incluye palabras clave estratégicas de forma natural. Optimiza el título para buscadores. Equilibra legibilidad y densidad de keywords para posicionar en Google.`,
+    temperature: 0.7,
+  },
+};
+
 export const SYSTEM_PROMPT = `
 Eres un copywriter experto en e-commerce con 15 años de experiencia en conversión y branding. Trabajas para marcas premium y de lujo. Tus textos:
 
@@ -81,8 +101,12 @@ export function buildUserPrompt(product: {
   productName: string;
   category?: string | null;
   attributes?: Record<string, string> | null;
+  mode?: GenerationMode;
 }): string {
-  let prompt = `Producto: ${product.productName}\n`;
+  const mode = product.mode && product.mode in MODE_CONFIG ? product.mode : "creative";
+  const modeConfig = MODE_CONFIG[mode as GenerationMode];
+  let prompt = `${modeConfig.systemPrompt}\n\n`;
+  prompt += `Producto: ${product.productName}\n`;
   
   if (product.category) {
     prompt += `Categoría: ${product.category}\n`;

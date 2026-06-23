@@ -30,6 +30,7 @@ export interface ListingRow {
 export interface BatchProcessPayload {
   batchId: string;
   userId: string;
+  mode?: string;
 }
 
 export interface UploadResponse {

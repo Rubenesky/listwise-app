@@ -3,12 +3,12 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-  "dev": "next dev",
-  "build": "next build",
-  "start": "next start",
-  "trigger:dev": "npx trigger.dev@latest dev",
-  "dev:all": "concurrently \"npm run dev\" \"npm run trigger:dev\""
-},
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "trigger:dev": "npx trigger.dev@latest dev",
+    "dev:all": "concurrently \"npm run dev\" \"npm run trigger:dev\""
+  },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.3",
     "@clerk/nextjs": "^6.12.0",
@@ -38,6 +38,7 @@
     "openai": "^6.44.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-joyride": "^3.1.0",
     "stripe": "^22.2.2",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
