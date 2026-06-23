@@ -26,13 +26,6 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 
-  // Si está autenticado y es dashboard, verificar plan
-  if (userId && isDashboard) {
-    // Aquí puedes añadir lógica para verificar el plan del usuario
-    // Por ahora, solo dejamos pasar
-    return NextResponse.next();
-  }
-
   return NextResponse.next();
 });
 
