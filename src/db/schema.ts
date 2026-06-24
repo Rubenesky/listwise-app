@@ -58,11 +58,24 @@ export const listings = sqliteTable("listings", {
   generatedTitle: text("generated_title"),
   generatedBullets: text("generated_bullets", { mode: "json" }),
   generatedDescription: text("generated_description"),
+  selectedVariant: text("selected_variant"),
   status: text("status").notNull().default("PENDING"),
   errorMessage: text("error_message"),
   createdAt: integer("created_at").notNull().default(0),
 }, (table) => ({
   userIdIdx: index("idx_listings_user_id").on(table.userId),
+}));
+
+export const variantSelections = sqliteTable("variant_selections", {
+  id: text("id").primaryKey(),
+  listingId: text("listing_id").notNull(),
+  userId: text("user_id").notNull(),
+  variantIndex: integer("variant_index").notNull(),
+  style: text("style").notNull(),
+  selectedAt: integer("selected_at").notNull().default(0),
+}, (table) => ({
+  listingIdx: index("idx_variant_selections_listing_id").on(table.listingId),
+  userIdx: index("idx_variant_selections_user_id").on(table.userId),
 }));
 
 export const voiceProfiles = sqliteTable("voice_profiles", {

@@ -7,6 +7,7 @@ import { PLAN_LIMITS } from "@/lib/constants";
 import OnboardingTour from "@/components/OnboardingTour";
 import VoiceProfileManager from "@/components/VoiceProfileManager";
 import InfoTooltip from "@/components/InfoTooltip";
+import LivePreview from "@/components/LivePreview";
 
 type ListingStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
 type GenerationMode = "creative" | "professional" | "seo";
@@ -61,6 +62,9 @@ export default function DashboardPage() {
   const [batchTotal, setBatchTotal] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Live preview
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
 
   // Modal state
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
@@ -665,7 +669,8 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Listings table */}
+        {/* Listings table + Live Preview */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div className="listings-table border rounded-lg overflow-hidden">
           <div className="px-4 py-3 border-b bg-gray-50 flex justify-between items-center">
             <div className="flex items-center gap-3">
@@ -715,10 +720,14 @@ export default function DashboardPage() {
                 </thead>
                 <tbody className="divide-y">
                   {listings.map((listing) => (
-                    <tr key={listing.id} className="hover:bg-gray-50">
+                    <tr
+                      key={listing.id}
+                      className={`hover:bg-gray-50 cursor-pointer ${selectedProductId === listing.id ? "bg-blue-50" : ""}`}
+                      onClick={() => setSelectedProductId(listing.id)}
+                    >
                       <td className="px-4 py-3 max-w-[200px]">
                         <button
-                          onClick={() => openModal(listing)}
+                          onClick={(e) => { e.stopPropagation(); openModal(listing); }}
                           className="font-medium text-gray-900 hover:text-blue-600 text-left truncate w-full transition-colors"
                         >
                           {listing.productName}
@@ -730,7 +739,7 @@ export default function DashboardPage() {
                       </td>
                       <td className="px-4 py-3">
                         <button
-                          onClick={() => openModal(listing)}
+                          onClick={(e) => { e.stopPropagation(); openModal(listing); }}
                           className="px-3 py-1 text-sm text-blue-600 hover:text-blue-800 transition-colors"
                         >
                           {listing.status === "COMPLETED" ? "Editar" : "Ver"}
@@ -742,6 +751,12 @@ export default function DashboardPage() {
               </table>
             </div>
           )}
+        </div>
+
+        {/* Live Preview panel */}
+        <div className="lg:sticky lg:top-4 lg:self-start">
+          <LivePreview productId={selectedProductId ?? ""} />
+        </div>
         </div>
       </div>
     </>
