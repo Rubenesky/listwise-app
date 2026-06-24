@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { CheckCircle } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const plans = [
   {
@@ -54,6 +54,24 @@ export default function PricingPage() {
   const { isSignedIn } = useUser();
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+
+  // Read referral code from URL (?ref=CODE) or localStorage
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const ref = params.get("ref");
+    if (ref) {
+      localStorage.setItem("listwise_referral_code", ref);
+      setReferralCode(ref);
+      console.log(`🔗 [Pricing] Código de referido guardado: ${ref}`);
+    } else {
+      const saved = localStorage.getItem("listwise_referral_code");
+      if (saved) {
+        setReferralCode(saved);
+        console.log(`🔗 [Pricing] Código de referido recuperado: ${saved}`);
+      }
+    }
+  }, []);
 
   const handleSubscribe = async (priceId: string) => {
     if (!isSignedIn) {
@@ -64,12 +82,13 @@ export default function PricingPage() {
     setLoading(priceId);
 
     try {
+      console.log(`💰 [Pricing] Iniciando suscripción para plan: ${priceId}`);
+      console.log(`🔗 [Pricing] Código de referido: ${referralCode ?? "ninguno"}`);
+
       const response = await fetch("/api/stripe/create-checkout", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ priceId }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ priceId, referralCode }),
       });
 
       const data = await response.json();
@@ -109,6 +128,12 @@ export default function PricingPage() {
           <p className="mt-2 text-base text-gray-600 max-w-xl mx-auto">
             Genera descripciones de productos con IA y ahorra horas de trabajo
           </p>
+          {referralCode && (
+            <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-full text-sm text-green-700">
+              <span>🎁</span>
+              <span>Invitado con código <span className="font-mono font-semibold">{referralCode}</span> — obtendrás créditos extra al suscribirte</span>
+            </div>
+          )}
         </div>
 
         {/* Planes */}
