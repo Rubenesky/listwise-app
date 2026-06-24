@@ -1,11 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import dynamic from "next/dynamic";
 import { useUser } from "@clerk/nextjs";
 import type { Step } from "react-joyride";
-
-const Joyride = dynamic(() => import("react-joyride"), { ssr: false });
 
 const steps: Step[] = [
   {
@@ -31,26 +28,35 @@ const steps: Step[] = [
 
 export default function OnboardingTour() {
   const { isSignedIn } = useUser();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [Joyride, setJoyride] = useState<any>(null);
   const [run, setRun] = useState(false);
 
+  // Load react-joyride only on the client — avoids SSR/window issues entirely
   useEffect(() => {
-    if (!isSignedIn) return;
+    import("react-joyride").then((mod) => {
+      // Use functional form of setState to store a function without React calling it
+      setJoyride(() => mod.default);
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!isSignedIn || !Joyride) return;
     const hasSeenTour = localStorage.getItem("listwise_tour_seen");
     if (!hasSeenTour) {
       const timer = setTimeout(() => setRun(true), 1500);
       return () => clearTimeout(timer);
     }
-  }, [isSignedIn]);
+  }, [isSignedIn, Joyride]);
 
   const handleCallback = (data: { status: string }) => {
-    const { status } = data;
-    if (status === "finished" || status === "skipped") {
+    if (data.status === "finished" || data.status === "skipped") {
       localStorage.setItem("listwise_tour_seen", "true");
       setRun(false);
     }
   };
 
-  if (!isSignedIn) return null;
+  if (!isSignedIn || !Joyride) return null;
 
   return (
     <Joyride
