@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 
 export async function POST(req: Request) {
   try {
@@ -20,6 +20,7 @@ export async function POST(req: Request) {
 
     console.log(`🎁 [Referidos] Usuario ${userId} reclamando recompensa: ${rewardId}`);
 
+    // Fetch first to check ownership before any mutation
     const [reward] = await db
       .select()
       .from(schema.referralRewards)
@@ -36,32 +37,36 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
-    if (reward.status !== "pending") {
-      console.log(`❌ [Referidos] Recompensa ${rewardId} ya reclamada o expirada (estado: ${reward.status})`);
-      return NextResponse.json({ error: "Recompensa no disponible" }, { status: 400 });
-    }
-
     const now = Math.floor(Date.now() / 1000);
 
-    await db
+    // Atomic conditional UPDATE — only claims if still "pending".
+    // Prevents TOCTOU double-claim race condition.
+    const updated = await db
       .update(schema.referralRewards)
       .set({ status: "claimed", claimedAt: now })
-      .where(eq(schema.referralRewards.id, rewardId));
+      .where(and(eq(schema.referralRewards.id, rewardId), eq(schema.referralRewards.status, "pending")))
+      .returning({ id: schema.referralRewards.id, type: schema.referralRewards.type, amount: schema.referralRewards.amount });
 
-    console.log(`✅ [Referidos] Recompensa ${rewardId} reclamada por ${userId}`);
-
-    if (reward.type === "credit" && reward.amount) {
-      await db
-        .insert(schema.users)
-        .values({ id: userId, credits: reward.amount })
-        .onConflictDoUpdate({ target: schema.users.id, set: { credits: sql`credits + ${reward.amount}` } });
-      console.log(`💰 [Referidos] ${reward.amount} créditos añadidos a ${userId}`);
-    } else if (reward.type === "free_month_pro" || reward.type === "free_month_enterprise") {
-      // Extend subscription in a future iteration via Stripe API
-      console.log(`🎁 [Referidos] Recompensa ${reward.type} registrada para ${userId} — activación pendiente`);
+    if (updated.length === 0) {
+      console.log(`❌ [Referidos] Recompensa ${rewardId} ya reclamada (race condition evitada)`);
+      return NextResponse.json({ error: "Recompensa no disponible" }, { status: 409 });
     }
 
-    return NextResponse.json({ success: true, type: reward.type });
+    const claimed = updated[0];
+    console.log(`✅ [Referidos] Recompensa ${rewardId} reclamada por ${userId}`);
+
+    if (claimed.type === "credit" && claimed.amount) {
+      await db
+        .insert(schema.users)
+        .values({ id: userId, credits: claimed.amount })
+        .onConflictDoUpdate({ target: schema.users.id, set: { credits: sql`credits + ${claimed.amount}` } });
+      console.log(`💰 [Referidos] ${claimed.amount} créditos añadidos a ${userId}`);
+    } else if (claimed.type === "free_month_pro" || claimed.type === "free_month_enterprise") {
+      // Extend subscription in a future iteration via Stripe API
+      console.log(`🎁 [Referidos] Recompensa ${claimed.type} registrada para ${userId} — activación pendiente`);
+    }
+
+    return NextResponse.json({ success: true, type: claimed.type });
   } catch (error) {
     console.error("❌ [Referidos] Error al reclamar recompensa:", error);
     return NextResponse.json({ error: "Error al reclamar recompensa" }, { status: 500 });

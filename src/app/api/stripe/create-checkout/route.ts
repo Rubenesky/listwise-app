@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import Stripe from "stripe";
+import { db, schema } from "@/db";
+import { eq } from "drizzle-orm";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-05-27.dahlia",
@@ -26,8 +28,24 @@ export async function POST(req: Request) {
 
     console.log("🔑 Creando sesión para:", priceId);
     console.log("📦 Price ID:", PRICE_IDS[priceId]);
+
+    // Validate referral code server-side: reject self-referral before storing in Stripe metadata
+    let validatedReferralCode: string | null = null;
     if (referralCode) {
-      console.log(`🔗 [Stripe] Checkout incluye referralCode: ${referralCode}`);
+      const [referral] = await db
+        .select({ referrerId: schema.referrals.referrerId })
+        .from(schema.referrals)
+        .where(eq(schema.referrals.code, String(referralCode)))
+        .limit(1);
+
+      if (referral && referral.referrerId === userId) {
+        console.log(`❌ [Stripe] Auto-referido bloqueado en checkout para usuario ${userId}`);
+      } else if (referral) {
+        validatedReferralCode = String(referralCode).slice(0, 80);
+        console.log(`🔗 [Stripe] Checkout incluye referralCode validado: ${validatedReferralCode}`);
+      } else {
+        console.log(`⚠️ [Stripe] Código de referido no encontrado: ${referralCode}`);
+      }
     }
 
     const session = await stripe.checkout.sessions.create({
@@ -45,7 +63,7 @@ export async function POST(req: Request) {
       metadata: {
         userId: userId,
         priceId: PRICE_IDS[priceId],
-        ...(referralCode ? { referralCode: String(referralCode).slice(0, 80) } : {}),
+        ...(validatedReferralCode ? { referralCode: validatedReferralCode } : {}),
       },
     });
 

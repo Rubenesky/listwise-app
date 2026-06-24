@@ -1,5 +1,5 @@
 import { db, schema } from "@/db";
-import { eq, sql } from "drizzle-orm";
+import { and, eq, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 
 const BADGE_MAP: Record<number, { type: string; name: string; icon: string }> = {
@@ -8,11 +8,6 @@ const BADGE_MAP: Record<number, { type: string; name: string; icon: string }> = 
   10: { type: "10_referrals", name: "10 Referidos", icon: "🏆" },
 };
 
-/**
- * Converts a referral and distributes rewards.
- * Called from the Stripe webhook (trusted path) or the /convert endpoint (user-facing).
- * Idempotent: returns false without throwing if already converted.
- */
 export async function convertReferral(
   referralId: string,
   refereeUserId: string,
@@ -21,7 +16,7 @@ export async function convertReferral(
   console.log(`💰 [Referidos] Convirtiendo referido ${referralId} para usuario ${refereeUserId}, plan: ${plan}`);
 
   try {
-    // Fetch BEFORE updating so we have referrerId
+    // Fetch BEFORE updating so we have referrerId and can run guards
     const [referral] = await db
       .select()
       .from(schema.referrals)
@@ -33,25 +28,32 @@ export async function convertReferral(
       return false;
     }
 
-    if (referral.status === "converted") {
-      console.log(`⚠️ [Referidos] Referido ${referralId} ya estaba convertido`);
+    // Self-referral guard — defense-in-depth; callers should also enforce this
+    if (referral.referrerId === refereeUserId) {
+      console.log(`❌ [Referidos] Auto-referido bloqueado: referrerId === refereeUserId (${refereeUserId})`);
       return false;
     }
 
     const referrerId = referral.referrerId;
     const now = Math.floor(Date.now() / 1000);
 
-    // Mark as converted
-    await db
+    // Atomic conditional UPDATE — only converts if still "pending".
+    // If two webhook deliveries race, only one will see updated.length > 0.
+    const updated = await db
       .update(schema.referrals)
       .set({ status: "converted", convertedAt: now, refereeId: refereeUserId })
-      .where(eq(schema.referrals.id, referralId));
+      .where(and(eq(schema.referrals.id, referralId), eq(schema.referrals.status, "pending")))
+      .returning({ id: schema.referrals.id });
+
+    if (updated.length === 0) {
+      console.log(`⚠️ [Referidos] Referido ${referralId} ya fue convertido (race condition evitada)`);
+      return false;
+    }
 
     console.log(`✅ [Referidos] Referido ${referralId} marcado como convertido`);
 
     const rewardType = plan === "enterprise" ? "free_month_enterprise" : "free_month_pro";
 
-    // Create reward for the referrer
     await db.insert(schema.referralRewards).values({
       id: uuidv4(),
       userId: referrerId,
@@ -86,7 +88,6 @@ export async function convertReferral(
 
     console.log(`📊 [Referidos] Contadores actualizados para referidor ${referrerId}`);
 
-    // Fetch updated count for badge milestone check
     const [referrer] = await db
       .select({ convertedReferrals: schema.users.convertedReferrals })
       .from(schema.users)
@@ -100,14 +101,7 @@ export async function convertReferral(
       const badge = BADGE_MAP[count];
       await db
         .insert(schema.badges)
-        .values({
-          id: uuidv4(),
-          userId: referrerId,
-          type: badge.type,
-          name: badge.name,
-          icon: badge.icon,
-          earnedAt: now,
-        })
+        .values({ id: uuidv4(), userId: referrerId, type: badge.type, name: badge.name, icon: badge.icon, earnedAt: now })
         .onConflictDoNothing();
       console.log(`🏅 [Referidos] Insignia "${badge.name}" otorgada a ${referrerId}`);
     }
