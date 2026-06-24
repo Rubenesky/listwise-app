@@ -59,11 +59,27 @@ export const listings = sqliteTable("listings", {
   generatedBullets: text("generated_bullets", { mode: "json" }),
   generatedDescription: text("generated_description"),
   selectedVariant: text("selected_variant"),
+  slug: text("slug").unique(),
+  shareCount: integer("share_count").default(0),
   status: text("status").notNull().default("PENDING"),
   errorMessage: text("error_message"),
   createdAt: integer("created_at").notNull().default(0),
 }, (table) => ({
   userIdIdx: index("idx_listings_user_id").on(table.userId),
+}));
+
+export const pageViews = sqliteTable("page_views", {
+  id: text("id").primaryKey(),
+  listingId: text("listing_id").notNull(),
+  userId: text("user_id").notNull(),
+  visitorIp: text("visitor_ip"),
+  visitorUserAgent: text("visitor_user_agent"),
+  referrer: text("referrer"),
+  device: text("device"),
+  createdAt: integer("created_at").notNull().default(0),
+}, (table) => ({
+  listingIdx: index("idx_page_views_listing_id").on(table.listingId),
+  userIdx: index("idx_page_views_user_id").on(table.userId),
 }));
 
 export const variantSelections = sqliteTable("variant_selections", {

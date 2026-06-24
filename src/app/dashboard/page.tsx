@@ -73,6 +73,7 @@ export default function DashboardPage() {
   const [editBullets, setEditBullets] = useState<string[]>([]);
   const [editDescription, setEditDescription] = useState("");
   const [saving, setSaving] = useState(false);
+  const [sharing, setSharing] = useState<string | null>(null);
 
   // Derived stats from listings state
   const completedCount = listings.filter((l) => l.status === "COMPLETED").length;
@@ -157,6 +158,23 @@ export default function DashboardPage() {
   };
 
   const closeModal = () => setSelectedListingId(null);
+
+  const handleShare = async (listingId: string) => {
+    setSharing(listingId);
+    try {
+      const res = await fetch(`/api/listings/${listingId}/share`, { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || "Error al generar el enlace de compartir.");
+        return;
+      }
+      window.open(data.url, "_blank", "noopener,noreferrer");
+    } catch {
+      alert("Error de red al generar el enlace. Inténtalo de nuevo.");
+    } finally {
+      setSharing(null);
+    }
+  };
 
   const handleSave = async () => {
     if (!selectedListing) return;
@@ -738,12 +756,24 @@ export default function DashboardPage() {
                         {listing.generatedTitle || "—"}
                       </td>
                       <td className="px-4 py-3">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); openModal(listing); }}
-                          className="px-3 py-1 text-sm text-blue-600 hover:text-blue-800 transition-colors"
-                        >
-                          {listing.status === "COMPLETED" ? "Editar" : "Ver"}
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); openModal(listing); }}
+                            className="px-3 py-1 text-sm text-blue-600 hover:text-blue-800 transition-colors"
+                          >
+                            {listing.status === "COMPLETED" ? "Editar" : "Ver"}
+                          </button>
+                          {listing.status === "COMPLETED" && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handleShare(listing.id); }}
+                              disabled={sharing === listing.id}
+                              className="px-3 py-1 text-sm text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
+                              title="Compartir landing page"
+                            >
+                              {sharing === listing.id ? "..." : "🔗"}
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
