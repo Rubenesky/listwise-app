@@ -7,15 +7,39 @@ import { SYSTEM_PROMPT, buildUserPrompt, MODE_CONFIG, type GenerationMode } from
 import type { GeneratedContent, BatchProcessPayload } from "@/types";
 
 const generatedContentSchema = z.object({
-  title: z.string().max(60),
-  bullets: z.array(z.string()).length(5),
-  description: z.string(),
+  title: z.string().transform((s) => s.slice(0, 60)),
+  bullets: z.array(z.string()).min(1).max(10),
+  description: z.string().min(1),
 });
+
+function humanizeError(error: unknown): string {
+  if (!(error instanceof Error)) return "No se pudo procesar este producto. Inténtalo de nuevo.";
+  const msg = error.message.toLowerCase();
+  if (msg.includes("too_big") || msg.includes("maximum")) {
+    return "La IA generó una respuesta demasiado larga. Inténtalo de nuevo.";
+  }
+  if (msg.includes("bullets") || msg.includes("array") || msg.includes("length")) {
+    return "La IA no generó los puntos clave en el formato esperado. Inténtalo de nuevo.";
+  }
+  if (msg.includes("json") || msg.includes("parse") || msg.includes("unexpected token")) {
+    return "La IA devolvió una respuesta que no pudimos interpretar. Inténtalo de nuevo.";
+  }
+  if (msg.includes("rate_limit") || msg.includes("429") || msg.includes("too many")) {
+    return "Se superó el límite de solicitudes a la IA. Espera unos segundos e inténtalo de nuevo.";
+  }
+  if (msg.includes("timeout") || msg.includes("timed out")) {
+    return "La IA tardó demasiado en responder. Inténtalo de nuevo.";
+  }
+  if (msg.includes("connection") || msg.includes("network") || msg.includes("fetch")) {
+    return "Error de conexión con el servicio de IA. Comprueba tu conexión e inténtalo de nuevo.";
+  }
+  return "Algo salió mal al generar el contenido. Inténtalo de nuevo.";
+}
 
 function parseAiResponse(text: string): GeneratedContent {
   const jsonMatch = text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) {
-    throw new Error("No se encontró JSON en la respuesta");
+    throw new Error("La IA no devolvió datos en el formato correcto.");
   }
   const cleaned = jsonMatch[0];
   const parsed = JSON.parse(cleaned) as unknown;
@@ -116,12 +140,10 @@ export const processProductsTask = task({
             .where(eq(schema.listings.id, product.id));
           totalProcessed++;
         } catch (parseError) {
-          const msg = parseError instanceof Error ? parseError.message : "JSON parse error";
-          await markFailed(product.id, `Invalid AI response format: ${msg}`);
+          await markFailed(product.id, humanizeError(parseError));
         }
       } catch (error) {
-        const msg = error instanceof Error ? error.message : "Unknown error";
-        await markFailed(product.id, `API error: ${msg}`);
+        await markFailed(product.id, humanizeError(error));
       }
 
       await new Promise(resolve => setTimeout(resolve, 1000));
