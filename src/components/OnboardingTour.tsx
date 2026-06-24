@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useUser } from "@clerk/nextjs";
-import type { CallBackProps, Step } from "react-joyride";
+import type { Step } from "react-joyride";
 
 const Joyride = dynamic(() => import("react-joyride"), { ssr: false });
 
@@ -42,7 +42,7 @@ export default function OnboardingTour() {
     }
   }, [isSignedIn]);
 
-  const handleCallback = (data: CallBackProps) => {
+  const handleCallback = (data: { status: string }) => {
     const { status } = data;
     if (status === "finished" || status === "skipped") {
       localStorage.setItem("listwise_tour_seen", "true");
