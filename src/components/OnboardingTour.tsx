@@ -10,7 +10,6 @@ const steps: Step[] = [
     title: "Sube tu CSV",
     content: "Este es el área de subida. Arrastra tu archivo CSV con los productos o haz clic para seleccionarlo.",
     placement: "top",
-    disableBeacon: true,
   },
   {
     target: ".mode-selector",
