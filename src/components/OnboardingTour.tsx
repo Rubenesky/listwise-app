@@ -2,86 +2,96 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
-import type { Step } from "react-joyride";
 
-const steps: Step[] = [
+const STEPS = [
   {
     target: ".upload-area",
-    title: "Sube tu CSV",
-    content: "Este es el área de subida. Arrastra tu archivo CSV con los productos o haz clic para seleccionarlo.",
-    placement: "top",
+    title: "📤 Sube tu CSV",
+    content: "Arrastra tu archivo CSV aquí o haz clic para seleccionarlo. Descarga la plantilla para ver el formato correcto.",
   },
   {
     target: ".mode-selector",
-    title: "Elige el modo de generación",
-    content: "Selecciona el estilo de escritura: Creativo (emocional), Profesional (técnico) o SEO (optimizado para buscadores).",
-    placement: "bottom",
+    title: "🎨 Elige el modo",
+    content: "Selecciona el estilo de escritura antes de subir: Creativo (emocional), Profesional (técnico) o SEO (para buscadores).",
   },
   {
     target: ".listings-table",
-    title: "Tus listados",
-    content: "Aquí verás todos tus productos con su estado. Haz clic en cualquier producto para ver y editar el contenido generado.",
-    placement: "top",
+    title: "📊 Tus listados",
+    content: "Aquí verás todos tus productos. Haz clic en cualquiera para ver y editar el contenido generado por la IA.",
   },
 ];
 
 export default function OnboardingTour() {
   const { isSignedIn } = useUser();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [Joyride, setJoyride] = useState<any>(null);
-  const [run, setRun] = useState(false);
-
-  // Load react-joyride only on the client — avoids SSR/window issues entirely
-  useEffect(() => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    import("react-joyride").then((mod: any) => {
-      // react-joyride uses export= (CJS); with esModuleInterop .default works at runtime,
-      // but TS types don't declare it — cast to any and fall back to mod itself
-      const component = mod.default ?? mod;
-      setJoyride(() => component);
-    });
-  }, []);
+  const [step, setStep] = useState(0);
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    if (!isSignedIn || !Joyride) return;
+    if (!isSignedIn) return;
     const hasSeenTour = localStorage.getItem("listwise_tour_seen");
     if (!hasSeenTour) {
-      const timer = setTimeout(() => setRun(true), 1500);
+      const timer = setTimeout(() => setVisible(true), 1200);
       return () => clearTimeout(timer);
     }
-  }, [isSignedIn, Joyride]);
+  }, [isSignedIn]);
 
-  const handleCallback = (data: { status: string }) => {
-    if (data.status === "finished" || data.status === "skipped") {
-      localStorage.setItem("listwise_tour_seen", "true");
-      setRun(false);
+  const handleNext = () => {
+    if (step < STEPS.length - 1) {
+      setStep(step + 1);
+    } else {
+      finish();
     }
   };
 
-  if (!isSignedIn || !Joyride) return null;
+  const finish = () => {
+    localStorage.setItem("listwise_tour_seen", "true");
+    setVisible(false);
+  };
+
+  if (!isSignedIn || !visible) return null;
+
+  const current = STEPS[step];
 
   return (
-    <Joyride
-      steps={steps}
-      run={run}
-      continuous
-      showProgress
-      showSkipButton
-      locale={{
-        back: "Atrás",
-        close: "Cerrar",
-        last: "Finalizar",
-        next: "Siguiente",
-        skip: "Saltar tour",
-      }}
-      styles={{
-        options: {
-          primaryColor: "#2563eb",
-          textColor: "#1f2937",
-          zIndex: 1000,
-        },
-      }}
-      callback={handleCallback}
-    />
+    <div className="fixed inset-0 z-50 pointer-events-none">
+      {/* Backdrop */}
+      <div
+        className="absolute inset-0 bg-black/40 pointer-events-auto"
+        onClick={finish}
+      />
+
+      {/* Tooltip card */}
+      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-80 bg-white rounded-xl shadow-2xl p-5 pointer-events-auto z-10">
+        {/* Progress dots */}
+        <div className="flex gap-1.5 mb-3">
+          {STEPS.map((_, i) => (
+            <div
+              key={i}
+              className={`h-1.5 flex-1 rounded-full transition-colors ${
+                i <= step ? "bg-blue-600" : "bg-gray-200"
+              }`}
+            />
+          ))}
+        </div>
+
+        <p className="font-semibold text-gray-900 text-sm mb-1">{current.title}</p>
+        <p className="text-sm text-gray-600 mb-4">{current.content}</p>
+
+        <div className="flex justify-between items-center">
+          <button
+            onClick={finish}
+            className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            Saltar tour
+          </button>
+          <button
+            onClick={handleNext}
+            className="px-4 py-1.5 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            {step < STEPS.length - 1 ? "Siguiente →" : "Finalizar"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
