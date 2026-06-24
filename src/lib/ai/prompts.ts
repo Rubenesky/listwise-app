@@ -1,5 +1,14 @@
 export type GenerationMode = "creative" | "professional" | "seo";
 
+export interface VoiceProfileData {
+  tone: string;
+  vocabulary: string;
+  sentenceStructure: string;
+  keyWords: string[];
+  brandPersonality: string;
+  suggestions: string[];
+}
+
 export const MODE_CONFIG: Record<GenerationMode, { label: string; systemPrompt: string; temperature: number }> = {
   creative: {
     label: "Creativo",
@@ -179,4 +188,24 @@ export function buildUserPrompt(product: {
   
   prompt += `\n\nGenera el JSON. El título DEBE incluir las palabras clave obligatorias. Los bullets DEBEN empezar con verbo.`;
   return prompt;
+}
+
+export function buildUserPromptWithVoice(
+  product: Parameters<typeof buildUserPrompt>[0],
+  voiceProfile: VoiceProfileData | null
+): string {
+  const base = buildUserPrompt(product);
+  if (!voiceProfile) return base;
+
+  return (
+    base +
+    `\n\nPERFIL DE VOZ DE MARCA (aplica obligatoriamente):
+- Tono: ${voiceProfile.tone}
+- Vocabulario: ${voiceProfile.vocabulary}
+- Estructura de frases: ${voiceProfile.sentenceStructure}
+- Personalidad de marca: ${voiceProfile.brandPersonality}
+- Palabras clave de la marca: ${voiceProfile.keyWords.join(", ")}
+
+Integra este perfil de forma natural. El resultado debe sonar coherente con la identidad de la marca.`
+  );
 }

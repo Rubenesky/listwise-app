@@ -3,7 +3,7 @@ import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { groq } from "@/lib/ai/client-groq";
-import { SYSTEM_PROMPT, buildUserPrompt, MODE_CONFIG, type GenerationMode } from "@/lib/ai/prompts";
+import { SYSTEM_PROMPT, buildUserPromptWithVoice, MODE_CONFIG, type GenerationMode, type VoiceProfileData } from "@/lib/ai/prompts";
 import type { GeneratedContent, BatchProcessPayload } from "@/types";
 
 const generatedContentSchema = z.object({
@@ -62,6 +62,19 @@ export const processProductsTask = task({
     const safeMode = (mode && mode in MODE_CONFIG ? mode : "creative") as GenerationMode;
     const temperature = MODE_CONFIG[safeMode].temperature;
 
+    // Fetch active voice profile once (before the loop)
+    let activeVoiceProfile: VoiceProfileData | null = null;
+    try {
+      const [vp] = await db
+        .select()
+        .from(schema.voiceProfiles)
+        .where(and(eq(schema.voiceProfiles.userId, userId), eq(schema.voiceProfiles.isActive, 1)))
+        .limit(1);
+      if (vp) activeVoiceProfile = vp.profile as VoiceProfileData;
+    } catch {
+      // Non-fatal — proceed without voice profile
+    }
+
     let pendingListings: (typeof schema.listings.$inferSelect)[];
     try {
       pendingListings = await db
@@ -109,12 +122,15 @@ export const processProductsTask = task({
               model: "llama-3.3-70b-versatile",
               messages: [
                 { role: "system", content: SYSTEM_PROMPT },
-                { role: "user", content: buildUserPrompt({
-                  productName: safeName,
-                  category: safeCategory,
-                  attributes: product.attributes as Record<string, string> | null,
-                  mode: safeMode,
-                })},
+                { role: "user", content: buildUserPromptWithVoice(
+                  {
+                    productName: safeName,
+                    category: safeCategory,
+                    attributes: product.attributes as Record<string, string> | null,
+                    mode: safeMode,
+                  },
+                  activeVoiceProfile
+                )},
               ],
               temperature,
               max_tokens: 1024,

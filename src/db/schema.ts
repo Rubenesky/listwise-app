@@ -18,6 +18,17 @@ export const listings = sqliteTable("listings", {
   userIdIdx: index("idx_listings_user_id").on(table.userId),
 }));
 
+export const voiceProfiles = sqliteTable("voice_profiles", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  name: text("name").notNull().default("Mi perfil de voz"),
+  profile: text("profile", { mode: "json" }).notNull(),
+  isActive: integer("is_active").notNull().default(0),
+  createdAt: integer("created_at").notNull().default(0),
+}, (table) => ({
+  userIdIdx: index("idx_voice_profiles_user_id").on(table.userId),
+}));
+
 // Tabla de suscripciones (NUEVA)
 export const subscriptions = sqliteTable("subscriptions", {
   id: text("id").primaryKey(),

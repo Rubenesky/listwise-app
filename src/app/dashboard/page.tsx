@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useUserPlan } from "@/lib/hooks/useUserPlan";
 import { PLAN_LIMITS } from "@/lib/constants";
 import OnboardingTour from "@/components/OnboardingTour";
+import VoiceProfileManager from "@/components/VoiceProfileManager";
 
 type ListingStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
 type GenerationMode = "creative" | "professional" | "seo";
@@ -604,6 +605,9 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
+
+        {/* Voice profile */}
+        <VoiceProfileManager />
 
         {/* Progress bar */}
         {isProcessing && batchTotal > 0 && (
