@@ -87,68 +87,68 @@ export default function PricingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Logo - Tamaño grande con sombra y fondo transparente */}
-        <div className="flex justify-center mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto">
+        {/* Logo */}
+        <div className="flex justify-center mb-5">
           <Image
             src="/logo-transparent.png"
             alt="ListWise"
-            width={350}
-            height={110}
-            className="h-28 w-auto drop-shadow-xl"  // Cambiado de h-20 a h-28
+            width={200}
+            height={65}
+            className="h-14 w-auto drop-shadow-md"
             priority
           />
         </div>
 
         {/* Título */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 sm:text-5xl">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">
             Elige el plan perfecto para tu negocio
           </h1>
-          <p className="mt-4 text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className="mt-2 text-base text-gray-600 max-w-xl mx-auto">
             Genera descripciones de productos con IA y ahorra horas de trabajo
           </p>
         </div>
 
         {/* Planes */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto">
           {plans.map((plan) => (
             <div
               key={plan.name}
-              className={`bg-white rounded-2xl shadow-lg overflow-hidden ${
+              className={`bg-white rounded-xl shadow-md overflow-hidden ${
                 plan.popular ? "ring-2 ring-blue-600 relative" : ""
               }`}
             >
               {plan.popular && (
-                <div className="bg-blue-600 text-white text-center py-1.5 text-sm font-semibold">
+                <div className="bg-blue-600 text-white text-center py-1 text-xs font-semibold">
                   Más popular
                 </div>
               )}
-              <div className="p-6">
-                <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
-                <div className="mt-4 flex items-baseline">
-                  <span className="text-3xl font-extrabold text-gray-900">
+              <div className="p-5">
+                <h3 className="text-base font-bold text-gray-900">{plan.name}</h3>
+                <div className="mt-2 flex items-baseline">
+                  <span className="text-2xl font-extrabold text-gray-900">
                     {plan.price}
                   </span>
-                  <span className="ml-1 text-gray-500">/mes</span>
+                  <span className="ml-1 text-sm text-gray-500">/mes</span>
                 </div>
-                <p className="mt-2 text-gray-600">{plan.description}</p>
+                <p className="mt-1 text-sm text-gray-600">{plan.description}</p>
 
-                <ul className="mt-6 space-y-3">
+                <ul className="mt-4 space-y-2">
                   {plan.features.map((feature) => (
                     <li key={feature} className="flex items-start">
-                      <CheckCircle className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
-                      <span className="ml-3 text-gray-700">{feature}</span>
+                      <CheckCircle className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
+                      <span className="ml-2 text-sm text-gray-700">{feature}</span>
                     </li>
                   ))}
                 </ul>
 
-                <div className="mt-8">
+                <div className="mt-5">
                   {plan.priceId === "free" ? (
                     <Link
                       href="/dashboard"
-                      className="w-full block text-center px-4 py-3 bg-gray-200 text-gray-800 rounded-lg font-medium hover:bg-gray-300 transition-colors"
+                      className="w-full block text-center px-4 py-2 bg-gray-200 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
                     >
                       Ir al dashboard
                     </Link>
@@ -156,7 +156,7 @@ export default function PricingPage() {
                     <button
                       onClick={() => handleSubscribe(plan.priceId)}
                       disabled={loading === plan.priceId}
-                      className={`w-full px-4 py-3 rounded-lg font-medium transition-colors ${
+                      className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                         loading === plan.priceId
                           ? "bg-blue-400 cursor-not-allowed"
                           : "bg-blue-600 text-white hover:bg-blue-700"
@@ -182,7 +182,7 @@ export default function PricingPage() {
         </div>
 
         {/* Footer */}
-        <div className="mt-12 text-center">
+        <div className="mt-8 text-center">
           <p className="text-gray-600">
             ¿Necesitas un plan personalizado?{" "}
             <a href="mailto:contacto@listwise.com" className="text-blue-600 hover:underline">

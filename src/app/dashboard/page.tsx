@@ -378,12 +378,12 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="space-y-6">
+      <div className="space-y-4">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-            <p className="mt-1 text-gray-600">
+            <h1 className="text-xl font-bold text-gray-900">Dashboard</h1>
+            <p className="mt-0.5 text-sm text-gray-600">
               Sube tu catálogo en CSV y la IA generará títulos, bullets y descripciones optimizadas.
             </p>
           </div>
@@ -403,27 +403,27 @@ export default function DashboardPage() {
         </div>
 
         {/* Stats grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div className="bg-white rounded-lg border p-4 text-center">
-            <p className="text-2xl font-bold text-gray-900">{currentCount}</p>
-            <p className="text-sm text-gray-500">Total productos</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="bg-white rounded-lg border p-3 text-center">
+            <p className="text-lg font-bold text-gray-900">{currentCount}</p>
+            <p className="text-xs text-gray-500">Total productos</p>
           </div>
-          <div className="bg-white rounded-lg border p-4 text-center">
-            <p className="text-2xl font-bold text-green-600">{completedCount}</p>
-            <p className="text-sm text-gray-500">Completados</p>
+          <div className="bg-white rounded-lg border p-3 text-center">
+            <p className="text-lg font-bold text-green-600">{completedCount}</p>
+            <p className="text-xs text-gray-500">Completados</p>
           </div>
-          <div className="bg-white rounded-lg border p-4 text-center">
-            <p className="text-2xl font-bold text-yellow-600">{pendingOrProcessingCount}</p>
-            <p className="text-sm text-gray-500">Pendientes</p>
+          <div className="bg-white rounded-lg border p-3 text-center">
+            <p className="text-lg font-bold text-yellow-600">{pendingOrProcessingCount}</p>
+            <p className="text-xs text-gray-500">Pendientes</p>
           </div>
-          <div className="bg-white rounded-lg border p-4 text-center">
-            <p className="text-2xl font-bold text-red-600">{failedCount}</p>
-            <p className="text-sm text-gray-500">Fallidos</p>
+          <div className="bg-white rounded-lg border p-3 text-center">
+            <p className="text-lg font-bold text-red-600">{failedCount}</p>
+            <p className="text-xs text-gray-500">Fallidos</p>
           </div>
         </div>
 
         {/* Plan limit bar */}
-        <div className="bg-white rounded-lg border p-4">
+        <div className="bg-white rounded-lg border p-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-sm text-gray-600">
               Productos utilizados:{" "}
@@ -513,7 +513,7 @@ export default function DashboardPage() {
 
         {/* Upload section header */}
         <div className="flex justify-between items-center">
-          <h2 className="text-lg font-semibold text-gray-900">Subir CSV</h2>
+          <h2 className="text-sm font-semibold text-gray-900">Subir CSV</h2>
           <a
             href="/api/template/csv"
             download="plantilla_listwise.csv"
@@ -527,8 +527,8 @@ export default function DashboardPage() {
         </div>
 
         {/* Upload area */}
-        <div className="upload-area border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-blue-500 transition-colors">
-          <div className="flex flex-col items-center gap-3">
+        <div className="upload-area border-2 border-dashed border-gray-300 rounded-lg p-5 text-center hover:border-blue-500 transition-colors">
+          <div className="flex flex-col items-center gap-2">
             {file ? (
               <>
                 <p className="font-medium text-gray-900">{file.name}</p>
@@ -545,7 +545,7 @@ export default function DashboardPage() {
               </>
             ) : (
               <>
-                <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-9 h-9 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                 </svg>
                 <p className="font-medium text-gray-700">Arrastra tu CSV aquí</p>
