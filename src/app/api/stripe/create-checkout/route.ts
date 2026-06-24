@@ -18,7 +18,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
-    const { priceId } = await req.json();
+    const { priceId, referralCode } = await req.json();
 
     if (!priceId || !PRICE_IDS[priceId]) {
       return NextResponse.json({ error: "Plan no válido" }, { status: 400 });
@@ -26,6 +26,9 @@ export async function POST(req: Request) {
 
     console.log("🔑 Creando sesión para:", priceId);
     console.log("📦 Price ID:", PRICE_IDS[priceId]);
+    if (referralCode) {
+      console.log(`🔗 [Stripe] Checkout incluye referralCode: ${referralCode}`);
+    }
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
@@ -42,6 +45,7 @@ export async function POST(req: Request) {
       metadata: {
         userId: userId,
         priceId: PRICE_IDS[priceId],
+        ...(referralCode ? { referralCode: String(referralCode).slice(0, 80) } : {}),
       },
     });
 

@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
+import { convertReferral } from "@/lib/referrals/convert";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-05-27.dahlia",
@@ -57,14 +58,28 @@ export async function POST(req: Request) {
 
         console.log(`📨 [Stripe Webhook] Pago completado para usuario: ${userId}, plan: ${plan}`);
 
-        // Check if this subscriber was referred — read-only, for debug visibility
-        const [referralRecord] = await db
-          .select({ code: schema.referrals.code, referrerId: schema.referrals.referrerId })
-          .from(schema.referrals)
-          .where(eq(schema.referrals.refereeId, userId))
-          .limit(1);
-        if (referralRecord) {
-          console.log(`🔗 [Stripe Webhook] Usuario ${userId} fue referido con código: ${referralRecord.code} (por: ${referralRecord.referrerId})`);
+        // Auto-convert referral if the checkout included a referral code
+        const referralCode = session.metadata?.referralCode;
+        if (referralCode) {
+          console.log(`🔗 [Stripe Webhook] Usuario ${userId} tiene código de referido: ${referralCode}`);
+
+          const [pendingReferral] = await db
+            .select()
+            .from(schema.referrals)
+            .where(eq(schema.referrals.code, referralCode))
+            .limit(1);
+
+          if (pendingReferral && pendingReferral.status !== "converted") {
+            console.log(`💰 [Stripe Webhook] Referido encontrado, convirtiendo: ${pendingReferral.id}`);
+            const ok = await convertReferral(pendingReferral.id, userId, plan);
+            if (ok) {
+              console.log(`✅ [Stripe Webhook] Referido convertido automáticamente para usuario ${userId}`);
+            } else {
+              console.log(`⚠️ [Stripe Webhook] Conversión de referido falló silenciosamente para ${userId}`);
+            }
+          } else {
+            console.log(`ℹ️ [Stripe Webhook] Código ${referralCode} no tiene referido pendiente`);
+          }
         } else {
           console.log(`ℹ️ [Stripe Webhook] Usuario ${userId} no tiene código de referido registrado`);
         }
