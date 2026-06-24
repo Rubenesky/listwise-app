@@ -136,8 +136,11 @@ async function sendTriggerEvent(userId: string, batchId: string, mode: string) {
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error("Error sending trigger event:", errorText);
-    throw new Error("Failed to send trigger event");
+    console.error("Error sending trigger event:", response.status, errorText);
+    if (response.status === 429) {
+      throw new Error("RATE_LIMIT");
+    }
+    throw new Error("TRIGGER_FAILED");
   }
 
   return response.json();
@@ -275,8 +278,21 @@ export async function POST(req: Request) {
 
   } catch (error) {
     console.error("Error en upload:", error);
+    const msg = error instanceof Error ? error.message : "";
+    if (msg === "RATE_LIMIT") {
+      return NextResponse.json(
+        { error: "Has superado el límite de solicitudes. Espera unos minutos e inténtalo de nuevo." },
+        { status: 429 }
+      );
+    }
+    if (msg === "TRIGGER_FAILED") {
+      return NextResponse.json(
+        { error: "No se pudo iniciar el procesamiento. Inténtalo de nuevo en unos segundos." },
+        { status: 503 }
+      );
+    }
     return NextResponse.json(
-      { error: "Error al procesar el archivo" },
+      { error: "Error al procesar el archivo. Inténtalo de nuevo." },
       { status: 500 }
     );
   }

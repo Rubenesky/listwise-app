@@ -15,9 +15,16 @@ export async function GET() {
       .from(schema.listings)
       .where(eq(schema.listings.userId, userId));
 
+    const completed = listings.filter((l) => l.status === "COMPLETED");
+    if (completed.length === 0) {
+      return NextResponse.json(
+        { error: "No hay productos completados para exportar." },
+        { status: 404 }
+      );
+    }
+
     const csvHeader = "productName,generatedTitle,generatedBullets,generatedDescription\n";
-    const rows = listings
-      .filter((l) => l.status === "COMPLETED")
+    const rows = completed
       .map((l) => {
         const bullets = Array.isArray(l.generatedBullets)
           ? l.generatedBullets.join(" | ")

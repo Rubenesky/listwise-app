@@ -6,6 +6,7 @@ import { useUserPlan } from "@/lib/hooks/useUserPlan";
 import { PLAN_LIMITS } from "@/lib/constants";
 import OnboardingTour from "@/components/OnboardingTour";
 import VoiceProfileManager from "@/components/VoiceProfileManager";
+import InfoTooltip from "@/components/InfoTooltip";
 
 type ListingStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
 type GenerationMode = "creative" | "professional" | "seo";
@@ -48,7 +49,13 @@ export default function DashboardPage() {
   const [file, setFile] = useState<File | null>(null);
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
   const [uploadWarnings, setUploadWarnings] = useState<string[]>([]);
-  const [selectedMode, setSelectedMode] = useState<GenerationMode>("creative");
+  const [selectedMode, setSelectedMode] = useState<GenerationMode>(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("listwise_generation_mode");
+      if (saved === "creative" || saved === "professional" || saved === "seo") return saved;
+    }
+    return "creative";
+  });
   const [isProcessing, setIsProcessing] = useState(false);
   const [batchTotal, setBatchTotal] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -125,6 +132,10 @@ export default function DashboardPage() {
   useEffect(() => {
     return () => stopPolling();
   }, [stopPolling]);
+
+  useEffect(() => {
+    localStorage.setItem("listwise_generation_mode", selectedMode);
+  }, [selectedMode]);
 
   const openModal = (listing: ListingRow) => {
     setSelectedListingId(listing.id);
@@ -588,21 +599,33 @@ export default function DashboardPage() {
 
         {/* Mode selector */}
         <div className="mode-selector">
-          <label className="block text-sm font-medium text-gray-700 mb-2">Modo de generación</label>
+          <div className="flex items-center gap-1.5 mb-2">
+            <label className="text-sm font-medium text-gray-700">Modo de generación</label>
+            <InfoTooltip content="El modo define el estilo de escritura de la IA. Se aplica a todos los productos del siguiente CSV que subas." />
+          </div>
           <div className="flex gap-2 flex-wrap">
-            {(["creative", "professional", "seo"] as GenerationMode[]).map((mode) => (
-              <button
-                key={mode}
-                onClick={() => setSelectedMode(mode)}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  selectedMode === mode
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                }`}
-              >
-                {MODE_LABELS[mode]}
-              </button>
-            ))}
+            {(["creative", "professional", "seo"] as GenerationMode[]).map((mode) => {
+              const modeTooltips: Record<GenerationMode, string> = {
+                creative: "Tono emocional y narrativo. Conecta con las aspiraciones del cliente. Ideal para moda, lifestyle y regalos.",
+                professional: "Tono técnico y formal. Destaca especificaciones y funcionalidad. Ideal para electrónica, herramientas y B2B.",
+                seo: "Optimizado para buscadores. Incluye palabras clave estratégicas de forma natural. Ideal para posicionar en Google.",
+              };
+              return (
+                <div key={mode} className="flex items-center gap-1">
+                  <button
+                    onClick={() => setSelectedMode(mode)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      selectedMode === mode
+                        ? "bg-blue-600 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    {MODE_LABELS[mode]}
+                  </button>
+                  <InfoTooltip content={modeTooltips[mode]} />
+                </div>
+              );
+            })}
           </div>
         </div>
 

@@ -7,7 +7,7 @@ import { SYSTEM_PROMPT, buildUserPromptWithVoice, MODE_CONFIG, type GenerationMo
 import type { GeneratedContent, BatchProcessPayload } from "@/types";
 
 const generatedContentSchema = z.object({
-  title: z.string().transform((s) => s.slice(0, 60)),
+  title: z.string().transform((s) => s.slice(0, 80)),
   bullets: z.array(z.string()).min(1).max(10),
   description: z.string().min(1),
 });
