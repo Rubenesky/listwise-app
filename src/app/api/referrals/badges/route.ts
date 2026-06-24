@@ -10,11 +10,14 @@ export async function GET() {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
+    console.log(`🏅 [Referidos] Consultando insignias de usuario: ${userId}`);
+
     const userBadges = await db
       .select()
       .from(schema.badges)
       .where(eq(schema.badges.userId, userId));
 
+    console.log(`🏅 [Referidos] ${userBadges.length} insignias encontradas para ${userId}`);
     return NextResponse.json({ badges: userBadges });
   } catch {
     return NextResponse.json({ error: "Error al obtener insignias" }, { status: 500 });

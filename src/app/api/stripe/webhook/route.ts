@@ -55,6 +55,20 @@ export async function POST(req: Request) {
           break;
         }
 
+        console.log(`📨 [Stripe Webhook] Pago completado para usuario: ${userId}, plan: ${plan}`);
+
+        // Check if this subscriber was referred — read-only, for debug visibility
+        const [referralRecord] = await db
+          .select({ code: schema.referrals.code, referrerId: schema.referrals.referrerId })
+          .from(schema.referrals)
+          .where(eq(schema.referrals.refereeId, userId))
+          .limit(1);
+        if (referralRecord) {
+          console.log(`🔗 [Stripe Webhook] Usuario ${userId} fue referido con código: ${referralRecord.code} (por: ${referralRecord.referrerId})`);
+        } else {
+          console.log(`ℹ️ [Stripe Webhook] Usuario ${userId} no tiene código de referido registrado`);
+        }
+
         const existing = await db
           .select()
           .from(schema.subscriptions)

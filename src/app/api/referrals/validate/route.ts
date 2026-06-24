@@ -11,6 +11,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Código requerido" }, { status: 400 });
     }
 
+    console.log(`🔍 [Referidos] Validando código: ${code}`);
+
     const [referral] = await db
       .select()
       .from(schema.referrals)
@@ -18,13 +20,16 @@ export async function GET(req: Request) {
       .limit(1);
 
     if (!referral) {
+      console.log(`❌ [Referidos] Código inválido: ${code}`);
       return NextResponse.json({ valid: false, error: "Código inválido" });
     }
 
     if (referral.status !== "pending") {
+      console.log(`⚠️ [Referidos] Código ya utilizado: ${code} (estado: ${referral.status})`);
       return NextResponse.json({ valid: false, error: "Código ya utilizado" });
     }
 
+    console.log(`✅ [Referidos] Código válido: ${code} - Referidor: ${referral.referrerId}`);
     return NextResponse.json({ valid: true, referrerId: referral.referrerId });
   } catch {
     return NextResponse.json({ error: "Error al validar código" }, { status: 500 });

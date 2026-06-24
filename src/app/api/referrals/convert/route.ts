@@ -16,6 +16,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "referralId requerido" }, { status: 400 });
     }
 
+    console.log(`💰 [Referidos] Conversión detectada para usuario: ${userId}, plan: ${plan ?? "pro"}`);
+
     // Fetch first so we know who the referrer is
     const [referral] = await db
       .select()
@@ -57,11 +59,15 @@ export async function POST(req: Request) {
       createdAt: now,
     });
 
+    console.log(`🎁 [Referidos] Recompensa asignada a referidor ${referral.referrerId}: ${rewardType}`);
+
     // Give 10 credits to the referee (upsert in case no row exists yet)
     await db
       .insert(schema.users)
       .values({ id: userId, credits: 10 })
       .onConflictDoUpdate({ target: schema.users.id, set: { credits: sql`credits + 10` } });
+
+    console.log(`📊 [Referidos] Créditos asignados al referido ${userId}: +10`);
 
     // Increment referrer counters (upsert in case no row exists yet)
     await db
@@ -100,8 +106,10 @@ export async function POST(req: Request) {
         icon: badge.icon,
         earnedAt: now,
       }).onConflictDoNothing();
+      console.log(`🏅 [Referidos] Insignia "${badge.name}" otorgada a ${referral.referrerId}`);
     }
 
+    console.log(`✅ [Referidos] Proceso de conversión completado para usuario ${userId}`);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error en conversión:", error);

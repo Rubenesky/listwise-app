@@ -10,12 +10,15 @@ export async function GET() {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
+    console.log(`📋 [Referidos] Listando referidos de usuario: ${userId}`);
+
     const referrals = await db
       .select()
       .from(schema.referrals)
       .where(eq(schema.referrals.referrerId, userId))
       .orderBy(desc(schema.referrals.createdAt));
 
+    console.log(`📋 [Referidos] ${referrals.length} referidos encontrados para usuario: ${userId}`);
     return NextResponse.json({ referrals });
   } catch {
     return NextResponse.json({ error: "Error al listar referidos" }, { status: 500 });

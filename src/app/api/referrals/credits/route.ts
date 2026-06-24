@@ -10,13 +10,17 @@ export async function GET() {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
+    console.log(`💰 [Referidos] Consultando créditos de usuario: ${userId}`);
+
     const [user] = await db
       .select({ credits: schema.users.credits })
       .from(schema.users)
       .where(eq(schema.users.id, userId))
       .limit(1);
 
-    return NextResponse.json({ credits: user?.credits ?? 0 });
+    const credits = user?.credits ?? 0;
+    console.log(`💰 [Referidos] Créditos de ${userId}: ${credits}`);
+    return NextResponse.json({ credits });
   } catch {
     return NextResponse.json({ error: "Error al obtener créditos" }, { status: 500 });
   }
