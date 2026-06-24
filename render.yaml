@@ -3,7 +3,7 @@ services:
     name: listwise-app
     runtime: node
     plan: free
-    buildCommand: npm install && npm run build && npx trigger.dev@latest deploy --ci
+    buildCommand: npm install && npm run build && npx --yes trigger.dev@4.4.6 deploy --ci
     startCommand: npm start
     envVars:
       - key: NODE_VERSION

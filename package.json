@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "trigger:dev": "npx trigger.dev@latest dev",
-    "trigger:deploy": "npx trigger.dev@latest deploy",
+    "trigger:deploy": "npx --yes trigger.dev@4.4.6 deploy",
     "dev:all": "concurrently \"npm run dev\" \"npm run trigger:dev\""
   },
   "dependencies": {
