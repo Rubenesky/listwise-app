@@ -33,9 +33,12 @@ export default function OnboardingTour() {
 
   // Load react-joyride only on the client — avoids SSR/window issues entirely
   useEffect(() => {
-    import("react-joyride").then((mod) => {
-      // Use functional form of setState to store a function without React calling it
-      setJoyride(() => mod.default);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    import("react-joyride").then((mod: any) => {
+      // react-joyride uses export= (CJS); with esModuleInterop .default works at runtime,
+      // but TS types don't declare it — cast to any and fall back to mod itself
+      const component = mod.default ?? mod;
+      setJoyride(() => component);
     });
   }, []);
 
