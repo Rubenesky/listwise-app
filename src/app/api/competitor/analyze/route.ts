@@ -5,7 +5,7 @@ import { eq, and, gt } from "drizzle-orm";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { ratelimitCompetitor } from "@/lib/rate-limit";
-import { promises as dns } from "dns";
+import { promises as dns, LookupAddress } from "dns";
 
 // ─── SSRF Protection — DNS-based validation ─────────────────────────────────
 
@@ -64,7 +64,7 @@ async function validateUrlSSRF(
   }
 
   // DNS resolution: resolve ALL addresses and reject if any is private
-  let addresses: dns.LookupAddress[];
+  let addresses: LookupAddress[];
   try {
     addresses = await dns.lookup(host, { all: true });
   } catch {
