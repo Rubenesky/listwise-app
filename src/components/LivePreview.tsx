@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Eye, Sparkles, Copy, Check, Loader2 } from "lucide-react";
+import AgentChat from "./AgentChat";
 
 interface PreviewData {
   id: string;
@@ -142,6 +143,25 @@ export default function LivePreview({ productId }: { productId: string }) {
     const text = editContent || product?.generatedDescription || "";
     if (text) navigator.clipboard.writeText(text);
   };
+
+  const handleApplyChanges = useCallback(
+    (changes: { title?: string | null; bullets?: string[] | null; description?: string | null }) => {
+      setProduct((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          generatedTitle: changes.title ?? prev.generatedTitle,
+          generatedBullets: changes.bullets ?? prev.generatedBullets,
+          generatedDescription: changes.description ?? prev.generatedDescription,
+        };
+      });
+      if (changes.description) {
+        setEditContent(changes.description);
+        setIsEditing(false);
+      }
+    },
+    []
+  );
 
   if (!productId) {
     return (
@@ -332,6 +352,13 @@ export default function LivePreview({ productId }: { productId: string }) {
                 )}
               </div>
             )}
+
+            {/* Agent AI Chat — floating widget with product context */}
+            <AgentChat
+              listingId={product.id}
+              productName={product.productName}
+              onApplyChanges={handleApplyChanges}
+            />
           </>
         )}
       </div>

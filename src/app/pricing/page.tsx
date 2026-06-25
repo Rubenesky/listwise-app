@@ -29,6 +29,7 @@ const plans = [
       "Generación avanzada con IA",
       "Soporte prioritario",
       "Análisis de competencia",
+      "🤖 Agente de Copywriting (200 consultas/mes)",
     ],
     priceId: "pro",
     popular: true,

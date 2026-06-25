@@ -6,6 +6,8 @@ export const users = sqliteTable("users", {
   referralCode: text("referral_code").unique(),
   totalReferrals: integer("total_referrals").notNull().default(0),
   convertedReferrals: integer("converted_referrals").notNull().default(0),
+  agentCredits: integer("agent_credits").default(10),
+  agentPlan: text("agent_plan").default("free"),
 });
 
 export const referrals = sqliteTable("referrals", {
@@ -103,6 +105,43 @@ export const voiceProfiles = sqliteTable("voice_profiles", {
   createdAt: integer("created_at").notNull().default(0),
 }, (table) => ({
   userIdIdx: index("idx_voice_profiles_user_id").on(table.userId),
+}));
+
+export const agentCredits = sqliteTable("agent_credits", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  credits: integer("credits").default(0),
+  plan: text("plan").default("free"),
+  createdAt: integer("created_at").default(0),
+  expiresAt: integer("expires_at"),
+}, (table) => ({
+  userIdx: index("idx_agent_credits_user_id").on(table.userId),
+}));
+
+export const agentConversations = sqliteTable("agent_conversations", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  listingId: text("listing_id").notNull(),
+  messages: text("messages", { mode: "json" }).notNull(),
+  createdAt: integer("created_at").default(0),
+  updatedAt: integer("updated_at").default(0),
+}, (table) => ({
+  userIdx: index("idx_agent_conversations_user_id").on(table.userId),
+}));
+
+export const agentAnalytics = sqliteTable("agent_analytics", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  listingId: text("listing_id"),
+  command: text("command"),
+  prompt: text("prompt"),
+  response: text("response"),
+  accepted: integer("accepted").default(0),
+  latency: integer("latency"),
+  createdAt: integer("created_at").default(0),
+}, (table) => ({
+  userIdx: index("idx_agent_analytics_user_id").on(table.userId),
+  createdAtIdx: index("idx_agent_analytics_created_at").on(table.createdAt),
 }));
 
 // Tabla de suscripciones (NUEVA)

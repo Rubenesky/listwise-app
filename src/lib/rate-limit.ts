@@ -12,3 +12,19 @@ export const ratelimit = new Ratelimit({
   analytics: true,
   prefix: "@upstash/ratelimit",
 });
+
+// Agent chat: 3 requests per minute (per user)
+export const ratelimitAgentMinute = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(3, "1 m"),
+  analytics: false,
+  prefix: "@upstash/ratelimit/agent-minute",
+});
+
+// Agent chat: 10 requests per hour (free users only)
+export const ratelimitAgentHour = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(10, "1 h"),
+  analytics: false,
+  prefix: "@upstash/ratelimit/agent-hour",
+});

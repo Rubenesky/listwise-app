@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { headers } from "next/headers";
 import { db, schema } from "@/db";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { convertReferral } from "@/lib/referrals/convert";
 
@@ -38,12 +38,26 @@ export async function POST(req: Request) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         const userId = session.client_reference_id;
-        const priceId = session.metadata?.priceId;
 
         if (!userId) {
           console.error("❌ userId no encontrado");
           break;
         }
+
+        // Handle agent credit pack purchases
+        if (session.metadata?.type === "agent_credits") {
+          const creditsToAdd = parseInt(session.metadata.credits ?? "0", 10);
+          if (creditsToAdd > 0) {
+            console.log(`💰 [Stripe Webhook] +${creditsToAdd} créditos de agente para ${userId}`);
+            await db.update(schema.users)
+              .set({ agentCredits: sql`agent_credits + ${creditsToAdd}` })
+              .where(eq(schema.users.id, userId));
+            console.log(`✅ [Stripe Webhook] Créditos de agente actualizados para ${userId}`);
+          }
+          break;
+        }
+
+        const priceId = session.metadata?.priceId;
 
         if (!priceId) {
           console.error("❌ priceId no encontrado");
