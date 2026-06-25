@@ -18,10 +18,10 @@ const PLAN_STYLES: Record<string, {
   downloadLink: string;
 }> = {
   free: {
-    nav: "bg-white border-b border-gray-200",
+    nav: "bg-blue-50 border-b border-blue-200",
     linkActive: "bg-blue-100 text-blue-700",
-    linkInactive: "text-gray-700 hover:bg-gray-100",
-    downloadLink: "text-blue-600 hover:bg-blue-50",
+    linkInactive: "text-gray-700 hover:bg-blue-100",
+    downloadLink: "text-blue-600 hover:bg-blue-100",
   },
   pro: {
     nav: "bg-amber-50 border-b border-amber-300",

@@ -5,6 +5,7 @@ import { db, schema } from "@/db";
 import { eq, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { convertReferral } from "@/lib/referrals/convert";
+import { clerkClient } from "@clerk/nextjs/server";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-05-27.dahlia",
@@ -130,6 +131,19 @@ export async function POST(req: Request) {
           });
           console.log(`✅ Nueva suscripción creada para usuario ${userId} a plan ${plan}`);
         }
+
+        // Sync plan to Clerk publicMetadata for instant client-side reads
+        try {
+          const clerk = await clerkClient();
+          const clerkUser = await clerk.users.getUser(userId);
+          await clerk.users.updateUserMetadata(userId, {
+            publicMetadata: { ...clerkUser.publicMetadata, plan },
+          });
+          console.log(`✅ [Stripe Webhook] Clerk metadata sincronizada: ${userId} → ${plan}`);
+        } catch (metaErr) {
+          console.warn("⚠️ [Stripe Webhook] No se pudo sincronizar Clerk metadata:", metaErr);
+        }
+
         break;
       }
 
