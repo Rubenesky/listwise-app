@@ -20,25 +20,75 @@ interface CompetitorAnalysis {
   suggestions: string[];
 }
 
-async function scrapeUrl(url: string): Promise<{
+const MAX_REDIRECTS = 3;
+const FETCH_HEADERS = {
+  "User-Agent": "ListWise-Analyzer/1.0 (competitor analysis tool; contact@listwise.app)",
+  Accept: "text/html,application/xhtml+xml",
+  "Accept-Language": "es,en;q=0.8",
+} as const;
+
+// Validates each redirect destination to prevent SSRF via open-redirect chains
+function isSafeRedirectUrl(urlStr: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(urlStr);
+  } catch {
+    return false;
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return false;
+
+  const host = parsed.hostname.toLowerCase();
+  if (/^localhost$/i.test(host) || /^0\.0\.0\.0$/.test(host)) return false;
+  if (/^\[/.test(host)) return false; // raw IPv6
+
+  if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) {
+    const parts = host.split(".").map(Number);
+    const [a, b] = parts;
+    if (
+      a === 0 || a === 10 || a === 127 || a === 255 ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168)
+    ) return false;
+  }
+  return true;
+}
+
+async function scrapeUrl(initialUrl: string): Promise<{
   title: string;
   description: string;
   keywords: string;
   mainContent: string;
 }> {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
+  let currentUrl = initialUrl;
 
-  try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-      headers: {
-        "User-Agent": "ListWise-Analyzer/1.0 (competitor analysis tool; contact@listwise.app)",
-        Accept: "text/html,application/xhtml+xml",
-        "Accept-Language": "es,en;q=0.8",
-      },
-    });
-    clearTimeout(timeout);
+  for (let attempt = 0; attempt <= MAX_REDIRECTS; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 10000);
+    let res: Response;
+
+    try {
+      res = await fetch(currentUrl, {
+        signal: controller.signal,
+        redirect: "manual", // handle each hop ourselves to validate Location
+        headers: FETCH_HEADERS,
+      });
+    } finally {
+      clearTimeout(timeout);
+    }
+
+    if (res.status >= 300 && res.status < 400) {
+      if (attempt >= MAX_REDIRECTS) throw new Error("Demasiadas redirecciones");
+      const location = res.headers.get("location");
+      if (!location) throw new Error("Redirección sin Location header");
+      const nextUrl = new URL(location, currentUrl).href; // resolve relative paths
+      if (!isSafeRedirectUrl(nextUrl)) {
+        console.warn(`⚠️ [Competitor] Redirect bloqueado: ${currentUrl} → ${nextUrl}`);
+        throw new Error("Redirección a URL no permitida");
+      }
+      currentUrl = nextUrl;
+      continue;
+    }
 
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
@@ -47,16 +97,12 @@ async function scrapeUrl(url: string): Promise<{
       throw new Error("La URL no devuelve HTML");
     }
 
-    // Cap response at 2MB to prevent memory issues
+    // Cap at 2MB to prevent memory issues
     const arrayBuffer = await res.arrayBuffer();
-    if (arrayBuffer.byteLength > 2 * 1024 * 1024) {
-      throw new Error("Respuesta demasiado grande");
-    }
+    if (arrayBuffer.byteLength > 2 * 1024 * 1024) throw new Error("Respuesta demasiado grande");
     const html = new TextDecoder().decode(arrayBuffer);
 
     const $ = cheerio.load(html);
-
-    // Remove noise elements
     $("script, style, nav, footer, header, iframe, noscript, svg, [hidden]").remove();
 
     const title =
@@ -69,10 +115,8 @@ async function scrapeUrl(url: string): Promise<{
       $('meta[property="og:description"]').attr("content")?.trim().slice(0, 500) ||
       "";
 
-    const keywords =
-      $('meta[name="keywords"]').attr("content")?.trim().slice(0, 300) || "";
+    const keywords = $('meta[name="keywords"]').attr("content")?.trim().slice(0, 300) || "";
 
-    // Extract main product content
     const textNodes: string[] = [];
     $("h1, h2, h3, p, li").each((_, el) => {
       const text = $(el).text().trim();
@@ -81,9 +125,9 @@ async function scrapeUrl(url: string): Promise<{
     const mainContent = textNodes.join(" ").slice(0, 3000);
 
     return { title, description, keywords, mainContent };
-  } finally {
-    clearTimeout(timeout);
   }
+
+  throw new Error("Demasiadas redirecciones");
 }
 
 export const analyzeCompetitorTask = task({

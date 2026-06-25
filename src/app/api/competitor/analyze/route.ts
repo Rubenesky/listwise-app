@@ -5,32 +5,112 @@ import { eq, and, gt } from "drizzle-orm";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { ratelimitCompetitor } from "@/lib/rate-limit";
+import { promises as dns } from "dns";
 
-// ─── URL Security Validation ────────────────────────────────────────────────
+// ─── SSRF Protection — DNS-based validation ─────────────────────────────────
 
-const PRIVATE_IP_RE =
-  /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|0\.0\.0\.0|::1)/i;
+function isPrivateIPv4(ip: string): boolean {
+  const parts = ip.split(".").map(Number);
+  if (parts.length !== 4 || parts.some((p) => isNaN(p) || p < 0 || p > 255)) return false;
+  const [a, b] = parts;
+  return (
+    a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    (a === 169 && b === 254) ||
+    (a === 172 && b >= 16 && b <= 31) ||
+    (a === 192 && b === 168) ||
+    a === 255
+  );
+}
 
-function validateCompetitorUrl(raw: string): { ok: boolean; error?: string } {
+function isPrivateIPv6(ip: string): boolean {
+  const norm = ip.toLowerCase();
+  if (norm === "::1") return true;
+  if (/^f[cd]/i.test(norm)) return true; // fc00::/7 unique-local
+  if (/^fe[89ab]/i.test(norm)) return true; // fe80::/10 link-local
+  const v4mapped = norm.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  if (v4mapped) return isPrivateIPv4(v4mapped[1]);
+  return false;
+}
+
+async function validateUrlSSRF(
+  raw: string
+): Promise<{ ok: boolean; error?: string; normalized?: string }> {
   let parsed: URL;
   try {
     parsed = new URL(raw);
   } catch {
     return { ok: false, error: "La URL no es válida" };
   }
+
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
     return { ok: false, error: "Solo se permiten URLs http:// o https://" };
   }
+
   const host = parsed.hostname.toLowerCase();
-  if (PRIVATE_IP_RE.test(host)) {
-    return { ok: false, error: "No se permiten direcciones internas o localhost" };
+
+  // Fast-path: reject obvious cases before DNS
+  if (/^localhost$/i.test(host) || /^0\.0\.0\.0$/.test(host)) {
+    return { ok: false, error: "No se permiten direcciones internas" };
   }
-  // Block raw IPv4 to prevent SSRF
+  // Block raw IPv4 (no DNS needed)
   if (/^\d{1,3}(\.\d{1,3}){3}$/.test(host)) {
     return { ok: false, error: "No se permiten direcciones IP directas" };
   }
-  return { ok: true };
+  // Block raw IPv6 brackets e.g. [::1]
+  if (/^\[/.test(host)) {
+    return { ok: false, error: "No se permiten direcciones IPv6 directas" };
+  }
+
+  // DNS resolution: resolve ALL addresses and reject if any is private
+  let addresses: dns.LookupAddress[];
+  try {
+    addresses = await dns.lookup(host, { all: true });
+  } catch {
+    return { ok: false, error: "No se pudo resolver el dominio" };
+  }
+
+  if (addresses.length === 0) {
+    return { ok: false, error: "El dominio no resuelve a ninguna dirección" };
+  }
+
+  for (const { address, family } of addresses) {
+    if (family === 4 && isPrivateIPv4(address)) {
+      console.warn(`⚠️ [Competitor] SSRF block: ${host} → ${address} (private IPv4)`);
+      return { ok: false, error: "La URL apunta a una red interna" };
+    }
+    if (family === 6 && isPrivateIPv6(address)) {
+      console.warn(`⚠️ [Competitor] SSRF block: ${host} → ${address} (private IPv6)`);
+      return { ok: false, error: "La URL apunta a una red interna" };
+    }
+  }
+
+  return { ok: true, normalized: parsed.href };
 }
+
+// ─── CSRF Protection — exact host comparison ────────────────────────────────
+
+const ALLOWED_HOST = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000").host;
+  } catch {
+    return "localhost:3000";
+  }
+})();
+
+function checkOrigin(req: Request): boolean {
+  const origin = req.headers.get("origin");
+  if (!origin) return true; // no Origin: server-to-server / curl — allow
+  try {
+    // Exact host comparison prevents substring bypass (evil.com?listwise.app)
+    return new URL(origin).host === ALLOWED_HOST;
+  } catch {
+    return false;
+  }
+}
+
+// ─── Route ──────────────────────────────────────────────────────────────────
 
 const bodySchema = z.object({
   url: z.string().min(1).max(2048),
@@ -42,15 +122,11 @@ export async function POST(req: Request) {
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
-    // CSRF: verify request origin
-    const origin = req.headers.get("origin");
-    const host = req.headers.get("host");
-    if (origin && host && !origin.includes(host.split(":")[0])) {
-      console.warn(`⚠️ [Competitor] Origin mismatch: ${origin} vs ${host}`);
+    if (!checkOrigin(req)) {
+      console.warn(`⚠️ [Competitor] Origin mismatch from userId=${userId}`);
       return NextResponse.json({ error: "Solicitud no permitida" }, { status: 403 });
     }
 
-    // Rate limit: 5 per user per day
     const { success } = await ratelimitCompetitor.limit(`competitor:${userId}`);
     if (!success) {
       return NextResponse.json(
@@ -66,15 +142,16 @@ export async function POST(req: Request) {
     }
     const { url: rawUrl, listingId } = parsed.data;
 
-    const urlCheck = validateCompetitorUrl(rawUrl);
+    // SSRF: DNS-based validation (resolves all IPs, rejects private ranges)
+    const urlCheck = await validateUrlSSRF(rawUrl);
     if (!urlCheck.ok) {
       return NextResponse.json({ error: urlCheck.error }, { status: 400 });
     }
 
-    const normalizedUrl = new URL(rawUrl).href;
+    const normalizedUrl = urlCheck.normalized!;
     const now = Math.floor(Date.now() / 1000);
 
-    // Cache check: reuse COMPLETED analysis from last 24h for same URL
+    // Cache hit: reuse COMPLETED analysis from last 24h for same URL + user
     const [cached] = await db
       .select({ id: schema.competitorAnalyses.id })
       .from(schema.competitorAnalyses)
@@ -93,12 +170,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ analysisId: cached.id, cached: true });
     }
 
-    // Fetch optional listing for comparison context
+    // Optional: fetch listing context for comparison
     let listingTitle: string | undefined;
     let listingDescription: string | undefined;
     if (listingId) {
       const [listing] = await db
-        .select({ generatedTitle: schema.listings.generatedTitle, generatedDescription: schema.listings.generatedDescription })
+        .select({
+          generatedTitle: schema.listings.generatedTitle,
+          generatedDescription: schema.listings.generatedDescription,
+        })
         .from(schema.listings)
         .where(and(eq(schema.listings.id, listingId), eq(schema.listings.userId, userId)))
         .limit(1);
