@@ -1,7 +1,44 @@
 User-agent: *
 Allow: /
 Disallow: /api/
+Disallow: /dashboard
 Disallow: /dashboard/
+Disallow: /admin/
 Disallow: /sign-in/
 Disallow: /sign-up/
-Sitemap: https://listwise-app.onrender.com/sitemap.xml
+Disallow: /gamification
+
+# AI crawlers — explicit Allow for GEO indexing
+User-agent: GPTBot
+Allow: /
+Allow: /pricing
+Disallow: /api/
+Disallow: /dashboard
+
+User-agent: Claude-Web
+Allow: /
+Allow: /pricing
+Disallow: /api/
+Disallow: /dashboard
+
+User-agent: PerplexityBot
+Allow: /
+Allow: /pricing
+Disallow: /api/
+Disallow: /dashboard
+
+User-agent: Google-Extended
+Allow: /
+Allow: /pricing
+
+User-agent: Gemini-Web
+Allow: /
+Allow: /pricing
+Disallow: /api/
+Disallow: /dashboard
+
+User-agent: Bingbot
+Allow: /
+Allow: /pricing
+
+Sitemap: https://listwise.app/sitemap.xml

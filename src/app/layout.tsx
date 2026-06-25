@@ -5,19 +5,41 @@ import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
 
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://listwise.app";
+
 export const metadata: Metadata = {
-  title: "ListWise - Generador de descripciones de productos con IA",
-  description: "Ahorra horas de trabajo y aumenta tus ventas con descripciones optimizadas para SEO y conversión.",
+  metadataBase: new URL(BASE_URL),
+  title: {
+    default: "ListWise — Generador de Descripciones de Productos con IA",
+    template: "%s | ListWise",
+  },
+  description: "Genera títulos SEO, bullet points y descripciones de productos optimizados con IA. Procesa cientos de productos en minutos desde un CSV. Prueba gratis con 10 productos.",
+  keywords: ["generador descripciones productos", "IA ecommerce", "SEO productos", "optimizar listings Amazon", "descripciones marketplace", "inteligencia artificial tienda online"],
+  authors: [{ name: "ListWise", url: BASE_URL }],
+  creator: "ListWise",
+  publisher: "ListWise",
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
   openGraph: {
-    title: "ListWise - Generador de descripciones de productos con IA",
-    description: "Ahorra horas de trabajo y aumenta tus ventas con descripciones optimizadas para SEO y conversión.",
-    url: "https://listwise-app.onrender.com",
+    title: "ListWise — Generador de Descripciones de Productos con IA",
+    description: "Genera títulos SEO, bullet points y descripciones de productos con IA. Procesa cientos de productos desde un CSV en minutos.",
+    url: BASE_URL,
     siteName: "ListWise",
     images: [
       {
-        url: "https://listwise-app.onrender.com/og-image.png",
+        url: "/og-image.png",
         width: 1200,
         height: 630,
+        alt: "ListWise — Generador de listados de productos con IA",
       },
     ],
     locale: "es_ES",
@@ -25,13 +47,17 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "ListWise - Generador de descripciones de productos con IA",
-    description: "Ahorra horas de trabajo y aumenta tus ventas con descripciones optimizadas para SEO y conversión.",
-    images: ["https://listwise-app.onrender.com/og-image.png"],
+    title: "ListWise — Generador de Descripciones de Productos con IA",
+    description: "Genera títulos SEO, bullet points y descripciones de productos con IA. Prueba gratis.",
+    images: ["/og-image.png"],
   },
   icons: {
     icon: "/favicon.ico",
   },
+  alternates: {
+    canonical: BASE_URL,
+  },
+  category: "technology",
 };
 
 export default function RootLayout({

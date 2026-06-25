@@ -9,6 +9,7 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", download: false },
   { name: "🏆 Gamificación", href: "/gamification", download: false },
   { name: "Precios", href: "/pricing", download: false },
+  { name: "🔍 Competencia", href: "/dashboard/competitor", download: false },
   { name: "🎁 Invitar", href: "/dashboard/referrals", download: false },
   { name: "Plantilla CSV", href: "/api/template/csv", download: true },
 ];

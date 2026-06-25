@@ -182,6 +182,25 @@ export const gamificationDiscounts = sqliteTable("gamification_discounts", {
   userIdx: index("idx_gamification_discounts_user_id").on(table.userId),
 }));
 
+export const competitorAnalyses = sqliteTable("competitor_analyses", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  listingId: text("listing_id"),
+  url: text("url").notNull(),
+  status: text("status").notNull().default("PENDING"),
+  scrapedTitle: text("scraped_title"),
+  scrapedDescription: text("scraped_description"),
+  scrapedKeywords: text("scraped_keywords"),
+  analysis: text("analysis", { mode: "json" }),
+  errorMessage: text("error_message"),
+  cacheExpiresAt: integer("cache_expires_at"),
+  createdAt: integer("created_at").default(0),
+  updatedAt: integer("updated_at").default(0),
+}, (table) => ({
+  userIdx: index("idx_competitor_analyses_user_id").on(table.userId),
+  urlCacheIdx: index("idx_competitor_analyses_url").on(table.url, table.cacheExpiresAt),
+}));
+
 // Tabla de suscripciones (NUEVA)
 export const subscriptions = sqliteTable("subscriptions", {
   id: text("id").primaryKey(),

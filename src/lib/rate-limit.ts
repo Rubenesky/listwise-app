@@ -36,3 +36,11 @@ export const ratelimitGamification = new Ratelimit({
   analytics: false,
   prefix: "@upstash/ratelimit/gamification",
 });
+
+// Competitor analysis: 5 analyses per user per day
+export const ratelimitCompetitor = new Ratelimit({
+  redis,
+  limiter: Ratelimit.fixedWindow(5, "24 h"),
+  analytics: false,
+  prefix: "@upstash/ratelimit/competitor",
+});

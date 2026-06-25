@@ -671,7 +671,7 @@ export default function DashboardPage() {
               const modeTooltips: Record<GenerationMode, string> = {
                 creative: "Tono emocional y narrativo. Conecta con las aspiraciones del cliente. Ideal para moda, lifestyle y regalos.",
                 professional: "Tono técnico y formal. Destaca especificaciones y funcionalidad. Ideal para electrónica, herramientas y B2B.",
-                seo: "Optimizado para buscadores. Incluye palabras clave estratégicas de forma natural. Ideal para posicionar en Google.",
+                seo: "SEO + GEO: optimizado para buscadores tradicionales (Google) y motores de búsqueda de IA (ChatGPT, Perplexity, Gemini). Incluye palabras clave estratégicas y estructura semántica que los modelos de IA entienden mejor.",
               };
               return (
                 <div key={mode} className="flex items-center gap-1">
