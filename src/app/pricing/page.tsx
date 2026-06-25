@@ -6,6 +6,12 @@ import Link from "next/link";
 import Image from "next/image";
 import { CheckCircle, Zap } from "lucide-react";
 import { useState, useEffect } from "react";
+import { useUserPlan } from "@/app/api/user/plan/useUserPlan";
+
+const PLAN_LOGO: Record<string, string> = {
+  pro: "/logo-pro.png",
+  enterprise: "/logo-enterprise.png",
+};
 
 const plans = [
   {
@@ -80,6 +86,8 @@ const creditPacks = [
 
 export default function PricingPage() {
   const { isSignedIn } = useUser();
+  const { plan } = useUserPlan();
+  const logoSrc = PLAN_LOGO[plan] ?? "/logo-transparent.png";
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [referralCode, setReferralCode] = useState<string | null>(null);
@@ -139,7 +147,7 @@ export default function PricingPage() {
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link href="/">
             <Image
-              src="/logo-transparent.png"
+              src={logoSrc}
               alt="ListWise"
               width={120}
               height={40}

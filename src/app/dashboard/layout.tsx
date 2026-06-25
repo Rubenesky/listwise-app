@@ -4,6 +4,12 @@ import { UserButton } from "@clerk/nextjs";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
+import { useUserPlan } from "@/app/api/user/plan/useUserPlan";
+
+const PLAN_LOGO: Record<string, string> = {
+  pro: "/logo-pro.png",
+  enterprise: "/logo-enterprise.png",
+};
 
 const navigation = [
   { name: "Dashboard", href: "/dashboard", download: false },
@@ -20,6 +26,8 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const { plan } = useUserPlan();
+  const logoSrc = PLAN_LOGO[plan] ?? "/logo.png";
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -31,7 +39,7 @@ export default function DashboardLayout({
             <div className="flex items-center">
               <Link href="/dashboard" className="flex items-center">
                 <Image
-                  src="/logo.png"
+                  src={logoSrc}
                   alt="ListWise"
                   width={160}
                   height={50}
