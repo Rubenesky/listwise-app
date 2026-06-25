@@ -222,23 +222,12 @@ export default function HomePage() {
 
         <div className="max-w-6xl mx-auto px-4">
           {/* ── Hero ─────────────────────────────────────────── */}
-          <section className="text-center py-16 md:py-24">
-            <div className="flex justify-center mb-8">
-              <Image
-                src="/logo-transparent.png"
-                alt="ListWise"
-                width={300}
-                height={100}
-                className="h-16 w-auto drop-shadow-xl"
-                priority
-              />
-            </div>
-
-            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-6 leading-tight">
+          <section className="text-center py-8 md:py-12">
+            <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight">
               Genera descripciones de productos{" "}
               <span className="text-blue-600">que venden</span>
             </h1>
-            <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-10">
+            <p className="text-base md:text-lg text-gray-600 max-w-2xl mx-auto mb-8">
               Usa IA para crear títulos SEO, bullet points y descripciones
               optimizadas para Amazon, eBay y Shopify. Procesa tu catálogo
               entero en minutos.

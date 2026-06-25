@@ -4,7 +4,7 @@ import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { CheckCircle } from "lucide-react";
+import { CheckCircle, Zap } from "lucide-react";
 import { useState, useEffect } from "react";
 
 const plans = [
@@ -51,13 +51,39 @@ const plans = [
   },
 ];
 
+const creditPacks = [
+  {
+    name: "Starter",
+    credits: 50,
+    price: "4.99€",
+    priceId: "credits_50",
+    description: "Para proyectos puntuales",
+    popular: false,
+  },
+  {
+    name: "Growth",
+    credits: 200,
+    price: "14.99€",
+    priceId: "credits_200",
+    description: "El más elegido",
+    popular: true,
+  },
+  {
+    name: "Scale",
+    credits: 500,
+    price: "29.99€",
+    priceId: "credits_500",
+    description: "Para alto volumen",
+    popular: false,
+  },
+];
+
 export default function PricingPage() {
   const { isSignedIn } = useUser();
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [referralCode, setReferralCode] = useState<string | null>(null);
 
-  // Read referral code from URL (?ref=CODE) or localStorage
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const ref = params.get("ref");
@@ -83,7 +109,7 @@ export default function PricingPage() {
     setLoading(priceId);
 
     try {
-      console.log(`💰 [Pricing] Iniciando suscripción para plan: ${priceId}`);
+      console.log(`💰 [Pricing] Iniciando pago para: ${priceId}`);
       console.log(`🔗 [Pricing] Código de referido: ${referralCode ?? "ninguno"}`);
 
       const response = await fetch("/api/stripe/create-checkout", {
@@ -99,7 +125,7 @@ export default function PricingPage() {
       } else {
         alert("Error al crear la sesión de pago: " + (data.error || "Error desconocido"));
       }
-    } catch (error) {
+    } catch {
       alert("Error al procesar el pago. Inténtalo de nuevo.");
     } finally {
       setLoading(null);
@@ -107,20 +133,52 @@ export default function PricingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto">
-        {/* Logo */}
-        <div className="flex justify-center mb-5">
-          <Image
-            src="/logo-transparent.png"
-            alt="ListWise"
-            width={200}
-            height={65}
-            className="h-12 w-auto drop-shadow-md"
-            priority
-          />
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* ── Navbar ──────────────────────────────────────────── */}
+      <nav className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-200 shadow-sm">
+        <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
+          <Link href="/">
+            <Image
+              src="/logo-transparent.png"
+              alt="ListWise"
+              width={120}
+              height={40}
+              className="h-8 w-auto"
+              priority
+            />
+          </Link>
+          <div className="flex items-center gap-3">
+            {isSignedIn ? (
+              <Link
+                href="/dashboard"
+                className="flex items-center gap-1.5 text-sm text-gray-600 hover:text-blue-600 transition-colors font-medium"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+                </svg>
+                Dashboard
+              </Link>
+            ) : (
+              <>
+                <Link
+                  href="/sign-in"
+                  className="text-sm text-gray-600 hover:text-blue-600 transition-colors hidden sm:block"
+                >
+                  Iniciar sesión
+                </Link>
+                <Link
+                  href="/sign-up"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 hover:scale-105 transition-all"
+                >
+                  Crear cuenta gratis
+                </Link>
+              </>
+            )}
+          </div>
         </div>
+      </nav>
 
+      <div className="max-w-5xl mx-auto px-4 py-10">
         {/* Título */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900">
@@ -132,13 +190,17 @@ export default function PricingPage() {
           {referralCode && (
             <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-green-50 border border-green-200 rounded-full text-sm text-green-700">
               <span>🎁</span>
-              <span>Invitado con código <span className="font-mono font-semibold">{referralCode}</span> — obtendrás créditos extra al suscribirte</span>
+              <span>
+                Invitado con código{" "}
+                <span className="font-mono font-semibold">{referralCode}</span> — obtendrás
+                créditos extra al suscribirte
+              </span>
             </div>
           )}
         </div>
 
-        {/* Planes */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 max-w-5xl mx-auto">
+        {/* ── Planes de suscripción ─────────────────────────── */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-16">
           {plans.map((plan) => (
             <div
               key={plan.name}
@@ -154,9 +216,7 @@ export default function PricingPage() {
               <div className="p-8">
                 <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
                 <div className="mt-2 flex items-baseline">
-                  <span className="text-3xl font-extrabold text-gray-900">
-                    {plan.price}
-                  </span>
+                  <span className="text-3xl font-extrabold text-gray-900">{plan.price}</span>
                   <span className="ml-1 text-sm text-gray-500">/mes</span>
                 </div>
                 <p className="mt-1 text-sm text-gray-600">{plan.description}</p>
@@ -190,9 +250,25 @@ export default function PricingPage() {
                     >
                       {loading === plan.priceId ? (
                         <span className="flex items-center justify-center">
-                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          <svg
+                            className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              className="opacity-25"
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="currentColor"
+                              strokeWidth="4"
+                            />
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            />
                           </svg>
                           Procesando...
                         </span>
@@ -207,11 +283,64 @@ export default function PricingPage() {
           ))}
         </div>
 
+        {/* ── Créditos de uso ──────────────────────────────── */}
+        <div className="border-t border-gray-200 pt-12 mb-10">
+          <div className="text-center mb-8">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-medium text-amber-700 mb-3">
+              <Zap className="w-3.5 h-3.5" />
+              Sin suscripción mensual
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900">
+              Compra créditos de uso
+            </h2>
+            <p className="mt-2 text-sm text-gray-600 max-w-md mx-auto">
+              Paga solo lo que usas. Los créditos no caducan y se acumulan con tu plan.
+              1 crédito = 1 descripción generada.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
+            {creditPacks.map((pack) => (
+              <div
+                key={pack.name}
+                className={`bg-white rounded-xl border p-6 text-center hover:shadow-lg transition-shadow relative ${
+                  pack.popular ? "ring-2 ring-amber-400" : "border-gray-200"
+                }`}
+              >
+                {pack.popular && (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-amber-400 text-white text-xs font-semibold rounded-full whitespace-nowrap">
+                    Más elegido
+                  </span>
+                )}
+                <div className="text-2xl mb-1">⚡</div>
+                <h3 className="font-bold text-gray-900 text-lg">{pack.name}</h3>
+                <p className="text-xs text-gray-500 mb-3">{pack.description}</p>
+                <p className="text-3xl font-extrabold text-gray-900 mb-0.5">{pack.price}</p>
+                <p className="text-xs text-gray-400 mb-4">pago único</p>
+                <p className="text-sm font-semibold text-blue-600 mb-5">
+                  {pack.credits} créditos
+                </p>
+                <button
+                  onClick={() => handleSubscribe(pack.priceId)}
+                  disabled={loading === pack.priceId}
+                  className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+                    loading === pack.priceId
+                      ? "bg-amber-300 cursor-not-allowed text-white"
+                      : "bg-amber-400 text-white hover:bg-amber-500 hover:scale-105"
+                  }`}
+                >
+                  {loading === pack.priceId ? "Procesando..." : "Comprar créditos"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+
         {/* Footer */}
-        <div className="mt-8 text-center">
-          <p className="text-gray-600">
+        <div className="text-center pb-6">
+          <p className="text-gray-600 text-sm">
             ¿Necesitas un plan personalizado?{" "}
-            <a href="mailto:contacto@listwise.com" className="text-blue-600 hover:underline">
+            <a href="mailto:contacto@listwise.app" className="text-blue-600 hover:underline">
               Contáctanos
             </a>
           </p>
