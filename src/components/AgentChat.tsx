@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Send, Sparkles, Loader2, Zap } from "lucide-react";
+import { Send, Sparkles, Loader2, Zap, CheckCircle2, Copy, ChevronDown, ChevronUp } from "lucide-react";
 
 interface AgentChatProps {
   listingId: string;
@@ -14,10 +14,17 @@ interface AgentChatProps {
   }) => void;
 }
 
+interface Changes {
+  title?: string | null;
+  bullets?: string[] | null;
+  description?: string | null;
+}
+
 interface Message {
-  role: "user" | "assistant";
+  role: "user" | "assistant" | "changes";
   content: string;
   isTyping?: boolean;
+  changes?: Changes;
 }
 
 const QUICK_ACTIONS = [
@@ -26,6 +33,135 @@ const QUICK_ACTIONS = [
   { label: "Añadir SEO", command: "Añade palabras clave SEO relevantes" },
   { label: "Hacer juvenil", command: "Hazla más juvenil y fresca" },
 ];
+
+function ChangeCard({ changes }: { changes: Changes }) {
+  const [descExpanded, setDescExpanded] = useState(false);
+  const [bulletsExpanded, setBulletsExpanded] = useState(false);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text).then(() => {
+      setCopiedField(field);
+      setTimeout(() => setCopiedField(null), 2000);
+    });
+  };
+
+  const hasChanges =
+    (changes.title && changes.title.trim()) ||
+    (changes.bullets && changes.bullets.length > 0) ||
+    (changes.description && changes.description.trim());
+
+  if (!hasChanges) return null;
+
+  const visibleBullets = bulletsExpanded
+    ? changes.bullets ?? []
+    : (changes.bullets ?? []).slice(0, 3);
+  const hasMoreBullets = (changes.bullets ?? []).length > 3;
+
+  const descPreview = changes.description
+    ? descExpanded
+      ? changes.description
+      : changes.description.slice(0, 180) + (changes.description.length > 180 ? "…" : "")
+    : null;
+
+  return (
+    <div className="rounded-xl border border-green-200 bg-green-50 overflow-hidden text-xs w-full max-w-[90%]">
+      {/* Header */}
+      <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-500">
+        <CheckCircle2 className="h-3.5 w-3.5 text-white shrink-0" />
+        <span className="text-white font-semibold text-xs">Cambios aplicados</span>
+      </div>
+
+      <div className="p-3 space-y-2.5">
+        {/* Title */}
+        {changes.title && changes.title.trim() && (
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <span className="font-semibold text-green-800 uppercase tracking-wide" style={{ fontSize: "10px" }}>
+                Título
+              </span>
+              <button
+                onClick={() => copyToClipboard(changes.title!, "title")}
+                className="flex items-center gap-1 text-green-700 hover:text-green-900 transition-colors"
+              >
+                <Copy className="h-3 w-3" />
+                <span>{copiedField === "title" ? "¡Copiado!" : "Copiar"}</span>
+              </button>
+            </div>
+            <p className="text-gray-800 leading-snug bg-white rounded-lg px-2.5 py-1.5 border border-green-100">
+              {changes.title}
+            </p>
+          </div>
+        )}
+
+        {/* Bullets */}
+        {changes.bullets && changes.bullets.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <span className="font-semibold text-green-800 uppercase tracking-wide" style={{ fontSize: "10px" }}>
+                Bullets ({changes.bullets.length})
+              </span>
+              <button
+                onClick={() => copyToClipboard(changes.bullets!.join("\n"), "bullets")}
+                className="flex items-center gap-1 text-green-700 hover:text-green-900 transition-colors"
+              >
+                <Copy className="h-3 w-3" />
+                <span>{copiedField === "bullets" ? "¡Copiado!" : "Copiar"}</span>
+              </button>
+            </div>
+            <ul className="space-y-1">
+              {visibleBullets.map((b, i) => (
+                <li key={i} className="flex items-start gap-1.5 bg-white rounded-lg px-2.5 py-1.5 border border-green-100">
+                  <span className="text-green-500 shrink-0 mt-0.5">•</span>
+                  <span className="text-gray-800 leading-snug">{b}</span>
+                </li>
+              ))}
+            </ul>
+            {hasMoreBullets && (
+              <button
+                onClick={() => setBulletsExpanded((v) => !v)}
+                className="mt-1 flex items-center gap-1 text-green-700 hover:text-green-900 transition-colors"
+              >
+                {bulletsExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                {bulletsExpanded ? "Ver menos" : `Ver ${changes.bullets.length - 3} más`}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Description */}
+        {changes.description && changes.description.trim() && (
+          <div>
+            <div className="flex items-center justify-between gap-2 mb-1">
+              <span className="font-semibold text-green-800 uppercase tracking-wide" style={{ fontSize: "10px" }}>
+                Descripción
+              </span>
+              <button
+                onClick={() => copyToClipboard(changes.description!, "description")}
+                className="flex items-center gap-1 text-green-700 hover:text-green-900 transition-colors"
+              >
+                <Copy className="h-3 w-3" />
+                <span>{copiedField === "description" ? "¡Copiado!" : "Copiar"}</span>
+              </button>
+            </div>
+            <div className="bg-white rounded-lg px-2.5 py-1.5 border border-green-100">
+              <p className="text-gray-800 leading-snug whitespace-pre-wrap">{descPreview}</p>
+              {changes.description.length > 180 && (
+                <button
+                  onClick={() => setDescExpanded((v) => !v)}
+                  className="mt-1 flex items-center gap-1 text-green-700 hover:text-green-900 transition-colors"
+                >
+                  {descExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+                  {descExpanded ? "Ver menos" : "Ver más"}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
 
 export default function AgentChat({ listingId, productName, inline = false, onApplyChanges }: AgentChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -52,7 +188,6 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Reset conversation when product changes
   useEffect(() => {
     setMessages([]);
     setConversationId(null);
@@ -106,7 +241,6 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
         throw new Error("Error en la consulta");
       }
 
-      // Read SSE stream — typing indicator stays until done event
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -135,22 +269,31 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
               const msg =
                 typeof data.parsed.message === "string"
                   ? data.parsed.message
-                  : "Cambios aplicados correctamente.";
+                  : "Cambios procesados correctamente.";
 
-              // Replace typing indicator with the actual AI message
-              setMessages((prev) => [...prev.slice(0, -1), { role: "assistant", content: msg }]);
+              const p = data.parsed as Record<string, unknown>;
+              const changes: Changes = {
+                title: typeof p.updatedTitle === "string" ? p.updatedTitle : null,
+                bullets: Array.isArray(p.updatedBullets) ? (p.updatedBullets as string[]) : null,
+                description: typeof p.updatedDescription === "string" ? p.updatedDescription : null,
+              };
+
+              const hasChanges = changes.title || (changes.bullets && changes.bullets.length > 0) || changes.description;
+
+              // Replace typing indicator with text message, then optionally add change card
+              setMessages((prev) => {
+                const withMsg: Message[] = [...prev.slice(0, -1), { role: "assistant", content: msg }];
+                if (hasChanges) {
+                  withMsg.push({ role: "changes", content: "", changes });
+                }
+                return withMsg;
+              });
 
               if (data.remainingCredits !== undefined) setCredits(data.remainingCredits);
               if (data.conversationId) setConversationId(data.conversationId);
 
-              // Apply content changes to LivePreview via callback
-              if (onApplyChanges) {
-                const p = data.parsed as Record<string, unknown>;
-                onApplyChanges({
-                  title: typeof p.updatedTitle === "string" ? p.updatedTitle : null,
-                  bullets: Array.isArray(p.updatedBullets) ? (p.updatedBullets as string[]) : null,
-                  description: typeof p.updatedDescription === "string" ? p.updatedDescription : null,
-                });
+              if (onApplyChanges && hasChanges) {
+                onApplyChanges(changes);
               }
             }
           } catch {
@@ -254,28 +397,37 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
             </div>
           </div>
         ) : (
-          messages.map((msg, i) => (
-            <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-              <div
-                className={`max-w-[82%] rounded-xl px-3 py-2 text-sm ${
-                  msg.role === "user"
-                    ? "bg-blue-600 text-white"
-                    : msg.isTyping
-                    ? "bg-gray-100 text-gray-400 flex items-center gap-1.5"
-                    : "bg-gray-100 text-gray-800"
-                }`}
-              >
-                {msg.isTyping ? (
-                  <>
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    <span className="text-xs">IA escribiendo...</span>
-                  </>
-                ) : (
-                  <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
-                )}
+          messages.map((msg, i) => {
+            if (msg.role === "changes" && msg.changes) {
+              return (
+                <div key={i} className="flex justify-start">
+                  <ChangeCard changes={msg.changes} />
+                </div>
+              );
+            }
+            return (
+              <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                <div
+                  className={`max-w-[82%] rounded-xl px-3 py-2 text-sm ${
+                    msg.role === "user"
+                      ? "bg-blue-600 text-white"
+                      : msg.isTyping
+                      ? "bg-gray-100 text-gray-400 flex items-center gap-1.5"
+                      : "bg-gray-100 text-gray-800"
+                  }`}
+                >
+                  {msg.isTyping ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <span className="text-xs">IA escribiendo...</span>
+                    </>
+                  ) : (
+                    <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                  )}
+                </div>
               </div>
-            </div>
-          ))
+            );
+          })
         )}
         <div ref={messagesEndRef} />
       </div>

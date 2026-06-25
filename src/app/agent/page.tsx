@@ -15,10 +15,23 @@ interface Listing {
 export default function AgentPage() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
+  const [updatedIds, setUpdatedIds] = useState<Set<string>>(new Set());
   const [credits, setCredits] = useState<number | "ilimitado">(0);
   const [plan, setPlan] = useState("free");
   const [loadingListings, setLoadingListings] = useState(true);
   const [search, setSearch] = useState("");
+
+  const handleApplyChanges = () => {
+    if (!selectedListing) return;
+    setUpdatedIds((prev) => new Set(prev).add(selectedListing.id));
+    setTimeout(() => {
+      setUpdatedIds((prev) => {
+        const next = new Set(prev);
+        next.delete(selectedListing.id);
+        return next;
+      });
+    }, 4000);
+  };
 
   useEffect(() => {
     fetch("/api/agent/credits/status")
@@ -136,7 +149,14 @@ export default function AgentPage() {
                           : "text-gray-700 hover:bg-gray-100"
                       }`}
                     >
-                      <p className="font-medium truncate">{listing.productName}</p>
+                      <div className="flex items-center justify-between gap-1">
+                        <p className="font-medium truncate">{listing.productName}</p>
+                        {updatedIds.has(listing.id) && (
+                          <span className="shrink-0 text-xs font-semibold px-1.5 py-0.5 rounded-full bg-green-400 text-white animate-pulse">
+                            ✓
+                          </span>
+                        )}
+                      </div>
                       {listing.category && (
                         <p className={`text-xs mt-0.5 truncate ${
                           selectedListing?.id === listing.id ? "text-blue-200" : "text-gray-400"
@@ -166,6 +186,7 @@ export default function AgentPage() {
               listingId={selectedListing.id}
               productName={selectedListing.productName}
               inline
+              onApplyChanges={handleApplyChanges}
             />
           ) : (
             <div className="h-full flex flex-col items-center justify-center bg-white border border-gray-200 rounded-xl text-center p-8">

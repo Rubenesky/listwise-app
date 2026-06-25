@@ -187,13 +187,13 @@ export default function PricingPage() {
         </div>
       </nav>
 
-      <div className="max-w-5xl mx-auto px-4 py-10">
+      <div className="max-w-5xl mx-auto px-4 py-5">
         {/* Título */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">
+        <div className="text-center mb-4">
+          <h1 className="text-2xl font-bold text-gray-900">
             Elige el plan perfecto para tu negocio
           </h1>
-          <p className="mt-2 text-base text-gray-600 max-w-xl mx-auto">
+          <p className="mt-1 text-sm text-gray-600 max-w-xl mx-auto">
             Genera descripciones de productos con IA y ahorra horas de trabajo
           </p>
           {referralCode && (
@@ -209,7 +209,7 @@ export default function PricingPage() {
         </div>
 
         {/* ── Tab toggle ───────────────────────────────────── */}
-        <div className="flex justify-center mb-8">
+        <div className="flex justify-center mb-5">
           <div className="inline-flex bg-gray-100 rounded-xl p-1 gap-1">
             <button
               onClick={() => setActiveTab("plans")}
@@ -236,7 +236,7 @@ export default function PricingPage() {
         </div>
 
         {/* ── Planes de suscripción ─────────────────────────── */}
-        {activeTab === "plans" && <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-16">
+        {activeTab === "plans" && <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           {plans.map((plan) => (
             <div
               key={plan.name}
@@ -249,24 +249,24 @@ export default function PricingPage() {
                   Más popular
                 </div>
               )}
-              <div className="p-8">
-                <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
-                <div className="mt-2 flex items-baseline">
-                  <span className="text-3xl font-extrabold text-gray-900">{plan.price}</span>
+              <div className="p-5">
+                <h3 className="text-lg font-bold text-gray-900">{plan.name}</h3>
+                <div className="mt-1.5 flex items-baseline">
+                  <span className="text-2xl font-extrabold text-gray-900">{plan.price}</span>
                   <span className="ml-1 text-sm text-gray-500">/mes</span>
                 </div>
-                <p className="mt-1 text-sm text-gray-600">{plan.description}</p>
+                <p className="mt-0.5 text-xs text-gray-600">{plan.description}</p>
 
-                <ul className="mt-4 space-y-2">
+                <ul className="mt-3 space-y-1.5">
                   {plan.features.map((feature) => (
                     <li key={feature} className="flex items-start">
-                      <CheckCircle className="h-4 w-4 text-green-500 shrink-0 mt-0.5" />
-                      <span className="ml-2 text-sm text-gray-700">{feature}</span>
+                      <CheckCircle className="h-3.5 w-3.5 text-green-500 shrink-0 mt-0.5" />
+                      <span className="ml-2 text-xs text-gray-700">{feature}</span>
                     </li>
                   ))}
                 </ul>
 
-                <div className="mt-5">
+                <div className="mt-4">
                   {plan.priceId === "free" ? (
                     <Link
                       href="/dashboard"
@@ -320,16 +320,16 @@ export default function PricingPage() {
         </div>}
 
         {/* ── Créditos de uso ──────────────────────────────── */}
-        {activeTab === "credits" && <div className="mb-10">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-medium text-amber-700 mb-3">
+        {activeTab === "credits" && <div className="mb-4">
+          <div className="text-center mb-5">
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-medium text-amber-700 mb-2">
               <Zap className="w-3.5 h-3.5" />
               Sin suscripción mensual
             </div>
-            <h2 className="text-2xl font-bold text-gray-900">
+            <h2 className="text-xl font-bold text-gray-900">
               Compra créditos de uso
             </h2>
-            <p className="mt-2 text-sm text-gray-600 max-w-md mx-auto">
+            <p className="mt-1 text-xs text-gray-600 max-w-md mx-auto">
               Paga solo lo que usas. Los créditos no caducan y se acumulan con tu plan.
               Válidos para descripciones y Agent Mode.
             </p>
@@ -339,7 +339,7 @@ export default function PricingPage() {
             {creditPacks.map((pack) => (
               <div
                 key={pack.name}
-                className={`bg-white rounded-xl border p-6 text-center hover:shadow-lg transition-shadow relative ${
+                className={`bg-white rounded-xl border p-5 text-center hover:shadow-lg transition-shadow relative ${
                   pack.popular ? "ring-2 ring-amber-400" : "border-gray-200"
                 }`}
               >
@@ -348,12 +348,12 @@ export default function PricingPage() {
                     Más elegido
                   </span>
                 )}
-                <div className="text-2xl mb-1">⚡</div>
-                <h3 className="font-bold text-gray-900 text-lg">{pack.name}</h3>
-                <p className="text-xs text-gray-500 mb-3">{pack.description}</p>
-                <p className="text-3xl font-extrabold text-gray-900 mb-0.5">{pack.price}</p>
-                <p className="text-xs text-gray-400 mb-4">pago único</p>
-                <p className="text-sm font-semibold text-blue-600 mb-5">
+                <div className="text-xl mb-1">⚡</div>
+                <h3 className="font-bold text-gray-900 text-base">{pack.name}</h3>
+                <p className="text-xs text-gray-500 mb-2">{pack.description}</p>
+                <p className="text-2xl font-extrabold text-gray-900 mb-0.5">{pack.price}</p>
+                <p className="text-xs text-gray-400 mb-2">pago único</p>
+                <p className="text-sm font-semibold text-blue-600 mb-4">
                   {pack.credits} créditos
                 </p>
                 <button
@@ -373,7 +373,7 @@ export default function PricingPage() {
         </div>}
 
         {/* Footer */}
-        <div className="text-center pb-6">
+        <div className="text-center pb-3">
           <p className="text-gray-600 text-sm">
             ¿Necesitas un plan personalizado?{" "}
             <a href="mailto:contacto@listwise.app" className="text-blue-600 hover:underline">
