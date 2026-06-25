@@ -11,6 +11,32 @@ const PLAN_LOGO: Record<string, string> = {
   enterprise: "/logo-enterprise.png",
 };
 
+const PLAN_STYLES: Record<string, {
+  nav: string;
+  linkActive: string;
+  linkInactive: string;
+  downloadLink: string;
+}> = {
+  free: {
+    nav: "bg-white border-b border-gray-200",
+    linkActive: "bg-blue-100 text-blue-700",
+    linkInactive: "text-gray-700 hover:bg-gray-100",
+    downloadLink: "text-blue-600 hover:bg-blue-50",
+  },
+  pro: {
+    nav: "bg-amber-50 border-b border-amber-300",
+    linkActive: "bg-amber-200 text-amber-900",
+    linkInactive: "text-gray-700 hover:bg-amber-100",
+    downloadLink: "text-amber-700 hover:bg-amber-100",
+  },
+  enterprise: {
+    nav: "bg-gray-900 border-b border-gray-700",
+    linkActive: "bg-gray-700 text-white",
+    linkInactive: "text-gray-200 hover:bg-gray-700",
+    downloadLink: "text-amber-400 hover:bg-gray-700",
+  },
+};
+
 const navigation = [
   { name: "Dashboard", href: "/dashboard", download: false },
   { name: "🏆 Gamificación", href: "/gamification", download: false },
@@ -28,11 +54,12 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const { plan } = useUserPlan();
   const logoSrc = PLAN_LOGO[plan] ?? "/logo.png";
+  const styles = PLAN_STYLES[plan] ?? PLAN_STYLES.free;
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Navbar */}
-      <nav className="bg-white border-b border-gray-200 fixed w-full z-10">
+      <nav className={`${styles.nav} fixed w-full z-10`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             {/* Logo + Navegación */}
@@ -54,7 +81,7 @@ export default function DashboardLayout({
                       key={item.name}
                       href={item.href}
                       download
-                      className="px-3 py-2 rounded-md text-sm font-medium text-blue-600 hover:bg-blue-50 flex items-center gap-1"
+                      className={`px-3 py-2 rounded-md text-sm font-medium flex items-center gap-1 ${styles.downloadLink}`}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -67,8 +94,8 @@ export default function DashboardLayout({
                       href={item.href}
                       className={`px-3 py-2 rounded-md text-sm font-medium ${
                         pathname === item.href
-                          ? "bg-blue-100 text-blue-700"
-                          : "text-gray-700 hover:bg-gray-100"
+                          ? styles.linkActive
+                          : styles.linkInactive
                       }`}
                     >
                       {item.name}
