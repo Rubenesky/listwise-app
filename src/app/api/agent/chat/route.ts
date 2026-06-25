@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { eq, and, sql } from "drizzle-orm";
-import { groq } from "@/lib/ai/client-groq";
+import { providers, getDefaultProvider } from "@/lib/ai/providers";
 import { ratelimitAgentMinute, ratelimitAgentHour } from "@/lib/rate-limit";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
@@ -128,9 +128,12 @@ export async function POST(req: Request) {
     const startTime = Date.now();
     const newConvId = uuidv4();
 
-    // Call Groq with streaming
-    const stream = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+    // Call AI provider with streaming
+    const aiProvider = getDefaultProvider();
+    const aiConfig = providers[aiProvider];
+    console.log(`🤖 [Agent] Usando proveedor: ${aiProvider} (${aiConfig.defaultModel})`);
+    const stream = await aiConfig.client.chat.completions.create({
+      model: aiConfig.defaultModel,
       messages: [{ role: "system", content: systemPrompt }, ...messages] as never,
       temperature: 0.7,
       max_tokens: 1024,

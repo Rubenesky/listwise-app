@@ -116,7 +116,7 @@ export default function PricingPage() {
             alt="ListWise"
             width={200}
             height={65}
-            className="h-14 w-auto drop-shadow-md"
+            className="h-20 w-auto drop-shadow-md"
             priority
           />
         </div>

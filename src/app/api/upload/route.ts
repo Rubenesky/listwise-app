@@ -118,7 +118,7 @@ function validateRows(records: Record<string, string>[]): ValidationResult {
 
 // ─── Trigger ──────────────────────────────────────────────────────────────────
 
-async function sendTriggerEvent(userId: string, batchId: string, mode: string) {
+async function sendTriggerEvent(userId: string, batchId: string, mode: string, provider = "groq") {
   const response = await fetch("https://api.trigger.dev/api/v1/tasks/process-batch/trigger", {
     method: "POST",
     headers: {
@@ -130,6 +130,7 @@ async function sendTriggerEvent(userId: string, batchId: string, mode: string) {
         userId: userId,
         batchId: batchId,
         mode: mode,
+        provider: provider,
       },
     }),
   });
@@ -184,6 +185,7 @@ export async function POST(req: Request) {
     const formData = await req.formData();
     const file = formData.get("file") as File;
     const mode = (formData.get("mode") as string) || "creative";
+    const provider = (formData.get("provider") as string) || "groq";
 
     if (!file) {
       return NextResponse.json({ error: "No se proporcionó ningún archivo" }, { status: 400 });
@@ -265,7 +267,7 @@ export async function POST(req: Request) {
     // 7. Disparar el worker de Trigger.dev
     const batchId = uuidv4();
     console.log(`📤 [Upload] Batch ID: ${batchId}`);
-    await sendTriggerEvent(userId, batchId, mode);
+    await sendTriggerEvent(userId, batchId, mode, provider);
 
     return NextResponse.json({
       success: true,

@@ -75,6 +75,10 @@ export default function DashboardPage() {
   const [editDescription, setEditDescription] = useState("");
   const [saving, setSaving] = useState(false);
   const [sharing, setSharing] = useState<string | null>(null);
+  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
+  const [aiProvider, setAiProvider] = useState("groq");
+  const [availableProviders, setAvailableProviders] = useState<string[]>(["groq"]);
+  const currentPageRef = useRef(1);
 
   // Derived stats from listings state
   const completedCount = listings.filter((l) => l.status === "COMPLETED").length;
@@ -98,10 +102,12 @@ export default function DashboardPage() {
     if (intervalRef.current) return;
     intervalRef.current = setInterval(async () => {
       try {
-        const res = await fetch("/api/listings/dashboard");
+        const res = await fetch(`/api/listings/dashboard?page=${currentPageRef.current}&limit=20`);
         if (!res.ok) return;
-        const data: ListingRow[] = await res.json();
+        const json = await res.json();
+        const data: ListingRow[] = json.listings ?? [];
         setListings(data);
+        if (json.pagination) setPagination(json.pagination);
         const hasActive = data.some(
           (l) => l.status === "PENDING" || l.status === "PROCESSING"
         );
@@ -115,12 +121,15 @@ export default function DashboardPage() {
     }, 4000);
   }, [stopPolling]);
 
-  const fetchListings = useCallback(async () => {
+  const fetchListings = useCallback(async (page = 1) => {
+    currentPageRef.current = page;
     try {
-      const res = await fetch("/api/listings/dashboard");
+      const res = await fetch(`/api/listings/dashboard?page=${page}&limit=20`);
       if (!res.ok) return;
-      const data: ListingRow[] = await res.json();
+      const json = await res.json();
+      const data: ListingRow[] = json.listings ?? [];
       setListings(data);
+      if (json.pagination) setPagination(json.pagination);
       const hasActive = data.some(
         (l) => l.status === "PENDING" || l.status === "PROCESSING"
       );
@@ -148,6 +157,15 @@ export default function DashboardPage() {
     fetch("/api/referrals/credits")
       .then((r) => r.json())
       .then((d) => setCredits(d.credits ?? 0))
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    fetch("/api/ai/providers")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.providers?.length) setAvailableProviders(d.providers);
+      })
       .catch(() => {});
   }, []);
 
@@ -230,6 +248,7 @@ export default function DashboardPage() {
       const formData = new FormData();
       formData.append("file", file);
       formData.append("mode", selectedMode);
+      formData.append("provider", aiProvider);
       const res = await fetch("/api/upload", {
         method: "POST",
         body: formData,
@@ -291,7 +310,7 @@ export default function DashboardPage() {
   const planLabel = PLAN_LABELS[plan] || "Gratuito";
   const planColor = PLAN_COLORS[plan] || "bg-gray-100 text-gray-700";
   const planLimit = PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS] || 10;
-  const currentCount = listings.length;
+  const currentCount = pagination.total || listings.length;
   const hasPendingOrProcessing = pendingOrProcessingCount > 0;
 
   return (
@@ -673,6 +692,33 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* AI Provider selector */}
+        {availableProviders.length > 1 && (
+          <div>
+            <div className="flex items-center gap-1.5 mb-2">
+              <label className="text-sm font-medium text-gray-700">Proveedor de IA</label>
+            </div>
+            <div className="flex gap-2 flex-wrap">
+              {availableProviders.map((p) => {
+                const labels: Record<string, string> = { groq: "⚡ Groq", gemini: "✨ Gemini" };
+                return (
+                  <button
+                    key={p}
+                    onClick={() => setAiProvider(p)}
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      aiProvider === p
+                        ? "bg-purple-600 text-white"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    {labels[p] ?? p}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Voice profile */}
         <VoiceProfileManager />
 
@@ -738,10 +784,10 @@ export default function DashboardPage() {
               <table className="w-full text-xs">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    <th className="px-4 py-3 text-left font-medium text-gray-700">Producto</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-700">Estado</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-700">Título generado</th>
-                    <th className="px-4 py-3 text-left font-medium text-gray-700">Acciones</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-700">Producto</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-700">Estado</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-700">Título generado</th>
+                    <th className="px-3 py-2 text-left font-medium text-gray-700">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -751,7 +797,7 @@ export default function DashboardPage() {
                       className={`hover:bg-gray-50 cursor-pointer ${selectedProductId === listing.id ? "bg-blue-50" : ""}`}
                       onClick={() => setSelectedProductId(listing.id)}
                     >
-                      <td className="px-4 py-3 max-w-[200px]">
+                      <td className="px-3 py-2 max-w-[200px]">
                         <button
                           onClick={(e) => { e.stopPropagation(); openModal(listing); }}
                           className="font-medium text-gray-900 hover:text-blue-600 text-left truncate w-full transition-colors"
@@ -759,11 +805,11 @@ export default function DashboardPage() {
                           {listing.productName}
                         </button>
                       </td>
-                      <td className="px-4 py-3">{getStatusBadge(listing.status)}</td>
-                      <td className="px-4 py-3 text-gray-500 max-w-[300px] truncate">
+                      <td className="px-3 py-2">{getStatusBadge(listing.status)}</td>
+                      <td className="px-3 py-2 text-gray-500 max-w-[300px] truncate">
                         {listing.generatedTitle || "—"}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-3 py-2">
                         <div className="flex items-center gap-1">
                           <button
                             onClick={(e) => { e.stopPropagation(); openModal(listing); }}
@@ -787,6 +833,48 @@ export default function DashboardPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* Pagination controls */}
+          {pagination.totalPages > 1 && (
+            <div className="px-4 py-3 border-t bg-gray-50 flex items-center justify-between">
+              <p className="text-xs text-gray-500">
+                Página {pagination.page} de {pagination.totalPages} ({pagination.total} productos)
+              </p>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => fetchListings(pagination.page - 1)}
+                  disabled={pagination.page <= 1}
+                  className="px-3 py-1.5 text-xs border rounded-lg disabled:opacity-40 hover:bg-gray-100 transition-colors"
+                >
+                  ← Anterior
+                </button>
+                {Array.from({ length: Math.min(5, pagination.totalPages) }, (_, i) => {
+                  const start = Math.max(1, Math.min(pagination.page - 2, pagination.totalPages - 4));
+                  const pg = start + i;
+                  return (
+                    <button
+                      key={pg}
+                      onClick={() => fetchListings(pg)}
+                      className={`w-8 h-8 text-xs rounded-lg transition-colors ${
+                        pg === pagination.page
+                          ? "bg-blue-600 text-white"
+                          : "hover:bg-gray-100 text-gray-700"
+                      }`}
+                    >
+                      {pg}
+                    </button>
+                  );
+                })}
+                <button
+                  onClick={() => fetchListings(pagination.page + 1)}
+                  disabled={pagination.page >= pagination.totalPages}
+                  className="px-3 py-1.5 text-xs border rounded-lg disabled:opacity-40 hover:bg-gray-100 transition-colors"
+                >
+                  Siguiente →
+                </button>
+              </div>
             </div>
           )}
         </div>

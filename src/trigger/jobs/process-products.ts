@@ -2,8 +2,8 @@ import { task, retry } from "@trigger.dev/sdk/v3";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { groq } from "@/lib/ai/client-groq";
 import { SYSTEM_PROMPT, buildUserPromptWithVoice, MODE_CONFIG, type GenerationMode, type VoiceProfileData } from "@/lib/ai/prompts";
+import { providers, type AIProvider } from "@/lib/ai/providers";
 import type { GeneratedContent, BatchProcessPayload } from "@/types";
 
 const generatedContentSchema = z.object({
@@ -58,8 +58,11 @@ export const processProductsTask = task({
   run: async (payload: BatchProcessPayload) => {
     console.log(`📦 [Trigger] Procesando batch para usuario: ${payload.userId}`);
     console.log(`[process-batch] ▶ Iniciando para userId: ${payload.userId}`);
-    const { userId, mode } = payload;
+    const { userId, mode, provider } = payload;
     const safeMode = (mode && mode in MODE_CONFIG ? mode : "creative") as GenerationMode;
+    const safeProvider = (provider && provider in providers ? provider : "groq") as AIProvider;
+    const aiConfig = providers[safeProvider];
+    console.log(`🤖 [process-batch] Usando proveedor: ${safeProvider} (${aiConfig.defaultModel})`);
     const temperature = MODE_CONFIG[safeMode].temperature;
 
     // Fetch active voice profile once (before the loop)
@@ -118,8 +121,8 @@ export const processProductsTask = task({
 
         const response = await retry.onThrow(
           async () => {
-            return await groq.chat.completions.create({
-              model: "llama-3.3-70b-versatile",
+            return await aiConfig.client.chat.completions.create({
+              model: aiConfig.defaultModel,
               messages: [
                 { role: "system", content: SYSTEM_PROMPT },
                 { role: "user", content: buildUserPromptWithVoice(

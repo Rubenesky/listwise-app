@@ -68,6 +68,7 @@ export const listings = sqliteTable("listings", {
   createdAt: integer("created_at").notNull().default(0),
 }, (table) => ({
   userIdIdx: index("idx_listings_user_id").on(table.userId),
+  userCreatedIdx: index("idx_listings_user_id_created_at").on(table.userId, table.createdAt),
 }));
 
 export const pageViews = sqliteTable("page_views", {
