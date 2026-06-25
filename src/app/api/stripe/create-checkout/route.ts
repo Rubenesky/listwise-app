@@ -11,10 +11,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 const PRICE_IDS: Record<string, string> = {
   pro: "price_1Tl68X1uySlskct3CuBf7pjw",
   enterprise: "price_1Tl69t1uySlskct3TIl1qBqc",
-  // Agent Mode packs — one-time payments (replace with real Stripe price IDs)
-  agent_pack_s: "price_AGENT_PACK_S",
-  agent_pack_m: "price_AGENT_PACK_M",
-  agent_pack_l: "price_AGENT_PACK_L",
+  agent_pack_s: "price_1Tm1Ki1uySlskct3jd7NLdA3",
+  agent_pack_m: "price_1Tm1M41uySlskct3fECTVMZp",
+  agent_pack_l: "price_1Tm1Mk1uySlskct3eKYmbioP",
 };
 
 // One-time payment packs (not subscriptions)
