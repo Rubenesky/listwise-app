@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Send, Sparkles, Loader2, Zap, CheckCircle2, Copy, ChevronDown, ChevronUp } from "lucide-react";
+import { Send, Sparkles, Loader2, Zap, CheckCircle2, Copy, ChevronDown, ChevronUp, History } from "lucide-react";
 
 interface AgentChatProps {
   listingId: string;
@@ -167,6 +167,8 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [historicalCount, setHistoricalCount] = useState(0);
   const [credits, setCredits] = useState<number | "ilimitado">(0);
   const [plan, setPlan] = useState("free");
   const [conversationId, setConversationId] = useState<string | null>(null);
@@ -188,9 +190,29 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Load conversation history when product changes
   useEffect(() => {
     setMessages([]);
     setConversationId(null);
+    setHistoricalCount(0);
+    setLoadingHistory(true);
+
+    fetch(`/api/agent/conversation?listingId=${listingId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.conversation) {
+          const stored = d.conversation.messages as { role: string; content: string }[];
+          const mapped: Message[] = stored.map((m) => ({
+            role: m.role as "user" | "assistant",
+            content: m.content,
+          }));
+          setMessages(mapped);
+          setConversationId(d.conversation.id);
+          setHistoricalCount(mapped.length);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoadingHistory(false));
   }, [listingId]);
 
   const isFreeWithNoCredits = plan === "free" && credits === 0;
@@ -372,9 +394,30 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
         </div>
       </div>
 
+      {/* History bar */}
+      {historicalCount > 0 && (
+        <div className="flex items-center justify-between px-3 py-1.5 bg-indigo-50 border-b border-indigo-100 shrink-0">
+          <span className="flex items-center gap-1.5 text-xs text-indigo-600">
+            <History className="h-3 w-3" />
+            {historicalCount} mensaje{historicalCount !== 1 ? "s" : ""} anterior{historicalCount !== 1 ? "es" : ""} cargado{historicalCount !== 1 ? "s" : ""}
+          </span>
+          <button
+            onClick={() => { setMessages([]); setConversationId(null); setHistoricalCount(0); }}
+            className="text-xs text-indigo-500 hover:text-indigo-800 font-medium transition-colors"
+          >
+            Nueva conversación
+          </button>
+        </div>
+      )}
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
-        {messages.length === 0 ? (
+        {loadingHistory ? (
+          <div className="flex flex-col items-center justify-center h-full gap-2 text-gray-400">
+            <Loader2 className="h-5 w-5 animate-spin text-indigo-400" />
+            <span className="text-xs">Cargando historial...</span>
+          </div>
+        ) : messages.length === 0 ? (
           <div className="text-center text-gray-500 pt-6">
             <Sparkles className="h-10 w-10 mx-auto mb-2 text-gray-200" />
             <p className="font-medium text-sm">¡Hola! Soy tu asistente de copywriting.</p>
