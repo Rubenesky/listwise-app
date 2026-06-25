@@ -27,7 +27,7 @@ interface ListingRow {
 const PLAN_LABELS: Record<string, string> = {
   free: "Gratuito",
   pro: "Pro",
-  enterprise: "Empresa",
+  enterprise: "Enterprise",
 };
 
 const PLAN_COLORS: Record<string, string> = {

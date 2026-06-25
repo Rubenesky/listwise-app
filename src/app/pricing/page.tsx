@@ -35,7 +35,7 @@ const plans = [
     popular: true,
   },
   {
-    name: "Empresa",
+    name: "Enterprise",
     price: "99€",
     description: "Para negocios con alto volumen",
     features: [
