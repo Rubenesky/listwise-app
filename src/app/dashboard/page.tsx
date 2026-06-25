@@ -477,6 +477,27 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Agent Mode banner */}
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-4 flex items-center justify-between gap-4 flex-wrap shadow-sm">
+          <div className="flex items-center gap-3">
+            <span className="text-2xl">🤖</span>
+            <div>
+              <p className="text-white font-semibold text-sm">
+                ¿Sabías que puedes mejorar tus descripciones con IA?
+              </p>
+              <p className="text-blue-200 text-xs mt-0.5">
+                Selecciona un producto completado y prueba el Agent Mode al instante.
+              </p>
+            </div>
+          </div>
+          <a
+            href="/agent"
+            className="shrink-0 px-4 py-2 bg-white text-blue-700 rounded-lg text-sm font-semibold hover:bg-blue-50 hover:scale-105 transition-all whitespace-nowrap"
+          >
+            Probar Agent Mode →
+          </a>
+        </div>
+
         {/* Stats grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="bg-white rounded-lg border p-3 text-center hover:shadow-lg transition-shadow">

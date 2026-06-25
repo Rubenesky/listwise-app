@@ -2,26 +2,36 @@ import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 
 export function useUserPlan() {
-  const { isLoaded, isSignedIn } = useUser();
+  const { isLoaded, isSignedIn, user } = useUser();
   const [plan, setPlan] = useState<string>("free");
   const [status, setStatus] = useState<string>("active");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn) {
+    if (!isLoaded) return;
+
+    if (!isSignedIn) {
       setLoading(false);
       return;
     }
 
+    // Clerk publicMetadata available instantly — no network round-trip
+    const metadataPlan = user?.publicMetadata?.plan as string | undefined;
+    if (metadataPlan) {
+      setPlan(metadataPlan);
+      setLoading(false);
+      return;
+    }
+
+    // Fallback for users without metadata yet
     async function fetchPlan() {
       try {
         const res = await fetch("/api/user/plan");
-        if (!res.ok) throw new Error("Failed to fetch plan");
+        if (!res.ok) throw new Error();
         const data = await res.json();
-        setPlan(data.plan || "free");
-        setStatus(data.status || "active");
-      } catch (error) {
-        console.error("Error fetching user plan:", error);
+        setPlan(data.plan ?? "free");
+        setStatus(data.status ?? "active");
+      } catch {
         setPlan("free");
         setStatus("active");
       } finally {
@@ -30,7 +40,7 @@ export function useUserPlan() {
     }
 
     fetchPlan();
-  }, [isLoaded, isSignedIn]);
+  }, [isLoaded, isSignedIn, user]);
 
   return { plan, status, loading };
 }
