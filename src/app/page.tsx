@@ -212,7 +212,7 @@ export default function HomePage() {
               </Link>
               <Link
                 href="/sign-up"
-                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 hover:scale-105 transition-all"
               >
                 Crear cuenta gratis
               </Link>
@@ -229,16 +229,16 @@ export default function HomePage() {
                 alt="ListWise"
                 width={300}
                 height={100}
-                className="h-36 w-auto drop-shadow-xl"
+                className="h-16 w-auto drop-shadow-xl"
                 priority
               />
             </div>
 
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-6 leading-tight">
+            <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 mb-6 leading-tight">
               Genera descripciones de productos{" "}
               <span className="text-blue-600">que venden</span>
             </h1>
-            <p className="text-xl md:text-2xl text-gray-600 max-w-2xl mx-auto mb-10">
+            <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto mb-10">
               Usa IA para crear títulos SEO, bullet points y descripciones
               optimizadas para Amazon, eBay y Shopify. Procesa tu catálogo
               entero en minutos.
@@ -260,7 +260,7 @@ export default function HomePage() {
               />
               <button
                 type="submit"
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors whitespace-nowrap"
+                className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 hover:scale-105 transition-all whitespace-nowrap"
               >
                 Empezar gratis →
               </button>
@@ -269,7 +269,7 @@ export default function HomePage() {
             <div className="flex flex-col sm:flex-row gap-3 justify-center mb-12">
               <Link
                 href="/pricing"
-                className="px-6 py-3 bg-white text-blue-600 rounded-lg font-medium border-2 border-blue-600 hover:bg-blue-50 transition-colors text-sm"
+                className="px-6 py-3 bg-white text-blue-600 rounded-lg font-medium border-2 border-blue-600 hover:bg-blue-50 hover:scale-105 transition-all text-sm"
               >
                 Ver precios
               </Link>
@@ -331,7 +331,7 @@ export default function HomePage() {
 
           {/* ── Características ──────────────────────────────── */}
           <section className="mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-900 mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-900 mb-12">
               Todo lo que necesitas
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -356,12 +356,12 @@ export default function HomePage() {
 
           {/* ── Testimonios ──────────────────────────────────── */}
           <section className="mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-900 mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-900 mb-12">
               Lo que dicen nuestros usuarios
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {testimonials.map(({ name, role, avatar, text, rating }) => (
-                <div key={name} className="bg-white rounded-xl p-6 shadow-md">
+                <div key={name} className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
                   <div className="flex mb-3">
                     {Array.from({ length: rating }).map((_, i) => (
                       <span key={i} className="text-yellow-400 text-sm">★</span>
@@ -394,7 +394,7 @@ export default function HomePage() {
             </p>
             <Link
               href="/sign-up"
-              className="inline-block px-8 py-4 bg-white text-blue-700 rounded-lg font-bold text-lg hover:bg-blue-50 transition-colors shadow-md"
+              className="inline-block px-8 py-4 bg-white text-blue-700 rounded-lg font-bold text-lg hover:bg-blue-50 hover:scale-105 transition-all shadow-md"
             >
               Crear cuenta gratuita →
             </Link>
@@ -402,7 +402,7 @@ export default function HomePage() {
 
           {/* ── FAQ (GEO: para motores de IA) ────────────────── */}
           <section className="mb-16">
-            <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-900 mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-900 mb-12">
               Preguntas frecuentes
             </h2>
             <div className="max-w-3xl mx-auto space-y-3">

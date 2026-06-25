@@ -116,7 +116,7 @@ export default function PricingPage() {
             alt="ListWise"
             width={200}
             height={65}
-            className="h-20 w-auto drop-shadow-md"
+            className="h-12 w-auto drop-shadow-md"
             priority
           />
         </div>
@@ -142,7 +142,7 @@ export default function PricingPage() {
           {plans.map((plan) => (
             <div
               key={plan.name}
-              className={`bg-white rounded-xl shadow-md overflow-hidden ${
+              className={`bg-white rounded-xl shadow-md hover:shadow-lg transition-shadow overflow-hidden ${
                 plan.popular ? "ring-2 ring-blue-600 relative" : ""
               }`}
             >
@@ -151,10 +151,10 @@ export default function PricingPage() {
                   Más popular
                 </div>
               )}
-              <div className="p-5">
-                <h3 className="text-base font-bold text-gray-900">{plan.name}</h3>
+              <div className="p-8">
+                <h3 className="text-xl font-bold text-gray-900">{plan.name}</h3>
                 <div className="mt-2 flex items-baseline">
-                  <span className="text-2xl font-extrabold text-gray-900">
+                  <span className="text-3xl font-extrabold text-gray-900">
                     {plan.price}
                   </span>
                   <span className="ml-1 text-sm text-gray-500">/mes</span>
@@ -174,7 +174,7 @@ export default function PricingPage() {
                   {plan.priceId === "free" ? (
                     <Link
                       href="/dashboard"
-                      className="w-full block text-center px-4 py-2 bg-gray-200 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-300 transition-colors"
+                      className="w-full block text-center px-4 py-2 bg-gray-200 text-gray-800 rounded-lg text-sm font-medium hover:bg-gray-300 hover:scale-105 transition-all"
                     >
                       Ir al dashboard
                     </Link>
@@ -182,10 +182,10 @@ export default function PricingPage() {
                     <button
                       onClick={() => handleSubscribe(plan.priceId)}
                       disabled={loading === plan.priceId}
-                      className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                      className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-all ${
                         loading === plan.priceId
                           ? "bg-blue-400 cursor-not-allowed"
-                          : "bg-blue-600 text-white hover:bg-blue-700"
+                          : "bg-blue-600 text-white hover:bg-blue-700 hover:scale-105"
                       }`}
                     >
                       {loading === plan.priceId ? (

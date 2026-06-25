@@ -364,7 +364,7 @@ export default function DashboardPage() {
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                   </div>
-                  <p className="mt-3 font-medium text-red-700">Error al procesar</p>
+                  <p className="mt-3 font-medium text-red-600">Error al procesar</p>
                   {selectedListing.errorMessage && (
                     <p className="mt-1 text-sm text-gray-500 max-w-md mx-auto">{selectedListing.errorMessage}</p>
                   )}
@@ -479,19 +479,19 @@ export default function DashboardPage() {
 
         {/* Stats grid */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="bg-white rounded-lg border p-3 text-center">
+          <div className="bg-white rounded-lg border p-3 text-center hover:shadow-lg transition-shadow">
             <p className="text-lg font-bold text-gray-900">{currentCount}</p>
             <p className="text-xs text-gray-500">Total productos</p>
           </div>
-          <div className="bg-white rounded-lg border p-3 text-center">
+          <div className="bg-white rounded-lg border p-3 text-center hover:shadow-lg transition-shadow">
             <p className="text-lg font-bold text-green-600">{completedCount}</p>
             <p className="text-xs text-gray-500">Completados</p>
           </div>
-          <div className="bg-white rounded-lg border p-3 text-center">
+          <div className="bg-white rounded-lg border p-3 text-center hover:shadow-lg transition-shadow">
             <p className="text-lg font-bold text-yellow-600">{pendingOrProcessingCount}</p>
             <p className="text-xs text-gray-500">Pendientes</p>
           </div>
-          <div className="bg-white rounded-lg border p-3 text-center">
+          <div className="bg-white rounded-lg border p-3 text-center hover:shadow-lg transition-shadow">
             <p className="text-lg font-bold text-red-600">{failedCount}</p>
             <p className="text-xs text-gray-500">Fallidos</p>
           </div>
@@ -651,7 +651,7 @@ export default function DashboardPage() {
                 <button
                   onClick={handleUpload}
                   disabled={uploading}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors disabled:bg-blue-400"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 hover:scale-105 transition-all disabled:bg-blue-400"
                 >
                   {uploading ? "Subiendo..." : "Subir y Procesar"}
                 </button>
@@ -677,7 +677,7 @@ export default function DashboardPage() {
                 <div key={mode} className="flex items-center gap-1">
                   <button
                     onClick={() => setSelectedMode(mode)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-all hover:scale-105 ${
                       selectedMode === mode
                         ? "bg-blue-600 text-white"
                         : "bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -784,10 +784,10 @@ export default function DashboardPage() {
               <table className="w-full text-xs">
                 <thead className="bg-gray-50 border-b">
                   <tr>
-                    <th className="px-3 py-2 text-left font-medium text-gray-700">Producto</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-700">Estado</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-700">Título generado</th>
-                    <th className="px-3 py-2 text-left font-medium text-gray-700">Acciones</th>
+                    <th className="px-6 py-4 text-left font-medium text-gray-700">Producto</th>
+                    <th className="px-6 py-4 text-left font-medium text-gray-700">Estado</th>
+                    <th className="px-6 py-4 text-left font-medium text-gray-700">Título generado</th>
+                    <th className="px-6 py-4 text-left font-medium text-gray-700">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -797,7 +797,7 @@ export default function DashboardPage() {
                       className={`hover:bg-gray-50 cursor-pointer ${selectedProductId === listing.id ? "bg-blue-50" : ""}`}
                       onClick={() => setSelectedProductId(listing.id)}
                     >
-                      <td className="px-3 py-2 max-w-[200px]">
+                      <td className="px-6 py-4 max-w-[200px]">
                         <button
                           onClick={(e) => { e.stopPropagation(); openModal(listing); }}
                           className="font-medium text-gray-900 hover:text-blue-600 text-left truncate w-full transition-colors"
@@ -805,11 +805,11 @@ export default function DashboardPage() {
                           {listing.productName}
                         </button>
                       </td>
-                      <td className="px-3 py-2">{getStatusBadge(listing.status)}</td>
-                      <td className="px-3 py-2 text-gray-500 max-w-[300px] truncate">
+                      <td className="px-6 py-4">{getStatusBadge(listing.status)}</td>
+                      <td className="px-6 py-4 text-gray-500 max-w-[300px] truncate">
                         {listing.generatedTitle || "—"}
                       </td>
-                      <td className="px-3 py-2">
+                      <td className="px-6 py-4">
                         <div className="flex items-center gap-1">
                           <button
                             onClick={(e) => { e.stopPropagation(); openModal(listing); }}
