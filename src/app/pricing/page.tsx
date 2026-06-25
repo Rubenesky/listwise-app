@@ -91,6 +91,7 @@ export default function PricingPage() {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
   const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"plans" | "credits">("plans");
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -207,8 +208,35 @@ export default function PricingPage() {
           )}
         </div>
 
+        {/* ── Tab toggle ───────────────────────────────────── */}
+        <div className="flex justify-center mb-8">
+          <div className="inline-flex bg-gray-100 rounded-xl p-1 gap-1">
+            <button
+              onClick={() => setActiveTab("plans")}
+              className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
+                activeTab === "plans"
+                  ? "bg-white shadow text-blue-700"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              Planes de suscripción
+            </button>
+            <button
+              onClick={() => setActiveTab("credits")}
+              className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all flex items-center gap-1.5 ${
+                activeTab === "credits"
+                  ? "bg-white shadow text-amber-700"
+                  : "text-gray-500 hover:text-gray-700"
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5" />
+              Créditos de uso
+            </button>
+          </div>
+        </div>
+
         {/* ── Planes de suscripción ─────────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-16">
+        {activeTab === "plans" && <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mb-16">
           {plans.map((plan) => (
             <div
               key={plan.name}
@@ -289,10 +317,10 @@ export default function PricingPage() {
               </div>
             </div>
           ))}
-        </div>
+        </div>}
 
         {/* ── Créditos de uso ──────────────────────────────── */}
-        <div className="border-t border-gray-200 pt-12 mb-10">
+        {activeTab === "credits" && <div className="mb-10">
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-50 border border-amber-200 rounded-full text-xs font-medium text-amber-700 mb-3">
               <Zap className="w-3.5 h-3.5" />
@@ -342,7 +370,7 @@ export default function PricingPage() {
               </div>
             ))}
           </div>
-        </div>
+        </div>}
 
         {/* Footer */}
         <div className="text-center pb-6">

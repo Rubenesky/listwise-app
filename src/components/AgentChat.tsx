@@ -6,6 +6,7 @@ import { Send, Sparkles, Loader2, Zap } from "lucide-react";
 interface AgentChatProps {
   listingId: string;
   productName: string;
+  inline?: boolean;
   onApplyChanges?: (changes: {
     title?: string | null;
     bullets?: string[] | null;
@@ -26,7 +27,7 @@ const QUICK_ACTIONS = [
   { label: "Hacer juvenil", command: "Hazla más juvenil y fresca" },
 ];
 
-export default function AgentChat({ listingId, productName, onApplyChanges }: AgentChatProps) {
+export default function AgentChat({ listingId, productName, inline = false, onApplyChanges }: AgentChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -181,7 +182,7 @@ export default function AgentChat({ listingId, productName, onApplyChanges }: Ag
     }
   };
 
-  if (!isOpen) {
+  if (!inline && !isOpen) {
     return (
       <button
         onClick={() => setIsOpen(true)}
@@ -195,7 +196,10 @@ export default function AgentChat({ listingId, productName, onApplyChanges }: Ag
   }
 
   return (
-    <div className="fixed bottom-6 right-6 w-[380px] h-[520px] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 flex flex-col">
+    <div className={inline
+      ? "flex flex-col h-full bg-white rounded-2xl border border-gray-200"
+      : "fixed bottom-6 right-6 w-[380px] h-[520px] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 flex flex-col"
+    }>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-2xl shrink-0">
         <div className="flex items-center gap-2">
@@ -213,13 +217,15 @@ export default function AgentChat({ listingId, productName, onApplyChanges }: Ag
               💡 <span className="font-semibold text-blue-600">{credits}</span> consultas
             </span>
           )}
-          <button
-            onClick={() => setIsOpen(false)}
-            className="text-gray-400 hover:text-gray-600 ml-1"
-            aria-label="Cerrar chat"
-          >
-            ✕
-          </button>
+          {!inline && (
+            <button
+              onClick={() => setIsOpen(false)}
+              className="text-gray-400 hover:text-gray-600 ml-1"
+              aria-label="Cerrar chat"
+            >
+              ✕
+            </button>
+          )}
         </div>
       </div>
 

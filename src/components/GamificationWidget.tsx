@@ -16,7 +16,7 @@ interface GamificationStatus {
   badges: string[];
 }
 
-export default function GamificationWidget() {
+export default function GamificationWidget({ compact = false }: { compact?: boolean }) {
   const [data, setData] = useState<GamificationStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -27,6 +27,46 @@ export default function GamificationWidget() {
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  const progress = data && !data.isMaxLevel
+    ? ((data.points - data.currentLevelPoints) / Math.max(data.nextLevelPoints - data.currentLevelPoints, 1)) * 100
+    : 100;
+
+  if (compact) {
+    if (loading) {
+      return (
+        <div className="bg-white rounded-lg border border-purple-100 px-4 py-2.5 animate-pulse flex items-center gap-3">
+          <div className="h-3 bg-gray-200 rounded w-40" />
+          <div className="flex-1 h-1.5 bg-gray-200 rounded-full" />
+          <div className="h-3 bg-gray-200 rounded w-24" />
+        </div>
+      );
+    }
+    if (!data) return null;
+    return (
+      <div className="bg-white rounded-lg border border-purple-100 px-4 py-2.5 flex items-center gap-3">
+        <span className="text-base shrink-0">{data.levelIcon}</span>
+        <span className="text-sm font-medium text-gray-700 shrink-0">
+          {data.levelName} · <span className="text-purple-600 font-semibold">{data.points} pts</span>
+        </span>
+        <div className="flex-1 min-w-0">
+          <div className="w-full bg-purple-100 rounded-full h-1.5">
+            <div
+              className="bg-purple-600 h-1.5 rounded-full transition-all"
+              style={{ width: `${Math.min(progress, 100)}%` }}
+            />
+          </div>
+        </div>
+        <span className="text-xs text-gray-400 shrink-0 hidden sm:block">
+          {data.isMaxLevel ? "Nivel máximo" : `→ ${data.nextLevelName}`}
+        </span>
+        {data.streak > 0 && <span className="text-xs shrink-0">🔥{data.streak}</span>}
+        <Link href="/gamification" className="text-xs text-purple-600 hover:text-purple-800 font-medium shrink-0">
+          Ver →
+        </Link>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
@@ -39,10 +79,6 @@ export default function GamificationWidget() {
   }
 
   if (!data) return null;
-
-  const progress = data.isMaxLevel
-    ? 100
-    : ((data.points - data.currentLevelPoints) / Math.max(data.nextLevelPoints - data.currentLevelPoints, 1)) * 100;
 
   return (
     <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-lg border border-purple-100 p-4">

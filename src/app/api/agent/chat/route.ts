@@ -11,7 +11,7 @@ import { AGENT_SYSTEM_PROMPT } from "@/lib/ai/agent-prompts";
 const requestSchema = z.object({
   message: z.string().min(1).max(500),
   listingId: z.string().min(1),
-  conversationId: z.string().optional(),
+  conversationId: z.string().nullable().optional(),
   command: z.string().optional(),
 });
 

@@ -7,7 +7,6 @@ import { PLAN_LIMITS } from "@/lib/constants";
 import OnboardingTour from "@/components/OnboardingTour";
 import VoiceProfileManager from "@/components/VoiceProfileManager";
 import InfoTooltip from "@/components/InfoTooltip";
-import LivePreview from "@/components/LivePreview";
 import GamificationWidget from "@/components/GamificationWidget";
 
 type ListingStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
@@ -63,9 +62,6 @@ export default function DashboardPage() {
   const [batchTotal, setBatchTotal] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Live preview
-  const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
 
   // Modal state
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
@@ -470,12 +466,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Gamification widget */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="md:col-span-1">
-            <GamificationWidget />
-          </div>
-        </div>
+        {/* Gamification strip */}
+        <GamificationWidget compact />
 
         {/* Agent Mode banner */}
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-4 flex items-center justify-between gap-4 flex-wrap shadow-sm">
@@ -762,8 +754,7 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Listings table + Live Preview */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        {/* Listings table */}
         <div className="listings-table border rounded-lg overflow-hidden">
           <div className="px-4 py-3 border-b bg-gray-50 flex justify-between items-center">
             <div className="flex items-center gap-3">
@@ -815,8 +806,7 @@ export default function DashboardPage() {
                   {listings.map((listing) => (
                     <tr
                       key={listing.id}
-                      className={`hover:bg-gray-50 cursor-pointer ${selectedProductId === listing.id ? "bg-blue-50" : ""}`}
-                      onClick={() => setSelectedProductId(listing.id)}
+                      className="hover:bg-gray-50"
                     >
                       <td className="px-6 py-4 max-w-[200px]">
                         <button
@@ -900,11 +890,6 @@ export default function DashboardPage() {
           )}
         </div>
 
-        {/* Live Preview panel */}
-        <div className="lg:sticky lg:top-4 lg:self-start">
-          <LivePreview productId={selectedProductId ?? ""} />
-        </div>
-        </div>
       </div>
     </>
   );
