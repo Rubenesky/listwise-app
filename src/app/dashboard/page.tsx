@@ -51,6 +51,8 @@ export default function DashboardPage() {
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
   const [uploadWarnings, setUploadWarnings] = useState<string[]>([]);
   const [credits, setCredits] = useState(0);
+  const [agentCredits, setAgentCredits] = useState<number | null>(null);
+  const [agentUnlimited, setAgentUnlimited] = useState(false);
   const [selectedMode, setSelectedMode] = useState<GenerationMode>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("listwise_generation_mode");
@@ -153,6 +155,13 @@ export default function DashboardPage() {
     fetch("/api/referrals/credits")
       .then((r) => r.json())
       .then((d) => setCredits(d.credits ?? 0))
+      .catch(() => {});
+    fetch("/api/user/credits")
+      .then((r) => r.json())
+      .then((d) => {
+        setAgentUnlimited(d.unlimited ?? false);
+        setAgentCredits(d.unlimited ? null : (d.credits ?? 0));
+      })
       .catch(() => {});
   }, []);
 
@@ -448,10 +457,16 @@ export default function DashboardPage() {
           <div className="flex items-center gap-3">
             {credits > 0 && (
               <div className="text-right">
-                <span className="text-xs text-gray-500">💰 Créditos</span>
+                <span className="text-xs text-gray-500">💰 Créditos referidos</span>
                 <p className="text-lg font-bold text-blue-600 leading-tight">{credits}</p>
               </div>
             )}
+            <div className="text-right">
+              <span className="text-xs text-gray-500">🤖 Consultas IA</span>
+              <p className="text-sm font-bold text-indigo-600 leading-tight">
+                {agentUnlimited ? "Ilimitadas" : agentCredits !== null ? agentCredits : "—"}
+              </p>
+            </div>
             <div className="text-right">
               <span className="text-sm text-gray-500">Plan actual</span>
               <div className={`mt-1 px-3 py-1 rounded-full text-sm font-medium ${planColor}`}>

@@ -6,6 +6,7 @@ import { groq } from "@/lib/ai/client-groq";
 import { buildUserPrompt } from "@/lib/ai/prompts";
 import { ratelimit } from "@/lib/rate-limit";
 import { z } from "zod";
+import { trackGamification } from "@/lib/gamification/track";
 
 const generatedContentSchema = z.object({
   title: z.string().max(80),
@@ -125,6 +126,7 @@ export async function POST(
     }
 
     console.log(`✅ [Variants] ${variants.length} variantes generadas para ${id}`);
+    trackGamification(userId, "generate_product").catch(() => {});
     return NextResponse.json({ variants });
   } catch (error) {
     console.error("❌ [Variants] Error general:", error);

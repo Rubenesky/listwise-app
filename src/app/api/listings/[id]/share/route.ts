@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { eq, and } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
+import { trackGamification } from "@/lib/gamification/track";
 
 function generateSlug(productName: string): string {
   const base = productName
@@ -57,6 +58,7 @@ export async function POST(
     const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL}/share/${slug}`;
 
     console.log(`✅ [Share] URL generada: ${shareUrl}`);
+    trackGamification(userId, "share_landing").catch(() => {});
     return NextResponse.json({ url: shareUrl, slug });
   } catch (error) {
     console.error("❌ [Share] Error:", error);

@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { eq, and } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
+import { trackGamification } from "@/lib/gamification/track";
 
 export async function PUT(
   req: Request,
@@ -57,6 +58,7 @@ export async function PUT(
     }
 
     console.log(`✅ [Save] Descripción guardada para producto ${id}`);
+    trackGamification(userId, "edit_description").catch(() => {});
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("❌ [Save] Error al guardar:", error);

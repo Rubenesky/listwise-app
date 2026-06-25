@@ -6,6 +6,7 @@ import { eq, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { convertReferral } from "@/lib/referrals/convert";
 import { clerkClient } from "@clerk/nextjs/server";
+import { addCredits } from "@/lib/credits/use-credits";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-05-27.dahlia",
@@ -50,9 +51,13 @@ export async function POST(req: Request) {
           const creditsToAdd = parseInt(session.metadata.credits ?? "0", 10);
           if (creditsToAdd > 0) {
             console.log(`💰 [Stripe Webhook] +${creditsToAdd} créditos de agente para ${userId}`);
-            await db.update(schema.users)
-              .set({ agentCredits: sql`agent_credits + ${creditsToAdd}` })
-              .where(eq(schema.users.id, userId));
+            await addCredits(
+              userId,
+              creditsToAdd,
+              "purchase",
+              `Pack ${creditsToAdd} créditos`,
+              session.id
+            );
             console.log(`✅ [Stripe Webhook] Créditos de agente actualizados para ${userId}`);
           }
           break;

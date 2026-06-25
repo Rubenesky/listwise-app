@@ -7,6 +7,7 @@ import { ratelimitAgentMinute, ratelimitAgentHour } from "@/lib/rate-limit";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { AGENT_SYSTEM_PROMPT } from "@/lib/ai/agent-prompts";
+import { trackGamification } from "@/lib/gamification/track";
 
 const requestSchema = z.object({
   message: z.string().min(1).max(500),
@@ -201,7 +202,14 @@ export async function POST(req: Request) {
             await db.update(schema.users)
               .set({ agentCredits: sql`agent_credits - 1` })
               .where(eq(schema.users.id, userId));
+            await db.insert(schema.creditTransactions).values({
+              id: uuidv4(), userId, amount: -1, type: "usage",
+              description: "Consulta agente IA", stripeRef: null,
+              createdAt: Math.floor(Date.now() / 1000),
+            });
           }
+
+          trackGamification(userId, "agent_chat").catch(() => {});
 
           const remainingCredits = isFree ? Math.max(0, credits - 1) : "ilimitado";
           const finalConvId = conversation?.id ?? newConvId;

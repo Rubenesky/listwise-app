@@ -6,6 +6,7 @@ import { parse } from "csv-parse/sync";
 import { v4 as uuidv4 } from "uuid";
 import { PLAN_LIMITS } from "@/lib/constants";
 import { ratelimit } from "@/lib/rate-limit";
+import { trackGamification } from "@/lib/gamification/track";
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 
@@ -269,6 +270,7 @@ export async function POST(req: Request) {
     console.log(`📤 [Upload] Batch ID: ${batchId}`);
     await sendTriggerEvent(userId, batchId, mode, provider);
 
+    trackGamification(userId, "upload_csv").catch(() => {});
     return NextResponse.json({
       success: true,
       count: listings.length,

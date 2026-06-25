@@ -5,6 +5,7 @@ import { db, schema } from "@/db";
 import { SYSTEM_PROMPT, buildUserPromptWithVoice, MODE_CONFIG, type GenerationMode, type VoiceProfileData } from "@/lib/ai/prompts";
 import { providers, type AIProvider } from "@/lib/ai/providers";
 import type { GeneratedContent, BatchProcessPayload } from "@/types";
+import { trackGamification } from "@/lib/gamification/track";
 
 const generatedContentSchema = z.object({
   title: z.string().transform((s) => s.slice(0, 80)),
@@ -158,6 +159,7 @@ export const processProductsTask = task({
             })
             .where(eq(schema.listings.id, product.id));
           totalProcessed++;
+          trackGamification(userId, "complete_product").catch(() => {});
         } catch (parseError) {
           await markFailed(product.id, humanizeError(parseError));
         }

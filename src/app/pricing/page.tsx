@@ -370,6 +370,27 @@ export default function PricingPage() {
               </div>
             ))}
           </div>
+
+          {/* Credit cost table */}
+          <div className="mt-4 bg-gray-50 rounded-xl p-4 border border-gray-100">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3">¿Cuántos créditos consume cada acción?</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { action: "Generar variantes", cost: 1 },
+                { action: "Chat con agente IA", cost: 1 },
+                { action: "Análisis de competidor", cost: 2 },
+                { action: "Compartir landing", cost: 0 },
+              ].map(({ action, cost }) => (
+                <div key={action} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 text-sm border border-gray-100">
+                  <span className="text-gray-600">{action}</span>
+                  <span className={`font-bold ${cost === 0 ? "text-green-600" : "text-indigo-600"}`}>
+                    {cost === 0 ? "Gratis" : `${cost} crédito${cost > 1 ? "s" : ""}`}
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400 mt-3">Los planes Pro y Enterprise tienen consultas ilimitadas incluidas.</p>
+          </div>
         </div>}
 
         {/* Footer */}

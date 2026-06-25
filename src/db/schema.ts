@@ -201,7 +201,20 @@ export const competitorAnalyses = sqliteTable("competitor_analyses", {
   urlCacheIdx: index("idx_competitor_analyses_url").on(table.url, table.cacheExpiresAt),
 }));
 
-// Tabla de suscripciones (NUEVA)
+export const creditTransactions = sqliteTable("credit_transactions", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  amount: integer("amount").notNull(),
+  type: text("type").notNull(),
+  description: text("description"),
+  stripeRef: text("stripe_ref"),
+  createdAt: integer("created_at").notNull().default(0),
+}, (table) => ({
+  userIdx: index("idx_credit_transactions_user_id").on(table.userId),
+  createdAtIdx: index("idx_credit_transactions_created_at").on(table.createdAt),
+}));
+
+// Tabla de suscripciones
 export const subscriptions = sqliteTable("subscriptions", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull(),
