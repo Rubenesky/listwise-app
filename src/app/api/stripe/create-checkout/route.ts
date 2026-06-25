@@ -11,7 +11,14 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 const PRICE_IDS: Record<string, string> = {
   pro: "price_1Tl68X1uySlskct3CuBf7pjw",
   enterprise: "price_1Tl69t1uySlskct3TIl1qBqc",
+  // Agent Mode packs — one-time payments (replace with real Stripe price IDs)
+  agent_pack_s: "price_AGENT_PACK_S",
+  agent_pack_m: "price_AGENT_PACK_M",
+  agent_pack_l: "price_AGENT_PACK_L",
 };
+
+// One-time payment packs (not subscriptions)
+const ONE_TIME_PRICE_IDS = new Set(["agent_pack_s", "agent_pack_m", "agent_pack_l"]);
 
 export async function POST(req: Request) {
   try {
@@ -48,8 +55,10 @@ export async function POST(req: Request) {
       }
     }
 
+    const isOneTime = ONE_TIME_PRICE_IDS.has(priceId);
+
     const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
+      mode: isOneTime ? "payment" : "subscription",
       payment_method_types: ["card"],
       line_items: [
         {

@@ -53,26 +53,26 @@ const plans = [
 
 const creditPacks = [
   {
-    name: "Starter",
-    credits: 50,
-    price: "4.99€",
-    priceId: "credits_50",
+    name: "Pack S",
+    credits: 20,
+    price: "0,99€",
+    priceId: "agent_pack_s",
     description: "Para proyectos puntuales",
     popular: false,
   },
   {
-    name: "Growth",
-    credits: 200,
-    price: "14.99€",
-    priceId: "credits_200",
+    name: "Pack M",
+    credits: 50,
+    price: "1,99€",
+    priceId: "agent_pack_m",
     description: "El más elegido",
     popular: true,
   },
   {
-    name: "Scale",
-    credits: 500,
-    price: "29.99€",
-    priceId: "credits_500",
+    name: "Pack L",
+    credits: 100,
+    price: "2,99€",
+    priceId: "agent_pack_l",
     description: "Para alto volumen",
     popular: false,
   },
@@ -295,7 +295,7 @@ export default function PricingPage() {
             </h2>
             <p className="mt-2 text-sm text-gray-600 max-w-md mx-auto">
               Paga solo lo que usas. Los créditos no caducan y se acumulan con tu plan.
-              1 crédito = 1 descripción generada.
+              Válidos para descripciones y Agent Mode.
             </p>
           </div>
 
