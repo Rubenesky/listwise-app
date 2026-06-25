@@ -8,6 +8,7 @@ import OnboardingTour from "@/components/OnboardingTour";
 import VoiceProfileManager from "@/components/VoiceProfileManager";
 import InfoTooltip from "@/components/InfoTooltip";
 import LivePreview from "@/components/LivePreview";
+import GamificationWidget from "@/components/GamificationWidget";
 
 type ListingStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
 type GenerationMode = "creative" | "professional" | "seo";
@@ -447,6 +448,13 @@ export default function DashboardPage() {
                 Cancelado
               </span>
             )}
+          </div>
+        </div>
+
+        {/* Gamification widget */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-1">
+            <GamificationWidget />
           </div>
         </div>
 

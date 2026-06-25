@@ -39,6 +39,7 @@
     "openai": "^6.44.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "recharts": "^3.9.0",
     "stripe": "^22.2.2",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",

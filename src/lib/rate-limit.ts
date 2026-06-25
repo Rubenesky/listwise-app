@@ -28,3 +28,11 @@ export const ratelimitAgentHour = new Ratelimit({
   analytics: false,
   prefix: "@upstash/ratelimit/agent-hour",
 });
+
+// Gamification: flood protection (50 calls per hour per user)
+export const ratelimitGamification = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(50, "1 h"),
+  analytics: false,
+  prefix: "@upstash/ratelimit/gamification",
+});

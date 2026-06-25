@@ -144,6 +144,43 @@ export const agentAnalytics = sqliteTable("agent_analytics", {
   createdAtIdx: index("idx_agent_analytics_created_at").on(table.createdAt),
 }));
 
+export const gamification = sqliteTable("gamification", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull().unique(),
+  points: integer("points").default(0),
+  level: integer("level").default(1),
+  badges: text("badges").default("[]"),
+  streak: integer("streak").default(0),
+  lastActivity: integer("last_activity"),
+  updatedAt: integer("updated_at").default(0),
+}, (table) => ({
+  userIdx: index("idx_gamification_user_id").on(table.userId),
+  pointsIdx: index("idx_gamification_points").on(table.points),
+}));
+
+export const gamificationHistory = sqliteTable("gamification_history", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  action: text("action").notNull(),
+  points: integer("points").notNull(),
+  createdAt: integer("created_at").default(0),
+}, (table) => ({
+  userIdx: index("idx_gamification_history_user_id").on(table.userId),
+  createdAtIdx: index("idx_gamification_history_created_at").on(table.createdAt),
+}));
+
+export const gamificationDiscounts = sqliteTable("gamification_discounts", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  type: text("type").notNull(),
+  code: text("code").notNull(),
+  used: integer("used").default(0),
+  expiresAt: integer("expires_at"),
+  createdAt: integer("created_at").default(0),
+}, (table) => ({
+  userIdx: index("idx_gamification_discounts_user_id").on(table.userId),
+}));
+
 // Tabla de suscripciones (NUEVA)
 export const subscriptions = sqliteTable("subscriptions", {
   id: text("id").primaryKey(),
