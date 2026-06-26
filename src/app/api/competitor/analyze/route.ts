@@ -6,6 +6,7 @@ import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { ratelimitCompetitor } from "@/lib/rate-limit";
 import { promises as dns, LookupAddress } from "dns";
+import { useCredits } from "@/lib/credits/use-credits";
 
 // ─── SSRF Protection — DNS-based validation ─────────────────────────────────
 
@@ -168,6 +169,15 @@ export async function POST(req: Request) {
     if (cached) {
       console.log(`💾 [Competitor] Cache hit: ${normalizedUrl}`);
       return NextResponse.json({ analysisId: cached.id, cached: true });
+    }
+
+    // Credit check: 2 credits required for a new analysis
+    const creditResult = await useCredits(userId, 2, "Análisis de competidor");
+    if (!creditResult.success) {
+      return NextResponse.json(
+        { error: "No tienes suficientes créditos. Necesitas 2 créditos para analizar un competidor." },
+        { status: 402 }
+      );
     }
 
     // Optional: fetch listing context for comparison

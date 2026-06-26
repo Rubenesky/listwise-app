@@ -8,6 +8,7 @@ import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { AGENT_SYSTEM_PROMPT } from "@/lib/ai/agent-prompts";
 import { trackGamification } from "@/lib/gamification/track";
+import { ensureUser } from "@/lib/user/ensure-user";
 
 const requestSchema = z.object({
   message: z.string().min(1).max(500),
@@ -50,6 +51,9 @@ export async function POST(req: Request) {
       console.log(`❌ [Agent] Rate limit minuto excedido para ${userId}`);
       return NextResponse.json({ error: "Demasiadas consultas. Espera un momento." }, { status: 429 });
     }
+
+    // Ensure user row exists with free-tier defaults (new user path)
+    await ensureUser(userId);
 
     // Fetch user info
     const [user] = await db
@@ -197,21 +201,19 @@ export async function POST(req: Request) {
             });
           }
 
-          // Atomic credit decrement for free users
-          if (isFree) {
-            await db.update(schema.users)
-              .set({ agentCredits: sql`agent_credits - 1` })
-              .where(eq(schema.users.id, userId));
-            await db.insert(schema.creditTransactions).values({
-              id: uuidv4(), userId, amount: -1, type: "usage",
-              description: "Consulta agente IA", stripeRef: null,
-              createdAt: Math.floor(Date.now() / 1000),
-            });
-          }
+          // Atomic credit decrement (all plans tracked; free users were already gated above)
+          await db.update(schema.users)
+            .set({ agentCredits: sql`agent_credits - 1` })
+            .where(eq(schema.users.id, userId));
+          await db.insert(schema.creditTransactions).values({
+            id: uuidv4(), userId, amount: -1, type: "usage",
+            description: "Consulta agente IA", stripeRef: null,
+            createdAt: Math.floor(Date.now() / 1000),
+          });
 
           trackGamification(userId, "agent_chat").catch(() => {});
 
-          const remainingCredits = isFree ? Math.max(0, credits - 1) : "ilimitado";
+          const remainingCredits = Math.max(0, credits - 1);
           const finalConvId = conversation?.id ?? newConvId;
 
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({

@@ -29,15 +29,14 @@ export async function useCredits(
   if (!user) return { success: false, remainingCredits: 0, error: "user_not_found" };
 
   const plan = user.agentPlan ?? "free";
+  const current = user.agentCredits ?? 0;
 
-  if (plan !== "free") {
-    await logTransaction(userId, -amount, "usage", description);
-    return { success: true, remainingCredits: -1 };
+  // Free users: block if insufficient credits
+  if (plan === "free" && current < amount) {
+    return { success: false, remainingCredits: current, error: "insufficient" };
   }
 
-  const current = user.agentCredits ?? 0;
-  if (current < amount) return { success: false, remainingCredits: current, error: "insufficient" };
-
+  // Deduct for all plans (Pro/Enterprise never blocked but still tracked)
   await db.update(schema.users)
     .set({ agentCredits: sql`agent_credits - ${amount}` })
     .where(eq(schema.users.id, userId));

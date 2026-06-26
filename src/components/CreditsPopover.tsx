@@ -14,7 +14,6 @@ const ACTION_COSTS = [
 
 export default function CreditsPopover() {
   const [credits, setCredits] = useState<number | null>(null);
-  const [unlimited, setUnlimited] = useState(false);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -22,8 +21,7 @@ export default function CreditsPopover() {
     fetch("/api/user/credits")
       .then((r) => r.json())
       .then((d) => {
-        setUnlimited(d.unlimited ?? false);
-        setCredits(d.unlimited ? null : (d.credits ?? 0));
+        setCredits(d.credits ?? 0);
       })
       .catch(() => {});
   };
@@ -33,7 +31,7 @@ export default function CreditsPopover() {
 
     const handleUpdate = (e: Event) => {
       const ce = e as CustomEvent<{ credits: number }>;
-      if (typeof ce.detail?.credits === "number") {
+      if (typeof ce.detail?.credits === "number" && ce.detail.credits >= 0) {
         setCredits(ce.detail.credits);
       } else {
         fetchCredits();
@@ -61,22 +59,20 @@ export default function CreditsPopover() {
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
-  const isLow = !unlimited && typeof credits === "number" && credits <= 3;
+  const isLow = typeof credits === "number" && credits <= 3;
 
   return (
     <div className="relative" ref={ref}>
       <button
         onClick={() => setOpen((o) => !o)}
         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-          unlimited
-            ? "text-purple-700 bg-purple-50 border-purple-200 hover:bg-purple-100"
-            : isLow
+          isLow
             ? "text-red-700 bg-red-50 border-red-200 hover:bg-red-100"
             : "text-indigo-700 bg-indigo-50 border-indigo-200 hover:bg-indigo-100"
         }`}
       >
         <Zap className="w-3 h-3" />
-        <span>Créditos: {unlimited ? "∞" : (credits ?? "—")}</span>
+        <span>Créditos: {credits ?? "—"}</span>
       </button>
 
       {open && (
@@ -92,15 +88,13 @@ export default function CreditsPopover() {
               </div>
             ))}
           </div>
-          {!unlimited && (
-            <Link
-              href="/pricing"
-              onClick={() => setOpen(false)}
-              className="mt-3 block w-full text-center text-xs font-semibold py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
-            >
-              Comprar créditos →
-            </Link>
-          )}
+          <Link
+            href="/pricing"
+            onClick={() => setOpen(false)}
+            className="mt-3 block w-full text-center text-xs font-semibold py-1.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            Comprar créditos →
+          </Link>
         </div>
       )}
     </div>
