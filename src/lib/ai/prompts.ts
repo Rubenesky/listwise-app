@@ -179,7 +179,8 @@ BULLETS — SIEMPRE entre 4 y 6. Nunca menos de 4:
 DESCRIPCIÓN (2 a 3 párrafos):
 PÁRRAFO 1 — GANCHO:
   Primera frase: máximo 12 palabras.
-  PROHIBIDO empezar con: "Este", "Presentamos", "Descubre", "El/La [nombre del producto]" o el nombre repetido.
+  PROHIBIDO como primera palabra o primeras palabras: "Este", "Presentamos", "Descubre", "Imagina", "El/La [nombre del producto]", "Nuestra/Nuestro", "[nombre del producto]" repetido.
+  "Imagina" puede aparecer en el cuerpo del copy como Future Pacing, NUNCA como primera palabra del párrafo 1.
   Elige el tipo de apertura según la emoción de compra:
   - Escena inmersiva:  "Son las 7 de la mañana y [situación vivida por el comprador]."
   - Pregunta retórica: "¿Cuántas veces has buscado [X] sin encontrar exactamente eso?"
@@ -215,7 +216,7 @@ ANTES DE ESCRIBIR EL JSON, verifica internamente — NO lo incluyas en la respue
 4. ¿Algún bullet tiene más de 15 palabras? → Acórtalo.
 5. ¿Hay menos de 4 bullets? → AÑADE bullets hasta llegar a 4 mínimo usando: (a) contexto de uso ideal, (b) para quién es ideal y para quién no, (c) consecuencia emocional del beneficio principal. Esto es obligatorio — no puedes entregar menos de 4.
 6. ¿Has mencionado algún atributo material o característica física NO confirmada en los inputs? → Elimínala y sustitúyela por un beneficio de uso observable.
-7. ¿El gancho usa la misma apertura que usarías para cualquier producto de esta categoría? Si sí → Reescríbelo con el tipo de apertura indicado en el user prompt.
+7. ¿La descripción empieza con "Imagina", "Nuestra", "Este" o el nombre del producto? → REESCRIBE el gancho con el tipo de apertura indicado en el user prompt (question/scene/bold/benefit). "Imagina" como primera palabra está prohibido.
 8. ¿Cada bullet añade algo único que los otros no dicen? Si no → Elimina el redundante.
 9. ¿El CTA funcionaría para cualquier producto de esta categoría? Si sí → Personalízalo.
 </AUTOVERIFICACION>
