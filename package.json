@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -p ${PORT:-3000}",
     "trigger:dev": "npx trigger.dev@latest dev",
     "trigger:deploy": "npx --yes trigger.dev@4.4.6 deploy",
     "dev:all": "concurrently \"npm run dev\" \"npm run trigger:dev\""
