@@ -3,7 +3,7 @@ import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { SYSTEM_PROMPT, buildUserPromptWithVoice, MODE_CONFIG, type GenerationMode, type VoiceProfileData, type Marketplace, type PriceSegment } from "@/lib/ai/prompts";
-import { providers, type AIProvider } from "@/lib/ai/providers";
+import { providers, getAIResponse, type AIProvider } from "@/lib/ai/providers";
 import type { GeneratedContent, BatchProcessPayload } from "@/types";
 import { trackGamification } from "@/lib/gamification/track";
 
@@ -135,9 +135,8 @@ export const processProductsTask = task({
 
         const response = await retry.onThrow(
           async () => {
-            return await aiConfig.client.chat.completions.create({
-              model: aiConfig.defaultModel,
-              messages: [
+            return await getAIResponse(
+              [
                 { role: "system", content: SYSTEM_PROMPT },
                 { role: "user", content: buildUserPromptWithVoice(
                   {
@@ -151,15 +150,15 @@ export const processProductsTask = task({
                   activeVoiceProfile
                 )},
               ],
-              temperature,
-              max_tokens: 1600,
-              response_format: { type: "json_object" },
-            });
+              safeProvider,
+              { temperature, max_tokens: 1600, response_format: { type: "json_object" } }
+            );
           },
           { maxAttempts: 3, minTimeoutInMs: 2000, factor: 2 }
         );
 
-        const text = response.choices[0]?.message?.content || "";
+        const completion = response as { choices: { message: { content: string | null } }[] };
+        const text = completion.choices[0]?.message?.content || "";
 
         try {
           const generated = parseAiResponse(text);
