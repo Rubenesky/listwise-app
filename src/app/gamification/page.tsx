@@ -41,7 +41,7 @@ export default function GamificationPage() {
   const [ranking, setRanking] = useState<RankingItem[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const refresh = () => {
     Promise.all([
       fetch("/api/gamification/status").then((r) => r.json()),
       fetch("/api/gamification/ranking").then((r) => r.json()),
@@ -52,6 +52,18 @@ export default function GamificationPage() {
       })
       .catch(() => {})
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    refresh();
+    const handleVisibility = () => { if (document.visibilityState === "visible") refresh(); };
+    window.addEventListener("gamification-update", refresh);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("gamification-update", refresh);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   if (loading) {

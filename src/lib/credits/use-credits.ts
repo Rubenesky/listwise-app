@@ -1,6 +1,7 @@
 import { db, schema } from "@/db";
 import { eq, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
+import { ensureUser } from "@/lib/user/ensure-user";
 
 export interface UseCreditResult {
   success: boolean;
@@ -17,6 +18,8 @@ export async function useCredits(
   amount: number,
   description: string
 ): Promise<UseCreditResult> {
+  await ensureUser(userId);
+
   const [user] = await db
     .select({ agentCredits: schema.users.agentCredits, agentPlan: schema.users.agentPlan })
     .from(schema.users)
@@ -51,6 +54,7 @@ export async function addCredits(
   description: string,
   stripeRef?: string
 ): Promise<void> {
+  await ensureUser(userId);
   await db.update(schema.users)
     .set({ agentCredits: sql`agent_credits + ${amount}` })
     .where(eq(schema.users.id, userId));

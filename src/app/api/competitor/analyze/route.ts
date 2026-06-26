@@ -93,7 +93,7 @@ async function validateUrlSSRF(
 
 const ALLOWED_HOST = (() => {
   try {
-    return new URL(process.env.NEXT_PUBLIC_BASE_URL ?? "http://localhost:3000").host;
+    return new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").host;
   } catch {
     return "localhost:3000";
   }

@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { headers } from "next/headers";
 import { db, schema } from "@/db";
-import { eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { convertReferral } from "@/lib/referrals/convert";
 import { clerkClient } from "@clerk/nextjs/server";
 import { addCredits } from "@/lib/credits/use-credits";
+import { ensureUser } from "@/lib/user/ensure-user";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-05-27.dahlia",
@@ -147,6 +148,22 @@ export async function POST(req: Request) {
           console.log(`✅ [Stripe Webhook] Clerk metadata sincronizada: ${userId} → ${plan}`);
         } catch (metaErr) {
           console.warn("⚠️ [Stripe Webhook] No se pudo sincronizar Clerk metadata:", metaErr);
+        }
+
+        // Assign plan credits and update agentPlan in users table
+        try {
+          const planCredits: Record<string, number> = { pro: 1500, enterprise: 7000 };
+          const credits = planCredits[plan] ?? 0;
+          await ensureUser(userId);
+          await db.update(schema.users)
+            .set({ agentPlan: plan })
+            .where(eq(schema.users.id, userId));
+          if (credits > 0) {
+            await addCredits(userId, credits, "bonus", `Créditos plan ${plan}`, session.id);
+            console.log(`✅ [Stripe Webhook] +${credits} créditos plan ${plan} para ${userId}`);
+          }
+        } catch (creditErr) {
+          console.warn("⚠️ [Stripe Webhook] No se pudieron asignar créditos del plan:", creditErr);
         }
 
         break;
