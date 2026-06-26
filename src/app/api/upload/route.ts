@@ -189,6 +189,8 @@ export async function POST(req: Request) {
     const file = formData.get("file") as File;
     const mode = (formData.get("mode") as string) || "creative";
     const provider = (formData.get("provider") as string) || "groq";
+    const marketplace = (formData.get("marketplace") as string) || null;
+    const priceSegment = (formData.get("priceSegment") as string) || null;
 
     if (!file) {
       return NextResponse.json({ error: "No se proporcionó ningún archivo" }, { status: 400 });
@@ -272,6 +274,8 @@ export async function POST(req: Request) {
         if (!record.attributes) return null;
         try { return JSON.parse(record.attributes); } catch { return null; }
       })(),
+      marketplace: marketplace,
+      priceSegment: priceSegment,
       status: "PENDING" as const,
       generatedTitle: null,
       generatedBullets: null,

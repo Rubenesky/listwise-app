@@ -2,15 +2,28 @@ import { task, retry } from "@trigger.dev/sdk/v3";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { SYSTEM_PROMPT, buildUserPromptWithVoice, MODE_CONFIG, type GenerationMode, type VoiceProfileData } from "@/lib/ai/prompts";
+import { SYSTEM_PROMPT, buildUserPromptWithVoice, MODE_CONFIG, type GenerationMode, type VoiceProfileData, type Marketplace, type PriceSegment } from "@/lib/ai/prompts";
 import { providers, type AIProvider } from "@/lib/ai/providers";
 import type { GeneratedContent, BatchProcessPayload } from "@/types";
 import { trackGamification } from "@/lib/gamification/track";
 
+const qualityFlagsSchema = z.object({
+  no_trademarks: z.boolean().optional(),
+  title_in_range: z.boolean().optional(),
+  bullets_concise: z.boolean().optional(),
+  attrs_real: z.boolean().optional(),
+  hook_differentiated: z.boolean().optional(),
+}).optional();
+
 const generatedContentSchema = z.object({
-  title: z.string().transform((s) => s.slice(0, 80)),
+  title: z.string().transform((s) => s.slice(0, 100)),
+  title_b: z.string().transform((s) => s.slice(0, 100)).optional(),
   bullets: z.array(z.string()).min(1).max(10),
   description: z.string().min(1),
+  primary_keyword: z.string().max(100).optional(),
+  target_audience: z.string().max(100).optional(),
+  hook_type: z.enum(["scene", "question", "bold", "benefit"]).optional(),
+  quality_flags: qualityFlagsSchema,
 });
 
 function humanizeError(error: unknown): string {
@@ -132,12 +145,14 @@ export const processProductsTask = task({
                     category: safeCategory,
                     attributes: product.attributes as Record<string, string> | null,
                     mode: safeMode,
+                    marketplace: (product.marketplace as Marketplace | undefined) ?? undefined,
+                    priceSegment: (product.priceSegment as PriceSegment | undefined) ?? undefined,
                   },
                   activeVoiceProfile
                 )},
               ],
               temperature,
-              max_tokens: 1024,
+              max_tokens: 1600,
               response_format: { type: "json_object" },
             });
           },
@@ -153,8 +168,14 @@ export const processProductsTask = task({
             .set({
               status: "COMPLETED",
               generatedTitle: generated.title,
+              generatedTitleB: generated.title_b ?? null,
               generatedBullets: generated.bullets,
               generatedDescription: generated.description,
+              primaryKeyword: generated.primary_keyword ?? null,
+              targetAudience: generated.target_audience ?? null,
+              hookType: generated.hook_type ?? null,
+              qualityFlags: generated.quality_flags ?? null,
+              promptVersion: "3.0",
               errorMessage: null,
             })
             .where(eq(schema.listings.id, product.id));

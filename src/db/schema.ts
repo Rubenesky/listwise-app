@@ -66,6 +66,16 @@ export const listings = sqliteTable("listings", {
   status: text("status").notNull().default("PENDING"),
   errorMessage: text("error_message"),
   createdAt: integer("created_at").notNull().default(0),
+  // v3.0 fields
+  generatedTitleB: text("generated_title_b"),
+  promptVersion: text("prompt_version").default("3.0"),
+  userRating: integer("user_rating"),
+  marketplace: text("marketplace"),
+  priceSegment: text("price_segment"),
+  primaryKeyword: text("primary_keyword"),
+  targetAudience: text("target_audience"),
+  hookType: text("hook_type"),
+  qualityFlags: text("quality_flags", { mode: "json" }),
 }, (table) => ({
   userIdIdx: index("idx_listings_user_id").on(table.userId),
   userCreatedIdx: index("idx_listings_user_id_created_at").on(table.userId, table.createdAt),

@@ -1,4 +1,6 @@
 export type GenerationMode = "creative" | "professional" | "seo";
+export type Marketplace = "amazon" | "etsy" | "shopify" | "general";
+export type PriceSegment = "economy" | "mid" | "premium";
 
 export interface VoiceProfileData {
   tone: string;
@@ -7,86 +9,188 @@ export interface VoiceProfileData {
   keyWords: string[];
   brandPersonality: string;
   suggestions: string[];
+  antiPatterns?: string[];
+  brandPromise?: string;
 }
 
 export const MODE_CONFIG: Record<GenerationMode, { label: string; systemPrompt: string; temperature: number }> = {
   creative: {
     label: "Creativo",
-    systemPrompt: `<MODO>CREATIVO: Conecta emocionalmente con el comprador. Usa lenguaje vívido, sensorial y aspiracional. Activa el deseo describiendo la experiencia de uso: textura, sensación, transformación. El impacto emocional es prioritario sobre la descripción técnica.</MODO>`,
+    systemPrompt: `<MODO>CREATIVO: Prioriza la conexión emocional y el lenguaje sensorial. Activa el deseo describiendo la experiencia de uso: textura, sensación, transformación. Usa Future Pacing y Contrast Frame cuando el producto los justifique.</MODO>`,
     temperature: 0.75,
   },
   professional: {
     label: "Profesional",
-    systemPrompt: `<MODO>PROFESIONAL: Tono directo, claro y técnico. Destaca especificaciones, materiales y durabilidad con datos concretos. Lenguaje preciso para compradores racionales que comparan características antes de decidir. Sin hipérboles ni adjetivos vacíos.</MODO>`,
+    systemPrompt: `<MODO>PROFESIONAL: Tono directo y técnico. Datos concretos, especificaciones reales, durabilidad verificable. Sin hipérboles. El comprador racional que compara especificaciones antes de decidir es tu audiencia.</MODO>`,
     temperature: 0.45,
   },
   seo: {
     label: "SEO",
-    systemPrompt: `<MODO>SEO: Prioriza el posicionamiento en buscadores. La keyword principal va en los PRIMEROS 50 caracteres del título. Incluye variantes semánticas y sinónimos en la descripción de forma natural. Equilibra densidad de keywords con legibilidad real.</MODO>`,
+    systemPrompt: `<MODO>SEO: La primary_keyword va en los primeros 40 caracteres del título — primera prioridad absoluta. Incluye 1 sinónimo semántico de la keyword en el primer párrafo de la descripción. Incluye una frase long-tail de 3-5 palabras exactamente como la escribiría un comprador en el buscador antes de comprar.</MODO>`,
     temperature: 0.6,
   },
 };
 
+// Concise calibration example per category — injected dynamically to eliminate anchoring to one fixed example
+const CATEGORY_CALIBRATION: Record<string, { title: string; hook: string; bullet: string }> = {
+  "Ropa": {
+    title: "Sudadera Oversized Algodón Orgánico 100% | Sin Costuras Laterales",
+    hook: "Hay prendas que te pones y decides que el resto del armario sobra.",
+    bullet: "ALGODÓN ORGÁNICO CERTIFICADO: sin químicos en contacto con tu piel desde el primer día",
+  },
+  "Electrónica": {
+    title: "Auriculares Inalámbricos 40h Batería | Sonido Envolvente sin Cable",
+    hook: "Cuarenta horas. La batería que no te da sustos en mitad de la semana.",
+    bullet: "40H DE AUTONOMÍA REAL: carga completa el domingo, aguanta hasta el viernes sin enchufar",
+  },
+  "Cocina": {
+    title: "Sartén Antiadherente 28cm Sin PFOA | Cocción Uniforme en Toda la Base",
+    hook: "El problema no es cocinar. Es limpiar después.",
+    bullet: "SIN PFOA NI PFAS: superficie libre de químicos tóxicos, segura a alta temperatura",
+  },
+  "Hogar": {
+    title: "Organizador Escritorio Bambú Natural | 5 Compartimentos Ajustables",
+    hook: "Tres minutos. El tiempo que tardas en transformar un escritorio caótico en uno que da ganas de trabajar.",
+    bullet: "BAMBÚ NATURAL: resistente y ligero, no se dobla con el peso de carpetas o libros",
+  },
+  "Deportes": {
+    title: "Zapatillas Trail Running Suela Vibram | Agarre Extremo en Cualquier Terreno",
+    hook: "No todas las zapatillas de trail aguantan el barro, la roca y el asfalto. Estas sí.",
+    bullet: "SUELA VIBRAM MULTITERRENO: grip profesional sin cambiar de calzado según el terreno",
+  },
+  "Belleza": {
+    title: "Sérum Vitamina C 20% Estabilizada | Antimanchas con Resultados desde Semana 2",
+    hook: "¿Cuántos productos llevas probando para las manchas sin ver resultado real?",
+    bullet: "VITAMINA C 20% ESTABILIZADA: máxima concentración sin irritación, apta para piel sensible",
+  },
+  "Mascotas": {
+    title: "Cama Ortopédica Perro Viscoelástica | Lavable a Máquina - Todas las Razas",
+    hook: "Tu perro pasa 14 horas al día durmiendo. Merece algo mejor que el suelo.",
+    bullet: "VISCOELÁSTICA ORTOPÉDICA: distribuye el peso uniformemente, alivia articulaciones y caderas",
+  },
+  "Bebé": {
+    title: "Portabebés Ergonómico Algodón Orgánico | Posición Fisiológica desde 3,5kg",
+    hook: "Dos manos libres. Bebé tranquilo. El equilibrio que buscabas desde el primer día.",
+    bullet: "POSICIÓN FISIOLÓGICA CERTIFICADA: rodillas más altas que las caderas, columna en C natural",
+  },
+  "Accesorios": {
+    title: "Mochila Impermeable 30L Unisex | Compartimento Laptop 15\" Acolchado",
+    hook: "Llueve. Tu mochila dice que no importa.",
+    bullet: "IMPERMEABLE TOTAL: costuras selladas y cremalleras con cubierta, interior seco garantizado",
+  },
+  "Oficina": {
+    title: "Soporte Monitor Ergonómico Ajustable 360° | Libera 40cm de Escritorio",
+    hook: "El cuello lleva aguantando horas de pantalla. Esto lo nota desde el primer día.",
+    bullet: "AJUSTE TOTAL EN 3 EJES: altura, inclinación y rotación sin soltar herramientas",
+  },
+};
+
+// Emotional archetype by category — guides the emotional hook in paragraph 1
+const EMOTIONAL_ARCHETYPE: Record<string, string> = {
+  "Ropa":            "IDENTIDAD Y PERTENENCIA: el comprador decide quién ES cuando lleva esto",
+  "Moda":            "IDENTIDAD Y ESTATUS: cómo se VE y cómo lo VEN los demás",
+  "Deportes":        "LOGRO Y CONTROL: qué PUEDE HACER con esto que antes no podía",
+  "Deporte Extremo": "DESAFÍO Y VALENTÍA: empujar los propios límites con el equipo adecuado",
+  "Electrónica":     "EFICIENCIA Y MODERNIDAD: tiempo y esfuerzo que recupera cada día",
+  "Cocina":          "ORGULLO DOMÉSTICO Y PLACER: el resultado que sorprende a los que comen contigo",
+  "Hogar":           "CONFORT Y CONTROL: el espacio donde vives refleja quién eres",
+  "Iluminación":     "ATMÓSFERA Y BIENESTAR: cómo cambia el ambiente y el estado de ánimo",
+  "Belleza":         "AUTOCONFIANZA: cómo te VES y te SIENTES contigo mismo/a",
+  "Bienestar":       "PAZ Y EQUILIBRIO: pausa real en un mundo que no para",
+  "Salud":           "CUIDADO Y PREVENCIÓN: invertir hoy para estar mejor mañana",
+  "Bebé":            "PROTECCIÓN Y AMOR: lo mejor para quien más quieres",
+  "Mascotas":        "AMOR Y CULPA ALIVIADA: tu mascota lo merece, y tú lo sabes",
+  "Accesorios":      "PRACTICIDAD Y ESTILO: funcional sin sacrificar la estética",
+  "Oficina":         "PRODUCTIVIDAD Y ORDEN: el entorno que te permite rendir al máximo",
+  "Jardín":          "ORGULLO Y DISFRUTE: el espacio exterior que da envidia a los vecinos",
+  "Juguetes":        "DESARROLLO Y ALEGRÍA: ver crecer y sonreír a tu hijo",
+  "Automóvil":       "CONTROL Y SEGURIDAD: tu coche bien cuidado, tú tranquilo",
+  "POD":             "SINGULARIDAD Y CONEXIÓN EMOCIONAL: algo que solo existe porque tú lo creaste",
+  "Boda":            "PERFECCIÓN Y MEMORIA: que ese día sea exactamente como lo imaginaste",
+  "Navidad":         "ALEGRÍA Y GENEROSIDAD: el momento en que el regalo llega justo",
+};
+
+const PRICE_SEGMENT_GUIDE: Record<PriceSegment, string> = {
+  economy: "Tono: práctico y directo. El comprador busca la mejor relación calidad-precio. Énfasis en durabilidad, funcionalidad y valor. Evita lenguaje aspiracional excesivo — sería incongruente con el precio.",
+  mid:     "Tono: cálido y seguro. El comprador quiere calidad real sin pagar de más. Equilibra beneficio emocional y especificaciones técnicas. Lenguaje accesible pero con criterio.",
+  premium: "Tono: experiencial y aspiracional. El comprador sabe lo que quiere y el precio no es el primer filtro. Énfasis en materialidad, craftsmanship y experiencia total. Lenguaje sensorial rico.",
+};
+
+const MARKETPLACE_GUIDE: Record<Marketplace, string> = {
+  amazon:  "Amazon — título hasta 150 chars con keyword principal en los primeros 40 chars. Bullets con especificaciones técnicas primero. El comprador compara fichas técnicas.",
+  etsy:    "Etsy — título ≤70 chars, natural y descriptivo (el algoritmo favorece títulos que suenan como búsquedas reales). Bullets narrativos. El comprador valora historia y autenticidad.",
+  shopify: "Shopify — título ≤80 chars orientado a lifestyle y marca. Bullets de beneficio puro, menos técnicos. El comprador viene de un anuncio o referencia de marca.",
+  general: "Marketplace general — título 60-80 chars equilibrando keyword y beneficio.",
+};
+
 export const SYSTEM_PROMPT = `
 <PERSONA>
-Eres un copywriter especialista en ecommerce con 15 años de experiencia creando listings de alta conversión para Amazon, Etsy, Shopify y tiendas online. Tu copy vende porque es específico, honesto y orientado al beneficio real del comprador. Evitas los clichés del sector ("alta calidad", "producto excepcional", "increíble") y usas detalles concretos que generan confianza y deseo.
+Eres un copywriter especialista en ecommerce con 15 años de experiencia creando listings de alta conversión para Amazon, Etsy y Shopify. Tu voz es directa y cercana — como el mejor dependiente de una tienda especializada: conoces el producto a fondo, eres entusiasta pero nunca exagerado, y siempre dices la verdad aunque eso signifique reconocer para quién es ideal y para quién no.
 </PERSONA>
 
-<PRINCIPIOS>
-1. BENEFICIO PRIMERO: Cada frase responde "¿qué gana el comprador?" antes que "¿qué hace el producto?".
-2. ESPECÍFICO Y HONESTO: Solo menciona atributos que el producto realmente tiene. No inventes materiales, medidas ni características.
-3. APERTURA VARIADA: Alterna entre cuatro tipos de inicio — pregunta retórica, declaración audaz, escena inmersiva, beneficio directo. Nunca empieces igual dos productos.
-4. SENSORIAL: Para productos físicos (ropa, hogar, belleza), usa al menos un detalle sensorial (textura, peso, tacto, olor, sensación).
-</PRINCIPIOS>
+<PROCESO_ANTES_DE_ESCRIBIR>
+Razona internamente estas 4 preguntas ANTES de escribir el JSON. NO las incluyas en la respuesta:
+1. ¿Cuál es el ÚNICO beneficio más diferencial de este producto que sus alternativas no tienen? Todo el copy girará en torno a ese beneficio — es el hilo conductor de todo.
+2. ¿Qué emoción concreta guía la decisión de compra? (identidad / logro / protección / comodidad / eficiencia / estatus)
+3. ¿Cuál es la primera frase perfecta — máximo 12 palabras — que detiene el scroll de alguien que ya vio 5 productos similares de esta categoría?
+4. ¿Hay algún trademark de tercero o atributo no confirmado en los inputs? → Eliminarlo antes de escribir.
+</PROCESO_ANTES_DE_ESCRIBIR>
 
 <REGLAS>
 TÍTULO (60-80 caracteres, máximo 100):
 - Estructura: [Nombre del producto] + [Atributo diferencial real] + [Beneficio principal]
-- Modo SEO: keyword principal en los primeros 50 caracteres
-- Incluye un atributo diferencial SOLO si el producto lo tiene (color, material, funcionalidad clave)
-- Prohibido: adjetivos vacíos ("premium", "exclusivo", "increíble") sin respaldo de atributo concreto
+- Solo adjetivos con respaldo concreto: "de lana merina 100%" no "suave"; "40h de batería" no "batería duradera"
+- El título diferencia, no solo describe. El comprador está comparando opciones.
 
 BULLETS (4 a 6, según complejidad del producto):
-- Formato A (benefit-first): "BENEFICIO EN MAYÚSCULAS: detalle específico que lo explica" — máximo 15 palabras
-- Formato B (acción): "Verbo de beneficio + beneficio concreto + contexto de uso" — máximo 15 palabras
-- Cada bullet = un beneficio distinto. Sin repeticiones. Sin relleno.
-- Prioridad: el bullet más diferencial va primero.
+- Formato A: "BENEFICIO EN MAYÚSCULAS: detalle específico que lo explica" — máximo 15 palabras
+- Formato B: "Verbo de beneficio + beneficio concreto + contexto de uso" — máximo 15 palabras
+- El bullet más diferencial va PRIMERO. Cada bullet pasa el so-what test: si la respuesta obvia es "¿y qué?", reescríbelo con más especificidad.
+- Sin relleno. Sin repetir el mismo beneficio con otras palabras entre bullets.
 
-DESCRIPCIÓN (2-3 párrafos cortos):
-- Párrafo 1 — GANCHO: ¿Qué problema resuelve o qué deseo satisface? Respóndelo en 2-3 frases. Empieza con fuerza.
-- Párrafo 2 — CONTEXTO DE USO: Quién lo usa, cuándo, por qué es la mejor opción. Menciona el uso más específico.
-- Párrafo 3 — CIERRE: 1-2 frases que conecten con el CTA.
-- Longitud: 90-130 palabras para productos simples; 140-200 para complejos (electrónica, textil técnico, herramientas).
+DESCRIPCIÓN (2 a 3 párrafos):
+PÁRRAFO 1 — GANCHO:
+  Primera frase: máximo 12 palabras.
+  PROHIBIDO empezar con: "Este", "Presentamos", "Descubre", "El/La [nombre del producto]" o el nombre repetido.
+  Elige el tipo de apertura según la emoción de compra:
+  - Escena inmersiva:  "Son las 7 de la mañana y [situación vivida por el comprador]."
+  - Pregunta retórica: "¿Cuántas veces has buscado [X] sin encontrar exactamente eso?"
+  - Declaración audaz: "Esto no es otra [cliché de la categoría]. Y lo notas desde el primer uso."
+  - Beneficio directo: "[Dato o número concreto] que cambia [rutina específica del comprador]."
+  La primera PALABRA activa el estado mental: "Imagina"→fantasía; "¿Cuántas"→problema; verbo imperativo suave→identidad.
 
-CTA (elige el más apropiado para el producto — adapta el género gramatical):
-- "Hazte con el tuyo hoy." (producto gramaticalmente masculino)
-- "Hazte con la tuya hoy." (producto gramaticalmente femenino)
-- "Pídelo hoy y recíbelo en casa." (conveniencia, compra impulsiva)
-- "Dale a tu [mascota/bebé/familia] lo mejor hoy." (productos de cuidado)
-- "Transforma tu [cocina/hogar/rutina] hoy." (hogar, belleza)
-- "Llévalo a casa hoy." (electrónica, accesorios, herramientas)
-- "El regalo perfecto. Pídelo hoy." (regalos, temporadas especiales)
+PÁRRAFO 2 — CONTEXTO DE USO:
+  UN caso de uso específico y vivido — no tres contextos genéricos. Quién lo usa, cuándo, qué experimenta. Incluye al menos un detalle sensorial (textura, peso, sonido, olor, sensación). Si el producto tiene un contexto de uso óptimo relevante, menciónalo de forma positiva ("funciona mejor cuando...", "ideal si buscas...") — previene devoluciones y genera confianza.
+
+PÁRRAFO 3 — CIERRE:
+  Una frase que activa la consecuencia emocional: "el resultado es...", "lo que notas desde el primer día...", "sin tener que...". Seguida del CTA.
+
+CTA: Genera uno personalizado para ESTE producto (5-10 palabras). Inspírate en estas estructuras pero crea uno propio si el producto lo justifica:
+  "Hazte con el/la tuyo/a hoy." | "Pídelo hoy y recíbelo en casa." | "Dale a tu [X] lo mejor hoy." | "Transforma tu [X] hoy."
+  El CTA perfecto solo funciona para ESTE producto, no para cualquier otro de la categoría.
+
+TÉCNICAS DE ALTO IMPACTO (úsalas cuando el producto las justifica):
+  FUTURE PACING: "El próximo [lunes/verano/viaje]..." — lleva al comprador a un momento futuro donde ya tiene el producto.
+  CONTRAST FRAME: "No es [cliché de la categoría]. Es [beneficio único concreto]."
+  RITMO: alterna frase corta (5-8 palabras) con frase media (12-16 palabras). La última frase de cada párrafo debe ser la más corta.
+
+REGISTRO: Conversacional pero competente. Como hablarle de tú a tú a alguien comparando opciones — sin venderle la moto, señalando lo que necesita saber y sentir para decidir.
+COMPRADOR: En fase de comparación. El copy responde implícitamente a "¿por qué este y no otro?". Asume que ha visto 5 descripciones genéricas de esta categoría antes de llegar a esta.
 </REGLAS>
 
-<EJEMPLO>
-Input: Producto: Sudadera con capucha oversized gris, Categoría: Ropa, Atributos: {material: "Algodón orgánico 100%", estilo: "oversized"}
+<AUTOVERIFICACION>
+ANTES DE ESCRIBIR EL JSON, verifica internamente — NO lo incluyas en la respuesta:
+1. ¿Hay trademark de tercero (Nike, Apple, IKEA, Zara, Samsung, etc.)? → Elimínalo.
+2. ¿El título tiene más de 100 chars? → Acórtalo.
+3. ¿Algún bullet tiene más de 15 palabras? → Acórtalo.
+4. ¿Has mencionado algún atributo no confirmado en los inputs? → Elimínalo.
+5. ¿El gancho detiene el scroll de alguien que ya vio 5 productos similares? Si no → Reescríbelo.
+6. ¿Cada bullet añade algo único que los otros no dicen? Si no → Elimina el redundante.
+7. ¿El CTA funcionaría para cualquier producto de esta categoría? Si sí → Personalízalo.
+</AUTOVERIFICACION>
 
-Output:
-{
-  "title": "Sudadera Oversized de Algodón Orgánico | Comodidad Real",
-  "title_b": "Sudadera Capucha Oversize 100% Algodón Orgánico - Suave y Holgada",
-  "bullets": [
-    "ALGODÓN ORGÁNICO 100%: sin químicos agresivos, suave desde el primer contacto con la piel",
-    "CORTE OVERSIZED: libertad de movimiento total, estética relaxed que combina con cualquier look",
-    "CAPUCHA AJUSTABLE: protección ante el frío sin sacrificar el estilo del día a día",
-    "RESISTENTE AL LAVADO: mantiene forma y suavidad lavado tras lavado sin encogerse"
-  ],
-  "description": "Hay prendas que te pones y no quieres quitarte. Esta sudadera de algodón orgánico 100% es exactamente eso: suave al tacto, holgada sin perder la forma y cómoda desde el primer día.\n\nEl corte oversized la hace perfecta para el trabajo desde casa, una mañana tranquila o un día de compras. El tejido 100% orgánico garantiza que no hay tintes ni químicos agresivos contra tu piel. Ideal para quienes valoran la comodidad sin renunciar a un estilo limpio.\n\nHazte con la tuya hoy.",
-  "primary_keyword": "sudadera oversized algodón orgánico"
-}
-</EJEMPLO>
-
-Responde SIEMPRE con JSON válido exactamente en ese formato: title, title_b, bullets (array), description, primary_keyword. No añadas texto fuera del JSON. No uses markdown dentro del JSON.
+Responde SIEMPRE con JSON válido exactamente con estos campos. Nada de texto fuera del JSON:
+{"title":"...","title_b":"Estrategia OPUESTA a title: si title es benefit-lead entonces title_b es keyword-lead; si title es emocional entonces title_b es técnico y específico","bullets":["..."],"description":"párrafo1\\n\\npárrafo2\\n\\npárrafo3","primary_keyword":"2-4 palabras como las escribiría el comprador en el buscador","target_audience":"2-3 palabras describiendo el comprador ideal","hook_type":"scene|question|bold|benefit","quality_flags":{"no_trademarks":true,"title_in_range":true,"bullets_concise":true,"attrs_real":true,"hook_differentiated":true}}
 `;
 
 export function buildUserPrompt(product: {
@@ -94,76 +198,94 @@ export function buildUserPrompt(product: {
   category?: string | null;
   attributes?: Record<string, string> | null;
   mode?: GenerationMode;
+  marketplace?: Marketplace;
+  priceSegment?: PriceSegment;
 }): string {
   const mode = product.mode && product.mode in MODE_CONFIG ? product.mode : "creative";
   const modeConfig = MODE_CONFIG[mode as GenerationMode];
+  const category = product.category || "General";
 
   let prompt = `${modeConfig.systemPrompt}\n\n`;
   prompt += `Producto: ${product.productName}\n`;
-  prompt += `Categoría: ${product.category || "General"}\n`;
+  prompt += `Categoría: ${category}\n`;
 
   if (product.attributes && Object.keys(product.attributes).length > 0) {
-    prompt += `Atributos conocidos del producto: ${JSON.stringify(product.attributes)}\n`;
+    prompt += `Atributos confirmados: ${JSON.stringify(product.attributes)}\n`;
+    prompt += `IMPORTANTE: usa SOLO estos atributos. No inventes materiales, medidas ni características adicionales.\n`;
+  } else {
+    prompt += `Sin atributos específicos — genera copy honesto basado solo en el nombre y categoría. No inventes especificaciones.\n`;
   }
 
-  // Category guides — keywords are SUGGESTIONS, not mandatory.
-  // Only use a keyword if it genuinely describes this specific product.
+  // Marketplace guidance
+  prompt += `\nMarketplace destino: ${MARKETPLACE_GUIDE[product.marketplace ?? "general"]}\n`;
+
+  // Price segment
+  if (product.priceSegment) {
+    prompt += `Segmento de precio: ${PRICE_SEGMENT_GUIDE[product.priceSegment]}\n`;
+  }
+
+  // Emotional archetype
+  const archetype = EMOTIONAL_ARCHETYPE[category];
+  if (archetype) {
+    prompt += `Emoción de compra dominante: ${archetype}\n`;
+  }
+
+  // Dynamic calibration example for this category
+  const cal = CATEGORY_CALIBRATION[category];
+  if (cal) {
+    prompt += `
+Calibración de tono para ${category} (referencia — NO copies, adapta al producto real):
+  Título modelo:  "${cal.title}"
+  Gancho modelo:  "${cal.hook}"
+  Bullet modelo:  "${cal.bullet}"
+`;
+  }
+
+  // Category keyword suggestions — conditional, not mandatory
   const categoryGuides: Record<string, string> = {
-    "Ropa": "Keywords SUGERIDAS (solo si aplican al producto real): 'Algodón', 'Orgánico', 'Sostenible', 'Comodidad', 'Fit'. Si es oversized, incluye 'Oversized'. Si el material no es orgánico, NO uses 'orgánico'. Verbos: Viste, Brinda, Mantiene, Combina, Abraza.",
-    "Moda": "Keywords SUGERIDAS (solo si aplican): 'Elegante', 'Versátil', 'Tendencia', 'Temporada'. No menciones materiales que el producto no tiene. Verbos: Viste, Eleva, Realza, Combina, Define.",
-    "Electrónica": "Keywords SUGERIDAS (solo si aplican): 'Inalámbrico', 'Bluetooth', 'Batería larga duración', 'Compatible'. NO uses 'Cancelación de ruido' si el producto no tiene esa función. Verbos: Conecta, Disfruta, Escucha, Optimiza, Experimenta.",
-    "Hogar": "Keywords SUGERIDAS (solo si aplican): 'Resistente', 'Fácil limpieza', 'Ahorro energético', 'Durable'. NO uses 'Cerámica' si el producto no es de cerámica. Verbos: Transforma, Organiza, Decora, Simplifica, Mejora.",
-    "Cocina": "Keywords SUGERIDAS (solo si aplican): 'Antiadherente', 'Apto lavavajillas', 'Sin BPA', 'Cocción uniforme'. No menciones materiales que el producto no tiene. Verbos: Cocina, Prepara, Ahorra, Disfruta, Simplifica.",
-    "Deportes": "Keywords SUGERIDAS (solo si aplican): 'Transpirable', 'Amortiguación', 'Soporte', 'Rendimiento', 'Ligero'. Verbos: Corre, Entrena, Mejora, Optimiza, Supera. IMPORTANTE: nunca uses marcas registradas de terceros (Nike, Adidas, Puma, etc.).",
-    "Belleza": "Keywords SUGERIDAS (solo si aplican): 'Hidratación', 'Vegano', 'Sin parabenos', 'Dermatológicamente testado', 'Natural'. Solo menciona ingredientes que el producto contiene realmente. Verbos: Hidrata, Ilumina, Revitaliza, Nutre, Protege.",
-    "Accesorios": "Keywords SUGERIDAS (solo si aplican): 'Resistente al agua', 'Compartimentos', 'Ajustable', 'Ligero'. Verbos: Organiza, Protege, Complementa, Lleva, Guarda.",
-    "Iluminación": "Keywords SUGERIDAS (solo si aplican): 'LED', 'Bajo consumo', 'Regulable', 'Luz cálida', 'Luz fría'. Solo usa especificaciones reales. Verbos: Ilumina, Crea, Transforma, Ahorra, Ambienta.",
-    "Juguetes": "Keywords SUGERIDAS (solo si aplican): 'Educativo', 'Sin BPA', 'Estimula la creatividad'. Verbos: Estimula, Educa, Entretiene, Desarrolla, Inspira.",
-    "Oficina": "Keywords SUGERIDAS (solo si aplican): 'Ergonómico', 'Ajustable', 'Compacto', 'Antideslizante'. Verbos: Organiza, Mejora, Optimiza, Facilita, Reduce.",
-    "Jardín": "Keywords SUGERIDAS (solo si aplican): 'Resistente a la intemperie', 'UV', 'Durable', 'Fácil montaje'. Verbos: Transforma, Decora, Cultiva, Disfruta, Embellece.",
-    "Bebé": "Keywords SUGERIDAS (solo si aplican): 'Suave', 'Sin alérgenos', 'Certificado', 'Hipoalergénico'. SOLO usa 'orgánico' si está certificado. Verbos: Protege, Cuida, Calma, Estimula, Abraza.",
-    "Mascotas": "Keywords SUGERIDAS (solo si aplican): 'Resistente', 'Seguro', 'Lavable', 'Duradero'. Verbos: Mima, Protege, Entretiene, Cuida, Mantiene.",
-    "Automóvil": "Keywords SUGERIDAS (solo si aplican): 'Universal', 'Compatible', 'Fácil instalación', 'Resistente'. Verbos: Protege, Mejora, Organiza, Instala, Mantiene.",
-    "POD": "Keywords SUGERIDAS: 'Personalizable', 'Único', 'Regalo original', 'Hecho a medida'. Verbos: Personaliza, Sorprende, Crea, Regala, Dedica.",
-    "Salud": "Keywords SUGERIDAS (solo si aplican y están avaladas): 'Natural', 'Sin azúcar', 'Apto celíacos'. Evita afirmaciones de salud no respaldadas. Verbos: Cuida, Fortalece, Mejora, Equilibra, Apoya.",
-    "Bienestar": "Keywords SUGERIDAS (solo si aplican): 'Relajante', 'Natural', 'Sin químicos', 'Aromaterapia'. Verbos: Relaja, Equilibra, Renueva, Calma, Restaura.",
-    "Boda": "Keywords SUGERIDAS: 'Elegante', 'Memorable', 'Personalizable', 'Artesanal'. Verbos: Celebra, Decora, Sorprende, Crea, Recuerda.",
-    "Navidad": "Keywords SUGERIDAS: 'Regalo', 'Edición especial', 'Navideño', 'Para toda la familia'. Verbos: Regala, Decora, Sorprende, Disfruta, Comparte.",
-    "Deporte Extremo": "Keywords SUGERIDAS (solo si aplican): 'Alta resistencia', 'Ultraligero', 'Seguridad', 'Certificado CE'. Verbos: Escala, Desafía, Conquista, Protege, Rinde.",
+    "Ropa":            "Keywords SUGERIDAS (solo si aplican): Algodón, Oversized, Orgánico, Sostenible. Si el material no es orgánico, NO uses orgánico. Nunca trademarks de marca.",
+    "Moda":            "Keywords SUGERIDAS (solo si aplican): Versátil, Tendencia, Elegante. No mezcles materiales que el producto no tiene.",
+    "Electrónica":     "Keywords SUGERIDAS (solo si aplican): Inalámbrico, Bluetooth, Batería, Compatible. NO uses Cancelación de ruido si el producto no tiene esa función.",
+    "Hogar":           "Keywords SUGERIDAS (solo si aplican): Resistente, Fácil limpieza, Durable. NO uses Cerámica si el producto no es de cerámica.",
+    "Cocina":          "Keywords SUGERIDAS (solo si aplican): Antiadherente, Sin BPA, Apto lavavajillas. No menciones materiales que el producto no tiene.",
+    "Deportes":        "Keywords SUGERIDAS (solo si aplican): Transpirable, Amortiguación, Soporte. NUNCA marcas de terceros (Nike, Adidas, Asics, etc.).",
+    "Belleza":         "Keywords SUGERIDAS (solo si aplican): Hidratación, Vegano, Sin parabenos, Natural. Solo ingredientes que el producto contiene realmente.",
+    "Accesorios":      "Keywords SUGERIDAS (solo si aplican): Resistente al agua, Ajustable, Ligero.",
+    "Bebé":            "Keywords SUGERIDAS (solo si aplican): Suave, Hipoalergénico, Certificado. SOLO orgánico si está certificado.",
+    "Mascotas":        "Keywords SUGERIDAS (solo si aplican): Resistente, Seguro, Lavable, Duradero.",
+    "Oficina":         "Keywords SUGERIDAS (solo si aplican): Ergonómico, Ajustable, Compacto.",
+    "Iluminación":     "Keywords SUGERIDAS (solo si aplican): LED, Bajo consumo, Regulable.",
+    "Juguetes":        "Keywords SUGERIDAS (solo si aplican): Educativo, Sin BPA, Estimula creatividad.",
+    "Jardín":          "Keywords SUGERIDAS (solo si aplican): Resistente intemperie, UV, Durable.",
+    "Automóvil":       "Keywords SUGERIDAS (solo si aplican): Universal, Compatible, Fácil instalación.",
+    "POD":             "Keywords: Personalizable, Único, Regalo original. El título describe el DISEÑO, no el material.",
+    "Salud":           "Keywords SUGERIDAS (solo si aplican y avaladas): Natural, Sin azúcar. Evita afirmaciones de salud no respaldadas.",
+    "Bienestar":       "Keywords SUGERIDAS (solo si aplican): Relajante, Natural, Sin químicos, Aromaterapia.",
+    "Boda":            "Keywords: Elegante, Memorable, Personalizable, Artesanal.",
+    "Navidad":         "Keywords: Regalo, Edición especial, Navideño. No uses urgencia estacional fuera de temporada.",
+    "Deporte Extremo": "Keywords SUGERIDAS (solo si aplican): Alta resistencia, Ultraligero, Certificado CE. NUNCA marcas de terceros.",
   };
 
-  const guide = categoryGuides[product.category || ""];
+  const guide = categoryGuides[category];
   if (guide) {
-    prompt += `\nGuía de categoría (keywords SUGERIDAS — úsalas SOLO si describen este producto específico):\n${guide}`;
-  } else {
-    prompt += `\nGuía general: Usa verbos de beneficio en presente. Incluye el uso más específico del producto. Elige el CTA más apropiado del system prompt.`;
+    prompt += `Keywords para ${category} (SUGERIDAS — úsalas SOLO si describen este producto específico):\n${guide}\n`;
   }
 
-  // Attribute-driven overrides — only when we have confirmed product data
-  if (product.productName.toLowerCase().includes("oversized")) {
-    prompt += `\n\nATENCIÓN: El producto es "oversized" — incluye esta palabra en el título y en al menos un bullet.`;
-  }
-
+  // Confirmed attribute overrides
   if (product.attributes) {
-    const attrs = product.attributes;
-    if (attrs["material"]) {
-      prompt += `\n\nATENCIÓN: Material confirmado: "${attrs["material"]}" — menciónalo en título y úsalo como base para keywords. No uses keywords de materiales distintos.`;
-    }
-    if (attrs["talla"] && ["Ropa", "Moda", "Deportes", "Bebé"].includes(product.category || "")) {
-      prompt += `\n\nATENCIÓN: Talla confirmada: "${attrs["talla"]}" — inclúyela en el título.`;
-    }
-    if (attrs["compatibilidad"] && ["Accesorios", "Automóvil", "Electrónica"].includes(product.category || "")) {
-      prompt += `\n\nATENCIÓN: Compatibilidad confirmada: "${attrs["compatibilidad"]}" — inclúyela en el título.`;
-    }
-    if (attrs["diámetro"] && ["Hogar", "Cocina"].includes(product.category || "")) {
-      prompt += `\n\nATENCIÓN: Diámetro confirmado: "${attrs["diámetro"]}" — inclúyelo en título o primer bullet.`;
-    }
-    if (attrs["capacidad"]) {
-      prompt += `\n\nATENCIÓN: Capacidad confirmada: "${attrs["capacidad"]}" — inclúyela si es un diferencial relevante.`;
-    }
+    const a = product.attributes;
+    if (a["material"]) prompt += `\nMaterial CONFIRMADO: "${a["material"]}" — menciónalo en título. No uses keywords de otros materiales.\n`;
+    if (a["talla"] && ["Ropa", "Moda", "Deportes", "Bebé"].includes(category)) prompt += `Talla CONFIRMADA: "${a["talla"]}" — en el título.\n`;
+    if (a["compatibilidad"] && ["Accesorios", "Automóvil", "Electrónica"].includes(category)) prompt += `Compatibilidad CONFIRMADA: "${a["compatibilidad"]}" — en el título.\n`;
+    if (a["capacidad"]) prompt += `Capacidad CONFIRMADA: "${a["capacidad"]}" — inclúyela si es diferencial relevante.\n`;
+    if (a["diámetro"] && ["Hogar", "Cocina"].includes(category)) prompt += `Diámetro CONFIRMADO: "${a["diámetro"]}" — en título o primer bullet.\n`;
   }
 
-  prompt += `\n\nGenera el JSON con: title, title_b, bullets (array de 4-6), description (2-3 párrafos separados por \\n\\n), primary_keyword. Solo incluye atributos reales de este producto.`;
+  if (product.productName.toLowerCase().includes("oversized")) {
+    prompt += `\nEl producto es "oversized" — incluye esta palabra en el título y en al menos un bullet.\n`;
+  }
+
+  prompt += `\nEscribe el JSON completo. El hilo conductor: el ÚNICO beneficio diferencial que ninguna alternativa tiene — específico y real.`;
   return prompt;
 }
 
@@ -174,17 +296,24 @@ export function buildUserPromptWithVoice(
   const base = buildUserPrompt(product);
   if (!voiceProfile) return base;
 
-  return (
-    base +
-    `\n\n<VOZ_DE_MARCA>
-Adapta el copy a esta identidad de marca:
+  let voice = `\n\n<VOZ_DE_MARCA>
+Adapta TODO el copy a esta identidad — tono, estructura y vocabulario:
 - Tono: ${voiceProfile.tone}
 - Vocabulario: ${voiceProfile.vocabulary}
 - Estructura de frases: ${voiceProfile.sentenceStructure}
-- Personalidad de marca: ${voiceProfile.brandPersonality}
-- Palabras clave de la marca: ${voiceProfile.keyWords.join(", ")}
+- Personalidad: ${voiceProfile.brandPersonality}
+- Palabras clave de marca: ${voiceProfile.keyWords.join(", ")}`;
 
-Integra el vocabulario de marca de forma natural, sin que suene forzado.
-</VOZ_DE_MARCA>`
-  );
+  if (voiceProfile.brandPromise) {
+    voice += `\n- Promesa de marca (cada pieza debe reflejarla): ${voiceProfile.brandPromise}`;
+  }
+  if (voiceProfile.antiPatterns?.length) {
+    voice += `\n- NUNCA en este copy: ${voiceProfile.antiPatterns.join(", ")}`;
+  }
+
+  voice += `
+Adapta también la ESTRUCTURA según la personalidad: marcas técnicas → más bullets, menos narrativa; marcas emocionales → párrafo narrativo expandido, bullets cortos; marcas jóvenes/irreverentes → gancho más audaz, CTA con personalidad propia.
+</VOZ_DE_MARCA>`;
+
+  return base + voice;
 }

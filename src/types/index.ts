@@ -6,10 +6,23 @@ export interface ProductInput {
   attributes?: Record<string, string>;
 }
 
+export interface QualityFlags {
+  no_trademarks?: boolean;
+  title_in_range?: boolean;
+  bullets_concise?: boolean;
+  attrs_real?: boolean;
+  hook_differentiated?: boolean;
+}
+
 export interface GeneratedContent {
   title: string;
+  title_b?: string;
   bullets: string[];
   description: string;
+  primary_keyword?: string;
+  target_audience?: string;
+  hook_type?: "scene" | "question" | "bold" | "benefit";
+  quality_flags?: QualityFlags;
 }
 
 export interface ListingRow {

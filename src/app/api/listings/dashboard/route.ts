@@ -21,9 +21,14 @@ export async function GET(req: Request) {
           category: schema.listings.category,
           status: schema.listings.status,
           generatedTitle: schema.listings.generatedTitle,
+          generatedTitleB: schema.listings.generatedTitleB,
           generatedBullets: schema.listings.generatedBullets,
           generatedDescription: schema.listings.generatedDescription,
           errorMessage: schema.listings.errorMessage,
+          userRating: schema.listings.userRating,
+          primaryKeyword: schema.listings.primaryKeyword,
+          hookType: schema.listings.hookType,
+          qualityFlags: schema.listings.qualityFlags,
         })
         .from(schema.listings)
         .where(eq(schema.listings.userId, userId))

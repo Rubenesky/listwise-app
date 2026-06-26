@@ -13,15 +13,60 @@ import CreditsPopover from "@/components/CreditsPopover";
 type ListingStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
 type GenerationMode = "creative" | "professional" | "seo";
 
+interface QualityFlags {
+  no_trademarks?: boolean;
+  title_in_range?: boolean;
+  bullets_concise?: boolean;
+  attrs_real?: boolean;
+  hook_differentiated?: boolean;
+}
+
 interface ListingRow {
   id: string;
   productName: string;
   category: string | null;
   status: ListingStatus;
   generatedTitle: string | null;
+  generatedTitleB: string | null;
   generatedBullets: string[] | null;
   generatedDescription: string | null;
   errorMessage: string | null;
+  userRating: number | null;
+  primaryKeyword: string | null;
+  hookType: string | null;
+  qualityFlags: QualityFlags | null;
+}
+
+function calcHealthScore(listing: ListingRow): number {
+  if (listing.status !== "COMPLETED") return 0;
+  let score = 0;
+  if (listing.generatedTitle) {
+    score += 20;
+    const len = listing.generatedTitle.length;
+    if (len >= 60 && len <= 100) score += 15;
+    else if (len >= 40) score += 8;
+  }
+  if (listing.generatedBullets) {
+    if (listing.generatedBullets.length >= 4) score += 20;
+    else if (listing.generatedBullets.length >= 2) score += 10;
+  }
+  if (listing.generatedDescription) {
+    if (listing.generatedDescription.length >= 200) score += 20;
+    else if (listing.generatedDescription.length >= 100) score += 10;
+  }
+  if (listing.primaryKeyword) score += 10;
+  if (listing.hookType) score += 5;
+  if (listing.generatedTitleB) score += 5;
+  if (listing.qualityFlags?.no_trademarks) score += 3;
+  if (listing.qualityFlags?.hook_differentiated) score += 2;
+  return Math.min(100, score);
+}
+
+function getHealthLabel(score: number): { label: string; color: string } {
+  if (score >= 90) return { label: "Excelente", color: "text-green-700 bg-green-100" };
+  if (score >= 70) return { label: "Bueno", color: "text-teal-700 bg-teal-100" };
+  if (score >= 50) return { label: "Regular", color: "text-yellow-700 bg-yellow-100" };
+  return { label: "Mejorable", color: "text-orange-700 bg-orange-100" };
 }
 
 const PLAN_LABELS: Record<string, string> = {
@@ -76,6 +121,14 @@ export default function DashboardPage() {
   const [aiProvider, setAiProvider] = useState("groq");
   const [availableProviders, setAvailableProviders] = useState<string[]>(["groq"]);
   const currentPageRef = useRef(1);
+  const [marketplace, setMarketplace] = useState<string>(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("listwise_marketplace") ?? "general";
+    return "general";
+  });
+  const [priceSegment, setPriceSegment] = useState<string>(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("listwise_price_segment") ?? "";
+    return "";
+  });
 
   // Derived stats from listings state
   const completedCount = listings.filter((l) => l.status === "COMPLETED").length;
@@ -149,6 +202,29 @@ export default function DashboardPage() {
   useEffect(() => {
     localStorage.setItem("listwise_generation_mode", selectedMode);
   }, [selectedMode]);
+
+  useEffect(() => {
+    localStorage.setItem("listwise_marketplace", marketplace);
+  }, [marketplace]);
+
+  useEffect(() => {
+    localStorage.setItem("listwise_price_segment", priceSegment);
+  }, [priceSegment]);
+
+  const handleRate = async (listingId: string, rating: number | null) => {
+    setListings((prev) =>
+      prev.map((l) => (l.id === listingId ? { ...l, userRating: rating } : l))
+    );
+    try {
+      await fetch(`/api/listings/${listingId}/rate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rating }),
+      });
+    } catch {
+      fetchListings(currentPageRef.current);
+    }
+  };
 
 
   // Register referral code from localStorage after sign-up
@@ -262,6 +338,8 @@ export default function DashboardPage() {
       formData.append("file", file);
       formData.append("mode", selectedMode);
       formData.append("provider", aiProvider);
+      formData.append("marketplace", marketplace);
+      if (priceSegment) formData.append("priceSegment", priceSegment);
       const res = await fetch("/api/upload", {
         method: "POST",
         body: formData,
@@ -390,8 +468,49 @@ export default function DashboardPage() {
 
               {selectedListing.status === "COMPLETED" && (
                 <div className="space-y-5">
+                  {/* Health score + rating */}
+                  <div className="flex items-center justify-between">
+                    {(() => {
+                      const score = calcHealthScore(selectedListing);
+                      const { label, color } = getHealthLabel(score);
+                      return (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500">Listing Health Score:</span>
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${color}`}>
+                            {score}/100 · {label}
+                          </span>
+                        </div>
+                      );
+                    })()}
+                    <div className="flex items-center gap-1">
+                      <span className="text-xs text-gray-400 mr-1">Valorar:</span>
+                      <button
+                        onClick={() => handleRate(selectedListing.id, selectedListing.userRating === 1 ? null : 1)}
+                        className={`p-1.5 rounded-lg text-base transition-colors ${
+                          selectedListing.userRating === 1
+                            ? "bg-green-100 text-green-700"
+                            : "text-gray-400 hover:text-green-600 hover:bg-green-50"
+                        }`}
+                        title="Buen resultado"
+                      >
+                        👍
+                      </button>
+                      <button
+                        onClick={() => handleRate(selectedListing.id, selectedListing.userRating === -1 ? null : -1)}
+                        className={`p-1.5 rounded-lg text-base transition-colors ${
+                          selectedListing.userRating === -1
+                            ? "bg-red-100 text-red-700"
+                            : "text-gray-400 hover:text-red-600 hover:bg-red-50"
+                        }`}
+                        title="Mal resultado"
+                      >
+                        👎
+                      </button>
+                    </div>
+                  </div>
+
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Título optimizado</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Título A (activo)</label>
                     <input
                       className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       value={editTitle}
@@ -399,6 +518,23 @@ export default function DashboardPage() {
                       maxLength={200}
                     />
                     <p className="text-xs text-gray-400 mt-1">{editTitle.length}/200 caracteres</p>
+                    {selectedListing.generatedTitleB && (
+                      <div className="mt-2">
+                        <p className="text-xs text-gray-500 mb-1">Variante B (estrategia opuesta — clic para usar)</p>
+                        <div
+                          className="w-full border border-dashed border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-600 bg-gray-50 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors"
+                          onClick={() => setEditTitle(selectedListing.generatedTitleB!)}
+                          title="Clic para usar la variante B como título activo"
+                        >
+                          {selectedListing.generatedTitleB}
+                        </div>
+                      </div>
+                    )}
+                    {selectedListing.primaryKeyword && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        Keyword principal: <span className="font-medium text-gray-600">{selectedListing.primaryKeyword}</span>
+                      </p>
+                    )}
                   </div>
 
                   <div>
@@ -696,6 +832,62 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        {/* Marketplace selector */}
+        <div>
+          <div className="flex items-center gap-1.5 mb-2">
+            <label className="text-sm font-medium text-gray-700">Marketplace destino</label>
+            <InfoTooltip content="El prompt se adapta al estilo y estructura de cada plataforma. Amazon prioriza keywords; Etsy prioriza autenticidad; Shopify prioriza lifestyle." />
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {([
+              { id: "general", label: "🌐 General" },
+              { id: "amazon", label: "📦 Amazon" },
+              { id: "etsy", label: "🌿 Etsy" },
+              { id: "shopify", label: "🛒 Shopify" },
+            ] as const).map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => setMarketplace(id)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all hover:scale-105 ${
+                  marketplace === id
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Price segment selector */}
+        <div>
+          <div className="flex items-center gap-1.5 mb-2">
+            <label className="text-sm font-medium text-gray-700">Segmento de precio</label>
+            <InfoTooltip content="Economy: práctico y directo. Mid: calidad-precio equilibrado. Premium: aspiracional y sensorial. Ajusta el tono del copy al rango de precio." />
+          </div>
+          <div className="flex gap-2 flex-wrap">
+            {([
+              { id: "", label: "Sin especificar" },
+              { id: "economy", label: "💰 Economy" },
+              { id: "mid", label: "⚖️ Mid" },
+              { id: "premium", label: "💎 Premium" },
+            ] as const).map(({ id, label }) => (
+              <button
+                key={id}
+                onClick={() => setPriceSegment(id)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all hover:scale-105 ${
+                  priceSegment === id
+                    ? "bg-amber-500 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* AI Provider selector */}
         {availableProviders.length > 1 && (
           <div>
@@ -806,6 +998,17 @@ export default function DashboardPage() {
                         >
                           {listing.productName}
                         </button>
+                        {listing.status === "COMPLETED" && (() => {
+                          const score = calcHealthScore(listing);
+                          const { label, color } = getHealthLabel(score);
+                          return (
+                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium mt-0.5 ${color}`}>
+                              {score} · {label}
+                            </span>
+                          );
+                        })()}
+                        {listing.userRating === 1 && <span className="ml-1 text-xs">👍</span>}
+                        {listing.userRating === -1 && <span className="ml-1 text-xs">👎</span>}
                       </td>
                       <td className="px-6 py-4">{getStatusBadge(listing.status)}</td>
                       <td className="px-6 py-4 text-gray-500 max-w-[300px] truncate">
