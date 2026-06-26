@@ -85,6 +85,32 @@ const CATEGORY_CALIBRATION: Record<string, { title: string; hook: string; bullet
   },
 };
 
+// Prescriptive hook type per category — tells the model exactly which opener to use
+// Avoids defaulting to "Imagina" for every product
+const REQUIRED_HOOK_TYPE: Record<string, { type: string; instruction: string }> = {
+  "Ropa":            { type: "bold",     instruction: 'Declaración audaz: "Esto no es otra sudadera/camiseta/[prenda genérica]." — define por oposición al cliché de la categoría.' },
+  "Moda":            { type: "bold",     instruction: 'Declaración audaz que rompe el cliché de moda genérica.' },
+  "Deportes":        { type: "scene",    instruction: 'Escena inmersiva: "Son las [hora] de la mañana y [situación de entrenamiento/esfuerzo vivida por el comprador]."' },
+  "Deporte Extremo": { type: "scene",    instruction: 'Escena inmersiva en el momento de máxima exigencia física.' },
+  "Electrónica":     { type: "benefit",  instruction: 'Beneficio directo con dato concreto: "[número o dato específico] que cambia [rutina diaria]."' },
+  "Cocina":          { type: "benefit",  instruction: 'Beneficio directo: "[resultado concreto de cocinar con este producto]." — nada de imaginación, hechos.' },
+  "Hogar":           { type: "question", instruction: '¿Cuántas veces has [problema doméstico concreto] sin encontrar la solución adecuada?' },
+  "Iluminación":     { type: "scene",    instruction: 'Escena inmersiva con la diferencia de luz/ambiente antes vs después.' },
+  "Belleza":         { type: "question", instruction: 'Pregunta retórica que nombra el problema exacto que el comprador ya conoce.' },
+  "Bienestar":       { type: "scene",    instruction: 'Escena inmersiva del momento de pausa y descanso que el producto hace posible.' },
+  "Salud":           { type: "benefit",  instruction: 'Beneficio directo con dato o resultado medible.' },
+  "Bebé":            { type: "scene",    instruction: 'Escena inmersiva desde la perspectiva del padre/madre en el momento de necesidad.' },
+  "Mascotas":        { type: "question", instruction: '¿Cuántas noches has visto a tu [perro/gato/mascota] [problema específico] sin poder hacer nada?' },
+  "Accesorios":      { type: "bold",     instruction: 'Declaración audaz que rompe el cliché de la categoría.' },
+  "Oficina":         { type: "question", instruction: 'Pregunta retórica sobre el problema de productividad o incomodidad que el comprador vive a diario.' },
+  "Jardín":          { type: "scene",    instruction: 'Escena inmersiva de disfrutar el jardín/exterior en el momento ideal.' },
+  "Juguetes":        { type: "scene",    instruction: 'Escena inmersiva de la sonrisa o el descubrimiento del niño usando el juguete.' },
+  "Automóvil":       { type: "benefit",  instruction: 'Beneficio directo con dato de funcionamiento real.' },
+  "POD":             { type: "bold",     instruction: 'Declaración audaz sobre la singularidad y exclusividad del producto personalizado.' },
+  "Boda":            { type: "scene",    instruction: 'Escena inmersiva en ese momento único del día que el producto hace perfecto.' },
+  "Navidad":         { type: "benefit",  instruction: 'Beneficio directo enfocado en la reacción emocional del receptor del regalo.' },
+};
+
 // Emotional archetype by category — guides the emotional hook in paragraph 1
 const EMOTIONAL_ARCHETYPE: Record<string, string> = {
   "Ropa":            "IDENTIDAD Y PERTENENCIA: el comprador decide quién ES cuando lleva esto",
@@ -184,12 +210,14 @@ COMPRADOR: En fase de comparación. El copy responde implícitamente a "¿por qu
 <AUTOVERIFICACION>
 ANTES DE ESCRIBIR EL JSON, verifica internamente — NO lo incluyas en la respuesta:
 1. ¿Hay trademark de tercero (Nike, Apple, IKEA, Zara, Samsung, etc.)? → Elimínalo.
-2. ¿El título tiene más de 100 chars? → Acórtalo.
-3. ¿Algún bullet tiene más de 15 palabras? → Acórtalo.
-4. ¿Has mencionado algún atributo no confirmado en los inputs? → Elimínalo.
-5. ¿El gancho detiene el scroll de alguien que ya vio 5 productos similares? Si no → Reescríbelo.
-6. ¿Cada bullet añade algo único que los otros no dicen? Si no → Elimina el redundante.
-7. ¿El CTA funcionaría para cualquier producto de esta categoría? Si sí → Personalízalo.
+2. ¿El título tiene menos de 50 chars? → Amplíalo con el público objetivo o contexto de uso.
+3. ¿El título tiene más de 100 chars? → Acórtalo.
+4. ¿Algún bullet tiene más de 15 palabras? → Acórtalo.
+5. ¿Hay menos de 4 bullets? → AÑADE bullets hasta llegar a 4 mínimo usando: (a) contexto de uso ideal, (b) para quién es ideal y para quién no, (c) consecuencia emocional del beneficio principal. Esto es obligatorio — no puedes entregar menos de 4.
+6. ¿Has mencionado algún atributo material o característica física NO confirmada en los inputs? → Elimínala y sustitúyela por un beneficio de uso observable.
+7. ¿El gancho usa la misma apertura que usarías para cualquier producto de esta categoría? Si sí → Reescríbelo con el tipo de apertura indicado en el user prompt.
+8. ¿Cada bullet añade algo único que los otros no dicen? Si no → Elimina el redundante.
+9. ¿El CTA funcionaría para cualquier producto de esta categoría? Si sí → Personalízalo.
 </AUTOVERIFICACION>
 
 Responde SIEMPRE con JSON válido exactamente con estos campos. Nada de texto fuera del JSON:
@@ -214,9 +242,10 @@ export function buildUserPrompt(product: {
 
   if (product.attributes && Object.keys(product.attributes).length > 0) {
     prompt += `Atributos confirmados: ${JSON.stringify(product.attributes)}\n`;
-    prompt += `IMPORTANTE: usa SOLO estos atributos. No inventes materiales, medidas ni características adicionales.\n`;
+    prompt += `IMPORTANTE: usa SOLO estos atributos. No inventes materiales, medidas, texturas ni características no confirmadas.\n`;
   } else {
-    prompt += `Sin atributos específicos — genera copy honesto basado solo en el nombre y categoría. No inventes especificaciones.\n`;
+    prompt += `ATENCIÓN: este producto no tiene atributos confirmados.\n`;
+    prompt += `Regla estricta: NO inventes materiales ("textura suave", "alta calidad", "materiales premium"), ni dimensiones, ni características físicas no confirmadas. El copy debe basarse ÚNICAMENTE en el nombre del producto y lo que se infiere directamente de él. Para los bullets sin datos, usa: (1) el contexto de uso más obvio, (2) para quién es ideal, (3) la consecuencia emocional del beneficio principal — pero sin inventar propiedades físicas.\n`;
   }
 
   // Marketplace guidance
@@ -231,6 +260,12 @@ export function buildUserPrompt(product: {
   const archetype = EMOTIONAL_ARCHETYPE[category];
   if (archetype) {
     prompt += `Emoción de compra dominante: ${archetype}\n`;
+  }
+
+  // Prescriptive hook type — overrides model's default bias toward "Imagina"
+  const requiredHook = REQUIRED_HOOK_TYPE[category];
+  if (requiredHook) {
+    prompt += `\nTipo de apertura OBLIGATORIO para este producto (hook_type: "${requiredHook.type}"):\n${requiredHook.instruction}\nNO uses "Imagina" como primera palabra si el tipo requerido es question, bold o benefit.\n`;
   }
 
   // Dynamic calibration example for this category
