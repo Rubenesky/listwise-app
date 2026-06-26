@@ -20,6 +20,7 @@ interface GamificationStatus {
 interface RankingItem {
   rank: number;
   userId: string;
+  nickname: string;
   points: number;
   level: number;
   levelName: string;
@@ -27,28 +28,41 @@ interface RankingItem {
   badges: string[];
 }
 
-const BADGE_META: Record<string, { icon: string; name: string }> = {
-  first_product: { icon: "🌟", name: "Primer Producto" },
-  sharer: { icon: "📢", name: "Compartidor" },
-  ai_user: { icon: "🤖", name: "Usuario IA" },
-  level_5: { icon: "🏆", name: "Maestro" },
-  level_6: { icon: "⭐", name: "Leyenda" },
+const BADGE_META: Record<string, { icon: string; name: string; category?: string }> = {
+  // Gamification badges
+  first_product: { icon: "🌟", name: "Primer Producto", category: "logros" },
+  sharer: { icon: "📢", name: "Compartidor", category: "logros" },
+  ai_user: { icon: "🤖", name: "Usuario IA", category: "logros" },
+  level_5: { icon: "🏆", name: "Maestro", category: "nivel" },
+  level_6: { icon: "⭐", name: "Leyenda", category: "nivel" },
+  // Registration badges
+  first_referral: { icon: "🤝", name: "Primer Registro", category: "referidos" },
+  "5_referrals": { icon: "💫", name: "5 Registros", category: "referidos" },
+  "10_referrals": { icon: "👑", name: "10 Registros", category: "referidos" },
+  // Conversion badges
+  first_conversion: { icon: "🌟", name: "Primer Convertido", category: "referidos" },
+  "5_conversions": { icon: "💫", name: "5 Convertidos", category: "referidos" },
+  "10_conversions": { icon: "👑", name: "10 Convertidos", category: "referidos" },
 };
 
 export default function GamificationPage() {
   const { user } = useUser();
   const [status, setStatus] = useState<GamificationStatus | null>(null);
   const [ranking, setRanking] = useState<RankingItem[]>([]);
+  const [referralBadgeTypes, setReferralBadgeTypes] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
 
   const refresh = () => {
     Promise.all([
       fetch("/api/gamification/status").then((r) => r.json()),
       fetch("/api/gamification/ranking").then((r) => r.json()),
+      fetch("/api/referrals/badges").then((r) => r.json()).catch(() => ({ badges: [] })),
     ])
-      .then(([s, r]) => {
+      .then(([s, r, rb]) => {
         setStatus(s);
         setRanking(r.ranking ?? []);
+        const refTypes = (rb.badges ?? []).map((b: { type: string }) => b.type) as string[];
+        setReferralBadgeTypes(refTypes);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -158,24 +172,33 @@ export default function GamificationPage() {
             </div>
           </div>
 
-          {/* Badges */}
+          {/* Badges — gamification + referral unified */}
           <div className="bg-white rounded-xl border p-5">
             <h2 className="text-base font-semibold text-gray-900 mb-4">Insignias obtenidas</h2>
-            {!status || status.badges.length === 0 ? (
-              <p className="text-sm text-gray-400">Aún no has ganado insignias. ¡Sigue usando ListWise!</p>
-            ) : (
-              <div className="flex flex-wrap gap-3">
-                {status.badges.map((badge) => {
-                  const meta = BADGE_META[badge] ?? { icon: "🏅", name: badge };
-                  return (
-                    <div key={badge} className="flex items-center gap-2 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-                      <span className="text-xl">{meta.icon}</span>
-                      <span className="text-xs font-medium text-gray-700">{meta.name}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            {(() => {
+              const allBadges = [...new Set([...(status?.badges ?? []), ...referralBadgeTypes])];
+              if (allBadges.length === 0) {
+                return <p className="text-sm text-gray-400">Aún no has ganado insignias. ¡Sigue usando ListWise!</p>;
+              }
+              return (
+                <div className="flex flex-wrap gap-3">
+                  {allBadges.map((badge) => {
+                    const meta = BADGE_META[badge] ?? { icon: "🏅", name: badge };
+                    return (
+                      <div key={badge} className="flex items-center gap-2 px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                        <span className="text-xl">{meta.icon}</span>
+                        <div>
+                          <p className="text-xs font-medium text-gray-700">{meta.name}</p>
+                          {meta.category && (
+                            <p className="text-xs text-gray-400 capitalize">{meta.category}</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
 
           {/* How it works */}
@@ -223,7 +246,7 @@ export default function GamificationPage() {
                       </span>
                       <span className="text-base shrink-0">{r.levelIcon}</span>
                       <span className="flex-1 text-gray-700 truncate text-xs">
-                        {isMe ? "Tú" : `Usuario ${r.userId.slice(0, 8)}`}
+                        {isMe ? "Tú" : (r.nickname ?? `Vendedor #${r.rank}`)}
                       </span>
                       <span className="text-xs font-semibold text-purple-700 shrink-0">{r.points} pts</span>
                     </div>

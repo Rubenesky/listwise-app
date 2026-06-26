@@ -51,7 +51,7 @@ export default function DashboardPage() {
   const [file, setFile] = useState<File | null>(null);
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
   const [uploadWarnings, setUploadWarnings] = useState<string[]>([]);
-  const [credits, setCredits] = useState(0);
+
   const [selectedMode, setSelectedMode] = useState<GenerationMode>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("listwise_generation_mode");
@@ -150,12 +150,6 @@ export default function DashboardPage() {
     localStorage.setItem("listwise_generation_mode", selectedMode);
   }, [selectedMode]);
 
-  useEffect(() => {
-    fetch("/api/referrals/credits")
-      .then((r) => r.json())
-      .then((d) => setCredits(d.credits ?? 0))
-      .catch(() => {});
-  }, []);
 
   // Register referral code from localStorage after sign-up
   useEffect(() => {
@@ -473,12 +467,6 @@ export default function DashboardPage() {
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {credits > 0 && (
-              <div className="text-right">
-                <span className="text-xs text-gray-500">💰 Créditos referidos</span>
-                <p className="text-lg font-bold text-blue-600 leading-tight">{credits}</p>
-              </div>
-            )}
             <CreditsPopover />
             <div className="text-right">
               <span className="text-sm text-gray-500">Plan actual</span>

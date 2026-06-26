@@ -3,7 +3,7 @@ import * as cheerio from "cheerio";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { providers, getDefaultProvider } from "@/lib/ai/providers";
-import { isSPADomain, hasScrapingProvider, scrapeWithJSRendering } from "@/lib/scraping/providers";
+import { isSPADomain, hasScrapingProvider, scrapeWithJSRendering, extractFromUrlSlug } from "@/lib/scraping/providers";
 
 export interface CompetitorAnalysisPayload {
   analysisId: string;
@@ -34,6 +34,38 @@ const FETCH_HEADERS = {
   Accept: "text/html,application/xhtml+xml",
   "Accept-Language": "es,en;q=0.8",
 } as const;
+
+// Mobile headers: SHEIN/Temu sometimes bypass Cloudflare's desktop challenge for mobile UAs
+const MOBILE_HEADERS = {
+  "User-Agent": "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+  "Accept-Encoding": "gzip, deflate, br",
+  "Cache-Control": "no-cache",
+} as const;
+
+// SHEIN domains that need the 3-layer free strategy
+const SHEIN_DOMAINS = ["shein.com", "shein.es", "es.shein.com", "m.shein.com"];
+
+function isSheinDomain(url: string): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return SHEIN_DOMAINS.some((d) => host === d || host.endsWith(`.${d}`) || host.includes("shein."));
+  } catch {
+    return false;
+  }
+}
+
+function isCloudflareBlocked(html: string): boolean {
+  return (
+    html.includes("cf-browser-verification") ||
+    html.includes("Just a moment") ||
+    html.includes("Checking your browser") ||
+    html.includes("Enable JavaScript and cookies") ||
+    html.includes("cf_clearance") ||
+    (html.includes("cloudflare") && html.length < 5000)
+  );
+}
 
 function isSafeRedirectUrl(urlStr: string): boolean {
   let parsed: URL;
@@ -198,12 +230,100 @@ async function fetchNormal(initialUrl: string): Promise<string> {
   throw new Error("Demasiadas redirecciones");
 }
 
+// Layer 1: try mobile UA fetch (free, bypasses Cloudflare on some SHEIN regions)
+async function fetchMobile(url: string): Promise<string | null> {
+  try {
+    // Convert desktop URL to mobile subdomain when applicable
+    const mobileUrl = url.replace(/^(https?:\/\/)(www\.|es\.)?shein\./, "$1m.shein.");
+    const res = await fetch(mobileUrl, {
+      headers: MOBILE_HEADERS,
+      signal: AbortSignal.timeout(10000),
+      redirect: "follow",
+    });
+    if (!res.ok) return null;
+    const ab = await res.arrayBuffer();
+    const html = new TextDecoder().decode(ab);
+    if (isCloudflareBlocked(html)) {
+      console.log(`🔒 [Competitor] Cloudflare detectado en fetch móvil`);
+      return null;
+    }
+    return html;
+  } catch {
+    return null;
+  }
+}
+
+// SHEIN-specific 3-layer free strategy:
+// Layer 1: mobile UA fetch
+// Layer 2: Zenrows/ScrapingBee free tier (if configured)
+// Layer 3: slug extraction (guaranteed title — always works)
+async function scrapeShein(url: string): Promise<ScrapedData & { dataSource: string }> {
+  // Always extract from slug as baseline — the slug IS the product title
+  const { title: slugTitle, goodsId } = extractFromUrlSlug(url);
+  console.log(`📎 [Competitor/SHEIN] Slug extraído: "${slugTitle}" (ID: ${goodsId})`);
+
+  // Layer 1: mobile fetch
+  const mobileHtml = await fetchMobile(url);
+  if (mobileHtml) {
+    const parsed = parseHtml(mobileHtml);
+    if (!isContentPoor(parsed)) {
+      console.log(`✅ [Competitor/SHEIN] Layer 1 (móvil) exitoso: "${parsed.title.slice(0, 60)}"`);
+      // Use slug title if parsed title is worse
+      if (slugTitle && (parsed.title.length < 20 || parsed.title.toLowerCase().includes("shein"))) {
+        parsed.title = slugTitle;
+      }
+      return { ...parsed, dataSource: "mobile_fetch" };
+    }
+  }
+
+  // Layer 2: JS rendering (Zenrows/ScrapingBee if configured)
+  if (hasScrapingProvider()) {
+    try {
+      console.log(`🌐 [Competitor/SHEIN] Layer 2 (JS rendering) para ${url}`);
+      const jsHtml = await scrapeWithJSRendering(url);
+      if (!isCloudflareBlocked(jsHtml)) {
+        const parsed = parseHtml(jsHtml);
+        if (!isContentPoor(parsed)) {
+          console.log(`✅ [Competitor/SHEIN] Layer 2 (JS rendering) exitoso`);
+          if (slugTitle && parsed.title.length < 20) parsed.title = slugTitle;
+          return { ...parsed, dataSource: "js_rendering" };
+        }
+      }
+    } catch (err) {
+      console.warn(`⚠️ [Competitor/SHEIN] Layer 2 falló: ${err}`);
+    }
+  }
+
+  // Layer 3: slug-only fallback — guaranteed, always works
+  console.log(`📎 [Competitor/SHEIN] Layer 3 (slug): usando título del URL`);
+  const mainContent = [
+    slugTitle ? `[TÍTULO] ${slugTitle}` : "",
+    `[PLATAFORMA] SHEIN`,
+    goodsId ? `[ID PRODUCTO] ${goodsId}` : "",
+    `[NOTA] Datos extraídos del slug de URL (protección anti-bot activa)`,
+  ].filter(Boolean).join("\n");
+
+  return {
+    title: slugTitle || "Producto SHEIN",
+    description: "",
+    keywords: "",
+    mainContent,
+    dataSource: "url_slug",
+  };
+}
+
 // Smart dual-strategy scraper
-async function scrapeUrl(url: string): Promise<ScrapedData> {
-  const spa = isSPADomain(url);
+async function scrapeUrl(url: string): Promise<ScrapedData & { dataSource?: string }> {
   const hasProvider = hasScrapingProvider();
 
-  // SPA domain → go straight to JS rendering
+  // SHEIN: use dedicated 3-layer strategy
+  if (isSheinDomain(url)) {
+    return scrapeShein(url);
+  }
+
+  const spa = isSPADomain(url);
+
+  // Other SPA domain → go straight to JS rendering
   if (spa && hasProvider) {
     console.log(`🌐 [Competitor] SPA detectado (${new URL(url).hostname}), usando JS rendering`);
     const html = await scrapeWithJSRendering(url);
@@ -268,19 +388,30 @@ export const analyzeCompetitorTask = task({
       return { success: false, error: msg };
     }
 
+    const dataSource = (scraped as { dataSource?: string }).dataSource;
+    const isSlugOnly = dataSource === "url_slug";
+    const sheinContext = isSheinDomain(payload.url)
+      ? `\n[PLATAFORMA] SHEIN — marketplace de moda ultra-fast-fashion con títulos muy keyword-stuffed, precios agresivos y audiencia mobile-first.`
+      : "";
+
+    const slugNote = isSlugOnly
+      ? `\nNOTA: Solo se pudo extraer el título del slug de la URL (protección anti-bot activa en SHEIN). Analiza la calidad del título como copywriter experto en SHEIN y sugiere mejoras reales basadas en él.`
+      : "";
+
     const userPrompt = `Analiza este LISTING ESPECÍFICO de producto de un competidor de ecommerce:
 
-=== DATOS DEL PRODUCTO ===
+=== DATOS DEL PRODUCTO ===${sheinContext}
 NOMBRE/TÍTULO: ${scraped.title || "(no detectado)"}
 DESCRIPCIÓN: ${scraped.description || "(no detectada)"}
 CONTENIDO DE LA PÁGINA:
 ${scraped.mainContent.slice(0, 2500)}
-${scraped.keywords ? `\nKEYWORDS META: ${scraped.keywords}` : ""}
+${scraped.keywords ? `\nKEYWORDS META: ${scraped.keywords}` : ""}${slugNote}
 ${payload.listingTitle ? `\n=== MI LISTING ACTUAL (para comparar) ===\nTÍTULO: ${payload.listingTitle}\nDESCRIPCIÓN: ${payload.listingDescription ?? ""}` : ""}
 
 Analiza el COPY y LISTING del producto específico: título, bullets, descripción, precio, tono de venta.
 NO analices la web en general — analiza solo cómo venden ESTE producto concreto.
-Basa tu análisis únicamente en los datos reales del producto proporcionados arriba.
+Si los datos son limitados (solo título), analiza exhaustivamente la calidad del título: estructura, keywords, claridad, longitud, elementos faltantes, potencial SEO en marketplace.
+Basa tu análisis únicamente en los datos reales proporcionados arriba.
 
 Responde SOLO con JSON válido:
 {"tone":"string (ej: emocional, técnico, aspiracional, urgencia, minimalista)","strengths":["fortaleza específica del copy de ESTE producto"],"weaknesses":["debilidad específica del copy de ESTE producto"],"keywords":["keyword relevante extraída del contenido real"],"suggestions":["acción concreta para mejorar MI listing basada en este análisis"]}`;

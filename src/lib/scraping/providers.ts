@@ -1,5 +1,20 @@
 export type ScrapingProvider = "zenrows" | "scrapingbee";
 
+// Extract product title and ID from URL slug (works for SHEIN, Temu, and similar -p-ID patterns)
+export function extractFromUrlSlug(url: string): { title: string; goodsId: string | null } {
+  try {
+    const pathname = new URL(url).pathname.replace(/\.html?$/, "");
+    // Pattern: /some-slug-words-p-12345 or /some-slug-words-p-12345-cat-xxx
+    const match = pathname.match(/\/(.+?)-p-(\d{5,})(?:-cat-[\w-]+)?$/);
+    if (!match) return { title: "", goodsId: null };
+    const rawSlug = (match[1].split("/").pop() ?? match[1]);
+    const title = rawSlug.replace(/-/g, " ").replace(/\s+/g, " ").trim();
+    return { title, goodsId: match[2] };
+  } catch {
+    return { title: "", goodsId: null };
+  }
+}
+
 // Known SPA domains that block normal fetch — go directly to JS rendering
 const SPA_DOMAINS = [
   "shein.com",

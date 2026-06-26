@@ -153,9 +153,15 @@ export default function CompetitorPage() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">🔍 Análisis de Competencia</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            Analiza el listing de un competidor con IA y obtén sugerencias para mejorar el tuyo. Máximo 5 análisis por día.
+          <div className="flex items-center gap-2 mb-1">
+            <h1 className="text-xl font-bold text-gray-900">🔍 Análisis de Competencia</h1>
+            <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-xs font-semibold rounded-full">Beta</span>
+          </div>
+          <p className="text-sm text-gray-600">
+            Analiza el listing de un competidor con IA y obtén sugerencias para mejorar el tuyo. Cada análisis gasta 2 créditos.
+          </p>
+          <p className="text-xs text-amber-600 mt-1">
+            ⚠️ En beta: el análisis puede ser limitado en plataformas con protección anti-bot (SHEIN, Temu). Funciona mejor con Amazon, Etsy, Shopify, Zalando, Mango y similares.
           </p>
         </div>
         <CreditsPopover />

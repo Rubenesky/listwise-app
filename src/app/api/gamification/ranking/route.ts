@@ -6,11 +6,27 @@ import { getLevelInfo } from "@/lib/gamification/constants";
 interface RankingItem {
   rank: number;
   userId: string;
+  nickname: string;
   points: number;
   level: number;
   levelName: string;
   levelIcon: string;
   badges: string[];
+}
+
+const ADJECTIVES = ["Ágil", "Veloz", "Experto", "Digital", "Global", "Pro", "Élite", "Maestro", "Dinámico", "Rápido", "Audaz", "Brillante"];
+const NOUNS = ["Vendedor", "Trader", "Marketer", "Seller", "Emprendedor", "Experto", "Creador", "Estratega"];
+
+function generateNickname(userId: string): string {
+  let hash = 0;
+  for (let i = 0; i < userId.length; i++) {
+    hash = (Math.imul(31, hash) + userId.charCodeAt(i)) | 0;
+  }
+  const h = Math.abs(hash);
+  const adj = ADJECTIVES[h % ADJECTIVES.length];
+  const noun = NOUNS[(h >> 4) % NOUNS.length];
+  const num = ((h >> 8) % 900) + 100;
+  return `${adj} ${noun} #${num}`;
 }
 
 let rankingCache: { data: RankingItem[]; expiresAt: number } | null = null;
@@ -34,6 +50,7 @@ export async function GET() {
       return {
         rank: index + 1,
         userId: user.userId,
+        nickname: generateNickname(user.userId),
         points: user.points ?? 0,
         level: levelInfo.level,
         levelName: levelInfo.name,

@@ -2,10 +2,11 @@ import { db, schema } from "@/db";
 import { and, eq, or, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 
+// Conversion badges — separate from registration badges (first_referral etc.)
 const BADGE_MAP: Record<number, { type: string; name: string; icon: string }> = {
-  1: { type: "first_referral", name: "Primer Referido", icon: "🤝" },
-  5: { type: "5_referrals", name: "5 Referidos", icon: "💫" },
-  10: { type: "10_referrals", name: "10 Referidos", icon: "👑" },
+  1: { type: "first_conversion", name: "Primer Convertido", icon: "🌟" },
+  5: { type: "5_conversions", name: "5 Convertidos", icon: "💫" },
+  10: { type: "10_conversions", name: "10 Convertidos", icon: "👑" },
 };
 
 export async function convertReferral(

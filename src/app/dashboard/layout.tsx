@@ -44,6 +44,7 @@ const navigation = [
   { name: "🎁 Invitar", href: "/dashboard/referrals", download: false },
   { name: "🏆 Gamificación", href: "/gamification", download: false },
   { name: "Precios", href: "/pricing", download: false },
+  { name: "❓ Ayuda", href: "/dashboard/help", download: false },
   { name: "Plantilla CSV", href: "/api/template/csv", download: true },
 ];
 

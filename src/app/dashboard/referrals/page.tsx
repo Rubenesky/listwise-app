@@ -243,35 +243,43 @@ export default function ReferralsPage() {
 
       {/* Badges */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">
-        <h2 className="text-sm font-semibold text-gray-800 mb-3">🏅 Insignias</h2>
-        {badges.length > 0 && (
-          <div className="flex gap-5 flex-wrap mb-4">
-            {badges.map((badge) => (
-              <div key={badge.id} className="flex flex-col items-center gap-1">
-                <span className="text-3xl">{badge.icon}</span>
-                <p className="text-xs text-gray-600 font-medium text-center">{badge.name}</p>
+        <h2 className="text-sm font-semibold text-gray-800 mb-1">🏅 Insignias</h2>
+        <p className="text-xs text-gray-400 mb-3">Se desbloquean cuando tus invitados se registran o contratan un plan</p>
+
+        {/* Registration badges */}
+        <p className="text-xs font-medium text-gray-500 mb-2">Por registro:</p>
+        <div className="flex gap-4 flex-wrap mb-4">
+          {[
+            { type: "first_referral", icon: "🤝", name: "Primer Registro" },
+            { type: "5_referrals", icon: "💫", name: "5 Registros" },
+            { type: "10_referrals", icon: "👑", name: "10 Registros" },
+          ].map((b) => {
+            const earned = badges.find((e) => e.type === b.type);
+            return (
+              <div key={b.type} className={`flex flex-col items-center gap-1 ${earned ? "" : "opacity-30 grayscale"}`}>
+                <span className="text-3xl">{b.icon}</span>
+                <p className="text-xs text-gray-600 font-medium text-center">{b.name}</p>
               </div>
-            ))}
-          </div>
-        )}
-        <div className={badges.length > 0 ? "pt-3 border-t border-gray-100" : ""}>
-          {badges.length === 0 && (
-            <p className="text-xs text-gray-400 mb-3">Invita a alguien para ganar tu primera insignia</p>
-          )}
-          <div className="flex gap-4 flex-wrap">
-            {[
-              { icon: "🤝", name: "Primer Referido" },
-              { icon: "💫", name: "5 Referidos" },
-              { icon: "👑", name: "10 Referidos" },
-            ]
-              .filter((b) => !badges.some((earned) => earned.icon === b.icon))
-              .map((b) => (
-                <div key={b.name} className="flex flex-col items-center gap-1 opacity-30">
-                  <span className="text-3xl grayscale">{b.icon}</span>
-                  <p className="text-xs text-gray-500 text-center">{b.name}</p>
-                </div>
-              ))}
-          </div>
+            );
+          })}
+        </div>
+
+        {/* Conversion badges */}
+        <p className="text-xs font-medium text-gray-500 mb-2">Por conversión (pago):</p>
+        <div className="flex gap-4 flex-wrap">
+          {[
+            { type: "first_conversion", icon: "🌟", name: "Primer Convertido" },
+            { type: "5_conversions", icon: "💫", name: "5 Convertidos" },
+            { type: "10_conversions", icon: "👑", name: "10 Convertidos" },
+          ].map((b) => {
+            const earned = badges.find((e) => e.type === b.type);
+            return (
+              <div key={b.type} className={`flex flex-col items-center gap-1 ${earned ? "" : "opacity-30 grayscale"}`}>
+                <span className="text-3xl">{b.icon}</span>
+                <p className="text-xs text-gray-600 font-medium text-center">{b.name}</p>
+              </div>
+            );
+          })}
         </div>
       </div>
 
