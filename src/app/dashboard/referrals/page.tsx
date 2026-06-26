@@ -91,18 +91,19 @@ export default function ReferralsPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const shareCode = async () => {
+  const [showShareMenu, setShowShareMenu] = useState(false);
+
+  const getShareLinks = () => {
     const url = `${appUrl}/sign-up?ref=${code}`;
-    const text = `🎁 ¡Genera descripciones de productos con IA! Únete a ListWise con mi enlace y obtén créditos extra al registrarte. 👉 ${url}`;
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: "ListWise — Invitación", text });
-      } catch {
-        // user cancelled
-      }
-    } else {
-      await copyCode();
-    }
+    const text = encodeURIComponent(`🎁 ¡Genera descripciones de productos con IA! Únete a ListWise y obtén créditos extra. 👉 ${url}`);
+    const encodedUrl = encodeURIComponent(url);
+    return [
+      { label: "WhatsApp", icon: "💬", href: `https://wa.me/?text=${text}` },
+      { label: "X (Twitter)", icon: "𝕏", href: `https://twitter.com/intent/tweet?text=${text}` },
+      { label: "Facebook", icon: "📘", href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}` },
+      { label: "Telegram", icon: "✈️", href: `https://t.me/share/url?url=${encodedUrl}&text=${text}` },
+      { label: "Email", icon: "✉️", href: `mailto:?subject=${encodeURIComponent("Te invito a ListWise")}&body=${text}` },
+    ];
   };
 
   if (!isLoaded || !isSignedIn || loading) {
@@ -141,13 +142,32 @@ export default function ReferralsPage() {
           >
             {copied ? "✅ Copiado" : "📋 Copiar enlace"}
           </button>
-          <button
-            onClick={shareCode}
-            disabled={!code}
-            className="px-4 py-2 bg-white/20 border border-white/30 text-white rounded-lg text-sm font-semibold hover:bg-white/30 transition-colors disabled:opacity-50"
-          >
-            🔗 Compartir
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setShowShareMenu((v) => !v)}
+              disabled={!code}
+              className="px-4 py-2 bg-white/20 border border-white/30 text-white rounded-lg text-sm font-semibold hover:bg-white/30 transition-colors disabled:opacity-50"
+            >
+              🔗 Compartir
+            </button>
+            {showShareMenu && (
+              <div className="absolute left-0 top-full mt-2 bg-white rounded-xl shadow-xl border border-gray-100 z-50 py-2 min-w-[160px]">
+                {getShareLinks().map(({ label, icon, href }) => (
+                  <a
+                    key={label}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setShowShareMenu(false)}
+                    className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                  >
+                    <span className="text-base">{icon}</span>
+                    <span>{label}</span>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
         <p className="text-xs text-blue-200 mt-3">
           Código: <span className="font-mono font-bold text-white">{code}</span>

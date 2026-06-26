@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import CreditsPopover from "@/components/CreditsPopover";
 
 interface AnalysisResult {
   id: string;
@@ -146,11 +147,14 @@ export default function CompetitorPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-gray-900">🔍 Análisis de Competencia</h1>
-        <p className="mt-1 text-sm text-gray-600">
-          Analiza el listing de un competidor con IA y obtén sugerencias para mejorar el tuyo. Máximo 5 análisis por día.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">🔍 Análisis de Competencia</h1>
+          <p className="mt-1 text-sm text-gray-600">
+            Analiza el listing de un competidor con IA y obtén sugerencias para mejorar el tuyo. Máximo 5 análisis por día.
+          </p>
+        </div>
+        <CreditsPopover />
       </div>
 
       {/* Form */}

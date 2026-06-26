@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Bot, Zap, Sparkles, Search } from "lucide-react";
+import { Bot, Search } from "lucide-react";
 import Link from "next/link";
 import AgentChat from "@/components/AgentChat";
+import CreditsPopover from "@/components/CreditsPopover";
 
 interface Listing {
   id: string;
@@ -16,8 +17,6 @@ export default function AgentPage() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [updatedIds, setUpdatedIds] = useState<Set<string>>(new Set());
-  const [credits, setCredits] = useState<number | "ilimitado">(0);
-  const [plan, setPlan] = useState("free");
   const [loadingListings, setLoadingListings] = useState(true);
   const [search, setSearch] = useState("");
 
@@ -34,16 +33,6 @@ export default function AgentPage() {
   };
 
   useEffect(() => {
-    fetch("/api/agent/credits/status")
-      .then((r) => r.json())
-      .then((d) => {
-        setCredits(d.credits ?? 0);
-        setPlan(d.plan ?? "free");
-      })
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
     fetch("/api/listings/dashboard?page=1&limit=100")
       .then((r) => r.json())
       .then((d) => {
@@ -58,8 +47,6 @@ export default function AgentPage() {
     l.productName.toLowerCase().includes(search.toLowerCase())
   );
 
-  const isLow = credits !== "ilimitado" && typeof credits === "number" && credits <= 5;
-
   return (
     <div className="flex flex-col gap-4 h-[calc(100vh-8rem)]">
       {/* Header strip */}
@@ -73,30 +60,7 @@ export default function AgentPage() {
             <p className="text-xs text-gray-500">Selecciona un producto y empieza a conversar</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {plan !== "free" ? (
-            <span className="inline-flex items-center gap-1 text-xs font-semibold text-purple-700 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-full">
-              <Zap className="w-3 h-3" /> Pro · ilimitado
-            </span>
-          ) : (
-            <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full border ${
-              isLow
-                ? "text-red-700 bg-red-50 border-red-200"
-                : "text-blue-700 bg-blue-50 border-blue-200"
-            }`}>
-              <Sparkles className="w-3 h-3" />
-              {credits} consultas
-            </span>
-          )}
-          {plan === "free" && (
-            <Link
-              href="/pricing"
-              className="text-xs px-3 py-1.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
-            >
-              Ampliar →
-            </Link>
-          )}
-        </div>
+        <CreditsPopover />
       </div>
 
       {/* Main content: product list + chat */}

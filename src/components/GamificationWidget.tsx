@@ -20,12 +20,26 @@ export default function GamificationWidget({ compact = false }: { compact?: bool
   const [data, setData] = useState<GamificationStatus | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  const refresh = () => {
     fetch("/api/gamification/status")
       .then((r) => r.json())
       .then(setData)
       .catch(() => {})
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    refresh();
+
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") refresh();
+    };
+    window.addEventListener("gamification-update", refresh);
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => {
+      window.removeEventListener("gamification-update", refresh);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, []);
 
   const progress = data && !data.isMaxLevel

@@ -17,10 +17,12 @@ const plans = [
   {
     name: "Gratuito",
     price: "0€",
+    credits: "10 créditos/mes",
     description: "Perfecto para probar la herramienta",
     features: [
-      "10 productos/mes",
-      "Generación básica",
+      "10 créditos de uso al mes",
+      "Generación básica con IA",
+      "Análisis de competidor (2 créditos)",
       "Soporte por email",
     ],
     priceId: "free",
@@ -29,13 +31,14 @@ const plans = [
   {
     name: "Pro",
     price: "29€",
+    credits: "1.500 créditos/mes",
     description: "Para tiendas online en crecimiento",
     features: [
-      "500 productos/mes",
+      "1.500 créditos de uso al mes",
       "Generación avanzada con IA",
+      "🤖 Agente de Copywriting ilimitado",
+      "Análisis de competencia ilimitado",
       "Soporte prioritario",
-      "Análisis de competencia",
-      "🤖 Agente de Copywriting (200 consultas/mes)",
     ],
     priceId: "pro",
     popular: true,
@@ -43,14 +46,16 @@ const plans = [
   {
     name: "Enterprise",
     price: "99€",
+    credits: "7.000 créditos/mes",
     description: "Para negocios con alto volumen",
     features: [
-      "Productos ilimitados",
+      "7.000 créditos de uso al mes",
       "Generación avanzada con IA",
-      "Soporte 24/7",
-      "Análisis de competencia",
+      "🤖 Agente de Copywriting ilimitado",
+      "Análisis de competencia ilimitado",
       "API personalizada",
       "Dedicated account manager",
+      "Soporte 24/7",
     ],
     priceId: "enterprise",
     popular: false,
@@ -255,7 +260,12 @@ export default function PricingPage() {
                   <span className="text-2xl font-extrabold text-gray-900">{plan.price}</span>
                   <span className="ml-1 text-sm text-gray-500">/mes</span>
                 </div>
-                <p className="mt-0.5 text-xs text-gray-600">{plan.description}</p>
+                {"credits" in plan && (
+                  <span className="inline-block mt-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                    ⚡ {plan.credits}
+                  </span>
+                )}
+                <p className="mt-1 text-xs text-gray-600">{plan.description}</p>
 
                 <ul className="mt-3 space-y-1.5">
                   {plan.features.map((feature) => (
@@ -377,8 +387,10 @@ export default function PricingPage() {
             <div className="grid grid-cols-2 gap-2">
               {[
                 { action: "Generar variantes", cost: 1 },
+                { action: "Generar descripción", cost: 1 },
                 { action: "Chat con agente IA", cost: 1 },
                 { action: "Análisis de competidor", cost: 2 },
+                { action: "Subir CSV", cost: 0 },
                 { action: "Compartir landing", cost: 0 },
               ].map(({ action, cost }) => (
                 <div key={action} className="flex items-center justify-between bg-white rounded-lg px-3 py-2 text-sm border border-gray-100">
@@ -389,7 +401,6 @@ export default function PricingPage() {
                 </div>
               ))}
             </div>
-            <p className="text-xs text-gray-400 mt-3">Los planes Pro y Enterprise tienen consultas ilimitadas incluidas.</p>
           </div>
         </div>}
 

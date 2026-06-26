@@ -8,6 +8,7 @@ import OnboardingTour from "@/components/OnboardingTour";
 import VoiceProfileManager from "@/components/VoiceProfileManager";
 import InfoTooltip from "@/components/InfoTooltip";
 import GamificationWidget from "@/components/GamificationWidget";
+import CreditsPopover from "@/components/CreditsPopover";
 
 type ListingStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
 type GenerationMode = "creative" | "professional" | "seo";
@@ -51,8 +52,6 @@ export default function DashboardPage() {
   const [uploadErrors, setUploadErrors] = useState<string[]>([]);
   const [uploadWarnings, setUploadWarnings] = useState<string[]>([]);
   const [credits, setCredits] = useState(0);
-  const [agentCredits, setAgentCredits] = useState<number | null>(null);
-  const [agentUnlimited, setAgentUnlimited] = useState(false);
   const [selectedMode, setSelectedMode] = useState<GenerationMode>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("listwise_generation_mode");
@@ -156,13 +155,6 @@ export default function DashboardPage() {
       .then((r) => r.json())
       .then((d) => setCredits(d.credits ?? 0))
       .catch(() => {});
-    fetch("/api/user/credits")
-      .then((r) => r.json())
-      .then((d) => {
-        setAgentUnlimited(d.unlimited ?? false);
-        setAgentCredits(d.unlimited ? null : (d.credits ?? 0));
-      })
-      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -193,6 +185,7 @@ export default function DashboardPage() {
         return;
       }
       window.open(data.url, "_blank", "noopener,noreferrer");
+      window.dispatchEvent(new Event("gamification-update"));
     } catch {
       alert("Error de red al generar el enlace. Inténtalo de nuevo.");
     } finally {
@@ -273,6 +266,7 @@ export default function DashboardPage() {
       // Start progress tracking for this batch
       setBatchTotal(data.count || 0);
       setIsProcessing(true);
+      window.dispatchEvent(new Event("gamification-update"));
       await fetchListings();
     } catch {
       setUploadErrors(["Error de red al subir el archivo. Inténtalo de nuevo."]);
@@ -461,12 +455,7 @@ export default function DashboardPage() {
                 <p className="text-lg font-bold text-blue-600 leading-tight">{credits}</p>
               </div>
             )}
-            <div className="text-right">
-              <span className="text-xs text-gray-500">🤖 Consultas IA</span>
-              <p className="text-sm font-bold text-indigo-600 leading-tight">
-                {agentUnlimited ? "Ilimitadas" : agentCredits !== null ? agentCredits : "—"}
-              </p>
-            </div>
+            <CreditsPopover />
             <div className="text-right">
               <span className="text-sm text-gray-500">Plan actual</span>
               <div className={`mt-1 px-3 py-1 rounded-full text-sm font-medium ${planColor}`}>
@@ -525,33 +514,8 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* Plan limit bar */}
-        <div className="bg-white rounded-lg border p-3">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-sm text-gray-600">
-              Productos utilizados:{" "}
-              <span className="font-semibold text-gray-900">{currentCount}</span>
-              {planLimit !== Infinity && (
-                <>
-                  {" "}de{" "}
-                  <span className="font-semibold text-gray-900">{planLimit}</span>
-                </>
-              )}
-            </span>
-            {planLimit !== Infinity && (
-              <div className="w-48 h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-blue-600 rounded-full transition-all"
-                  style={{ width: `${Math.min((currentCount / planLimit) * 100, 100)}%` }}
-                />
-              </div>
-            )}
-            {plan === "free" && (
-              <a href="/pricing" className="text-sm text-blue-600 hover:text-blue-800 font-medium">
-                Upgrade para más productos →
-              </a>
-            )}
-          </div>
+        {/* Plan limit bar removed — now using credits system */}
+        <div className="hidden">
         </div>
 
         {/* Validation errors */}

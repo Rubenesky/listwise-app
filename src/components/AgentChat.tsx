@@ -311,7 +311,13 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
                 return withMsg;
               });
 
-              if (data.remainingCredits !== undefined) setCredits(data.remainingCredits);
+              if (data.remainingCredits !== undefined) {
+                setCredits(data.remainingCredits);
+                if (typeof data.remainingCredits === "number") {
+                  window.dispatchEvent(new CustomEvent("credits-update", { detail: { credits: data.remainingCredits } }));
+                }
+              }
+              window.dispatchEvent(new Event("gamification-update"));
               if (data.conversationId) setConversationId(data.conversationId);
 
               if (onApplyChanges && hasChanges) {
