@@ -19,6 +19,17 @@ const PRICE_IDS: Record<string, string> = {
 // One-time payment packs (not subscriptions)
 const ONE_TIME_PRICE_IDS = new Set(["agent_pack_s", "agent_pack_m", "agent_pack_l"]);
 
+const PACK_CREDITS: Record<string, number> = {
+  agent_pack_s: 20,
+  agent_pack_m: 50,
+  agent_pack_l: 100,
+};
+
+const PLAN_NAMES: Record<string, string> = {
+  pro: "Pro",
+  enterprise: "Enterprise",
+};
+
 export async function POST(req: Request) {
   try {
     const { userId } = await auth();
@@ -34,6 +45,34 @@ export async function POST(req: Request) {
 
     console.log("🔑 Creando sesión para:", priceId);
     console.log("📦 Price ID:", PRICE_IDS[priceId]);
+
+    const isOneTime = ONE_TIME_PRICE_IDS.has(priceId);
+
+    // Guard: block duplicate subscriptions (not applicable to one-time packs)
+    if (!isOneTime) {
+      const [existing] = await db
+        .select({ plan: schema.subscriptions.plan, status: schema.subscriptions.status })
+        .from(schema.subscriptions)
+        .where(eq(schema.subscriptions.userId, userId))
+        .limit(1);
+
+      if (existing && existing.status === "active") {
+        if (existing.plan === priceId) {
+          return NextResponse.json({
+            error: `Ya tienes una suscripción activa al Plan ${PLAN_NAMES[priceId] ?? priceId}.`,
+            currentPlan: existing.plan,
+            alreadySubscribed: true,
+          }, { status: 409 });
+        }
+        if (existing.plan === "enterprise") {
+          return NextResponse.json({
+            error: "Ya tienes el Plan Enterprise, que es el plan máximo disponible.",
+            currentPlan: "enterprise",
+            alreadySubscribed: true,
+          }, { status: 409 });
+        }
+      }
+    }
 
     // Validate referral code server-side: reject self-referral before storing in Stripe metadata
     let validatedReferralCode: string | null = null;
@@ -54,8 +93,6 @@ export async function POST(req: Request) {
       }
     }
 
-    const isOneTime = ONE_TIME_PRICE_IDS.has(priceId);
-
     const session = await stripe.checkout.sessions.create({
       mode: isOneTime ? "payment" : "subscription",
       payment_method_types: ["card"],
@@ -71,6 +108,8 @@ export async function POST(req: Request) {
       metadata: {
         userId: userId,
         priceId: PRICE_IDS[priceId],
+        // Credit packs need type + credits so the webhook knows what to add
+        ...(isOneTime ? { type: "agent_credits", credits: (PACK_CREDITS[priceId] ?? 0).toString() } : {}),
         ...(validatedReferralCode ? { referralCode: validatedReferralCode } : {}),
       },
     });

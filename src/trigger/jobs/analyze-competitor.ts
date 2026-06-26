@@ -103,16 +103,43 @@ async function scrapeUrl(initialUrl: string): Promise<{
     const html = new TextDecoder().decode(arrayBuffer);
 
     const $ = cheerio.load(html);
+
+    // Extract JSON-LD product data BEFORE removing scripts
+    let jsonLdTitle = "";
+    let jsonLdDescription = "";
+    $('script[type="application/ld+json"]').each((_, el) => {
+      if (jsonLdTitle) return;
+      try {
+        const raw = $(el).html() ?? "";
+        const data = JSON.parse(raw) as unknown;
+        const items: unknown[] = Array.isArray(data) ? data : [data];
+        for (const item of items) {
+          const typed = item as Record<string, unknown>;
+          if (typed["@type"] === "Product" || typed["@type"] === "ItemPage") {
+            if (typeof typed.name === "string") jsonLdTitle = typed.name.slice(0, 200);
+            if (typeof typed.description === "string") jsonLdDescription = typed.description.slice(0, 500);
+            if (jsonLdTitle) break;
+          }
+        }
+      } catch {
+        // ignore malformed JSON-LD
+      }
+    });
+
     $("script, style, nav, footer, header, iframe, noscript, svg, [hidden]").remove();
 
+    // Prioritize: JSON-LD Product → OG tags → h1 → <title>
     const title =
-      $("title").first().text().trim().slice(0, 200) ||
+      jsonLdTitle ||
+      $('meta[property="og:title"]').attr("content")?.trim().slice(0, 200) ||
       $("h1").first().text().trim().slice(0, 200) ||
+      $("title").first().text().trim().slice(0, 200) ||
       "";
 
     const description =
-      $('meta[name="description"]').attr("content")?.trim().slice(0, 500) ||
+      jsonLdDescription ||
       $('meta[property="og:description"]').attr("content")?.trim().slice(0, 500) ||
+      $('meta[name="description"]').attr("content")?.trim().slice(0, 500) ||
       "";
 
     const keywords = $('meta[name="keywords"]').attr("content")?.trim().slice(0, 300) || "";

@@ -7,6 +7,8 @@ import { v4 as uuidv4 } from "uuid";
 import { PLAN_LIMITS } from "@/lib/constants";
 import { ratelimit } from "@/lib/rate-limit";
 import { trackGamification } from "@/lib/gamification/track";
+import { useCredits } from "@/lib/credits/use-credits";
+import { ensureUser } from "@/lib/user/ensure-user";
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 
@@ -242,6 +244,22 @@ export async function POST(req: Request) {
         attempting: newProductsCount,
         plan: userPlan,
       }, { status: 403 });
+    }
+
+    // 5b. Credit check: require 1 credit per product before generating
+    await ensureUser(userId);
+    const creditResult = await useCredits(
+      userId,
+      newProductsCount,
+      `Generación de ${newProductsCount} descripción${newProductsCount !== 1 ? "es" : ""}`
+    );
+    if (!creditResult.success) {
+      return NextResponse.json({
+        error: `No tienes suficientes créditos. Necesitas ${newProductsCount} crédito${newProductsCount !== 1 ? "s" : ""} para generar ${newProductsCount} descripción${newProductsCount !== 1 ? "es" : ""}, pero solo tienes ${creditResult.remainingCredits}. Reduce el número de productos o compra más créditos.`,
+        creditsRequired: newProductsCount,
+        creditsAvailable: creditResult.remainingCredits,
+        insufficientCredits: true,
+      }, { status: 402 });
     }
 
     // 6. Insertar productos en la base de datos

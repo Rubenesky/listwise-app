@@ -97,6 +97,7 @@ export default function PricingPage() {
   const [loading, setLoading] = useState<string | null>(null);
   const [referralCode, setReferralCode] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"plans" | "credits">("plans");
+  const [subscriptionModal, setSubscriptionModal] = useState<{ message: string; currentPlan: string } | null>(null);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -134,6 +135,11 @@ export default function PricingPage() {
 
       const data = await response.json();
 
+      if (response.status === 409 && data.alreadySubscribed) {
+        setSubscriptionModal({ message: data.error, currentPlan: data.currentPlan });
+        return;
+      }
+
       if (data.url) {
         window.location.href = data.url;
       } else {
@@ -146,8 +152,52 @@ export default function PricingPage() {
     }
   };
 
+  const getSubscriptionButtonLabel = (planPriceId: string) => {
+    if (plan === planPriceId) return "Plan actual ✓";
+    if (plan === "pro" && planPriceId === "enterprise") return "Mejorar a Enterprise ↗";
+    if (plan === "enterprise") return "Plan máximo activo";
+    return `Suscribirse por ${plans.find((p) => p.priceId === planPriceId)?.price ?? ""}/mes`;
+  };
+
+  const isSubscriptionDisabled = (planPriceId: string) => {
+    if (loading === planPriceId) return true;
+    if (plan === planPriceId) return true;
+    if (plan === "enterprise") return true;
+    return false;
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Subscription already active modal */}
+      {subscriptionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6">
+            <div className="text-center mb-4">
+              <div className="w-12 h-12 bg-blue-50 rounded-full flex items-center justify-center mx-auto mb-3">
+                <CheckCircle className="w-6 h-6 text-blue-600" />
+              </div>
+              <h3 className="text-base font-bold text-gray-900 mb-1">Suscripción activa</h3>
+              <p className="text-sm text-gray-600">{subscriptionModal.message}</p>
+            </div>
+            <div className="space-y-2">
+              {subscriptionModal.currentPlan === "pro" && (
+                <button
+                  onClick={() => { setSubscriptionModal(null); handleSubscribe("enterprise"); }}
+                  className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                >
+                  Mejorar al Plan Enterprise ↗
+                </button>
+              )}
+              <button
+                onClick={() => setSubscriptionModal(null)}
+                className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-200 transition-colors"
+              >
+                Entendido
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* ── Navbar ──────────────────────────────────────────── */}
       <nav className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-gray-200 shadow-sm">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
@@ -287,39 +337,23 @@ export default function PricingPage() {
                   ) : (
                     <button
                       onClick={() => handleSubscribe(plan.priceId)}
-                      disabled={loading === plan.priceId}
+                      disabled={isSubscriptionDisabled(plan.priceId)}
                       className={`w-full px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                        loading === plan.priceId
-                          ? "bg-blue-400 cursor-not-allowed"
+                        isSubscriptionDisabled(plan.priceId)
+                          ? "bg-gray-200 text-gray-500 cursor-not-allowed"
                           : "bg-blue-600 text-white hover:bg-blue-700 hover:scale-105"
                       }`}
                     >
                       {loading === plan.priceId ? (
                         <span className="flex items-center justify-center">
-                          <svg
-                            className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
-                            xmlns="http://www.w3.org/2000/svg"
-                            fill="none"
-                            viewBox="0 0 24 24"
-                          >
-                            <circle
-                              className="opacity-25"
-                              cx="12"
-                              cy="12"
-                              r="10"
-                              stroke="currentColor"
-                              strokeWidth="4"
-                            />
-                            <path
-                              className="opacity-75"
-                              fill="currentColor"
-                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            />
+                          <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                           </svg>
                           Procesando...
                         </span>
                       ) : (
-                        `Suscribirse por ${plan.price}/mes`
+                        getSubscriptionButtonLabel(plan.priceId)
                       )}
                     </button>
                   )}

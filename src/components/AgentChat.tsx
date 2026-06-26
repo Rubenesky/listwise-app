@@ -169,7 +169,7 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
   const [loading, setLoading] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [historicalCount, setHistoricalCount] = useState(0);
-  const [credits, setCredits] = useState<number | "ilimitado">(0);
+  const [credits, setCredits] = useState<number>(0);
   const [plan, setPlan] = useState("free");
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -202,13 +202,30 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
       .then((d) => {
         if (d.conversation) {
           const stored = d.conversation.messages as { role: string; content: string }[];
-          const mapped: Message[] = stored.map((m) => ({
-            role: m.role as "user" | "assistant",
-            content: m.content,
-          }));
+          const mapped: Message[] = stored.flatMap((m) => {
+            if (m.role === "assistant") {
+              try {
+                const parsed = JSON.parse(m.content) as Record<string, unknown>;
+                if (parsed && typeof parsed.message === "string") {
+                  const changes: Changes = {
+                    title: typeof parsed.updatedTitle === "string" ? parsed.updatedTitle : null,
+                    bullets: Array.isArray(parsed.updatedBullets) ? (parsed.updatedBullets as string[]) : null,
+                    description: typeof parsed.updatedDescription === "string" ? parsed.updatedDescription : null,
+                  };
+                  const hasChanges = changes.title || (changes.bullets && changes.bullets.length > 0) || changes.description;
+                  const msgs: Message[] = [{ role: "assistant", content: parsed.message }];
+                  if (hasChanges) msgs.push({ role: "changes", content: "", changes });
+                  return msgs;
+                }
+              } catch {
+                // not JSON — display as plain text
+              }
+            }
+            return [{ role: m.role as "user" | "assistant", content: m.content }];
+          });
           setMessages(mapped);
           setConversationId(d.conversation.id);
-          setHistoricalCount(mapped.length);
+          setHistoricalCount(mapped.filter((m) => m.role !== "changes").length);
         }
       })
       .catch(() => {})

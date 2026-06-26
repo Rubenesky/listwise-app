@@ -6,7 +6,6 @@ import { SYSTEM_PROMPT, buildUserPromptWithVoice, MODE_CONFIG, type GenerationMo
 import { providers, type AIProvider } from "@/lib/ai/providers";
 import type { GeneratedContent, BatchProcessPayload } from "@/types";
 import { trackGamification } from "@/lib/gamification/track";
-import { useCredits } from "@/lib/credits/use-credits";
 
 const generatedContentSchema = z.object({
   title: z.string().transform((s) => s.slice(0, 80)),
@@ -161,7 +160,6 @@ export const processProductsTask = task({
             .where(eq(schema.listings.id, product.id));
           totalProcessed++;
           trackGamification(userId, "complete_product").catch(() => {});
-          useCredits(userId, 1, "Generación de descripción").catch(() => {});
         } catch (parseError) {
           await markFailed(product.id, humanizeError(parseError));
         }
