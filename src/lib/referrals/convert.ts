@@ -98,13 +98,23 @@ export async function convertReferral(
     const count = referrer?.convertedReferrals ?? 0;
     console.log(`🏅 [Referidos] Referidor ${referrerId} tiene ${count} referidos convertidos`);
 
-    if (BADGE_MAP[count]) {
-      const badge = BADGE_MAP[count];
-      await db
-        .insert(schema.badges)
-        .values({ id: uuidv4(), userId: referrerId, type: badge.type, name: badge.name, icon: badge.icon, earnedAt: now })
-        .onConflictDoNothing();
-      console.log(`🏅 [Referidos] Insignia "${badge.name}" otorgada a ${referrerId}`);
+    // Check ALL milestones crossed — awards retroactively if a previous milestone was missed
+    const earnedBadges = await db
+      .select({ type: schema.badges.type })
+      .from(schema.badges)
+      .where(eq(schema.badges.userId, referrerId));
+
+    const earnedTypes = new Set(earnedBadges.map((b) => b.type));
+
+    for (const [milestoneStr, badge] of Object.entries(BADGE_MAP)) {
+      const milestone = parseInt(milestoneStr);
+      if (count >= milestone && !earnedTypes.has(badge.type)) {
+        await db
+          .insert(schema.badges)
+          .values({ id: uuidv4(), userId: referrerId, type: badge.type, name: badge.name, icon: badge.icon, earnedAt: now })
+          .onConflictDoNothing();
+        console.log(`🏅 [Referidos] Insignia "${badge.name}" otorgada a ${referrerId} (${count} conversiones >= ${milestone})`);
+      }
     }
 
     console.log(`✅ [Referidos] Proceso de conversión completado para usuario ${refereeUserId}`);

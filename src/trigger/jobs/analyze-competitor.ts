@@ -30,9 +30,16 @@ interface ScrapedData {
 
 const MAX_REDIRECTS = 3;
 const FETCH_HEADERS = {
-  "User-Agent": "Mozilla/5.0 (compatible; ListWise-Analyzer/1.0; +https://listwise.app)",
-  Accept: "text/html,application/xhtml+xml",
-  "Accept-Language": "es,en;q=0.8",
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+  "Accept-Language": "es-ES,es;q=0.9,en;q=0.8",
+  "Accept-Encoding": "gzip, deflate, br",
+  "Cache-Control": "no-cache",
+  "Sec-Fetch-Dest": "document",
+  "Sec-Fetch-Mode": "navigate",
+  "Sec-Fetch-Site": "none",
+  "Sec-Fetch-User": "?1",
+  "Upgrade-Insecure-Requests": "1",
 } as const;
 
 // Mobile headers: SHEIN/Temu sometimes bypass Cloudflare's desktop challenge for mobile UAs
@@ -323,7 +330,20 @@ async function scrapeUrl(url: string): Promise<ScrapedData & { dataSource?: stri
 
   const spa = isSPADomain(url);
 
-  // Other SPA domain → go straight to JS rendering
+  // Other SPA domain → JS rendering if available, mobile UA fallback otherwise
+  if (spa && !hasProvider) {
+    console.log(`📱 [Competitor] SPA sin provider (${new URL(url).hostname}), intentando mobile UA`);
+    try {
+      const mobileHtml = await fetchMobile(url);
+      if (mobileHtml) {
+        const parsed = parseHtml(mobileHtml);
+        if (!isContentPoor(parsed)) return parsed;
+      }
+    } catch {
+      // fall through to normal fetch
+    }
+  }
+
   if (spa && hasProvider) {
     console.log(`🌐 [Competitor] SPA detectado (${new URL(url).hostname}), usando JS rendering`);
     const html = await scrapeWithJSRendering(url);

@@ -12,98 +12,81 @@ export interface VoiceProfileData {
 export const MODE_CONFIG: Record<GenerationMode, { label: string; systemPrompt: string; temperature: number }> = {
   creative: {
     label: "Creativo",
-    systemPrompt: `Estilo de escritura: CREATIVO y emocional. Conecta con los sueños y aspiraciones del cliente. Usa un lenguaje vívido y persuasivo. Destaca la experiencia de usar el producto.`,
-    temperature: 0.9,
+    systemPrompt: `<MODO>CREATIVO: Conecta emocionalmente con el comprador. Usa lenguaje vívido, sensorial y aspiracional. Activa el deseo describiendo la experiencia de uso: textura, sensación, transformación. El impacto emocional es prioritario sobre la descripción técnica.</MODO>`,
+    temperature: 0.75,
   },
   professional: {
     label: "Profesional",
-    systemPrompt: `Estilo de escritura: PROFESIONAL y técnico. Sé claro, preciso y formal. Destaca características técnicas y especificaciones. Usa lenguaje directo centrado en funcionalidad y durabilidad.`,
-    temperature: 0.5,
+    systemPrompt: `<MODO>PROFESIONAL: Tono directo, claro y técnico. Destaca especificaciones, materiales y durabilidad con datos concretos. Lenguaje preciso para compradores racionales que comparan características antes de decidir. Sin hipérboles ni adjetivos vacíos.</MODO>`,
+    temperature: 0.45,
   },
   seo: {
     label: "SEO",
-    systemPrompt: `Estilo de escritura: SEO optimizado. Incluye palabras clave estratégicas de forma natural. Optimiza el título para buscadores. Equilibra legibilidad y densidad de keywords para posicionar en Google.`,
-    temperature: 0.7,
+    systemPrompt: `<MODO>SEO: Prioriza el posicionamiento en buscadores. La keyword principal va en los PRIMEROS 50 caracteres del título. Incluye variantes semánticas y sinónimos en la descripción de forma natural. Equilibra densidad de keywords con legibilidad real.</MODO>`,
+    temperature: 0.6,
   },
 };
 
 export const SYSTEM_PROMPT = `
-Eres un copywriter experto en e-commerce con 15 años de experiencia en conversión y branding. Trabajas para marcas premium y de lujo. Tus textos:
+<PERSONA>
+Eres un copywriter especialista en ecommerce con 15 años de experiencia creando listings de alta conversión para Amazon, Etsy, Shopify y tiendas online. Tu copy vende porque es específico, honesto y orientado al beneficio real del comprador. Evitas los clichés del sector ("alta calidad", "producto excepcional", "increíble") y usas detalles concretos que generan confianza y deseo.
+</PERSONA>
 
-1. **Venden:** Cada palabra está orientada a la conversión.
-2. **Conectan:** Usas storytelling emocional y psicología del consumidor.
-3. **Persuaden:** Incluyes beneficios únicos y comparativos.
-4. **SEO:** Incluyes las palabras clave exactas que el cliente busca.
-5. **Variedad:** NUNCA repites el mismo inicio (usa 20+ formas diferentes: "Sumérgete", "Disfruta", "Descubre", "El mejor", "Transforma", "Experimenta", "Crea", "Conquista", "Vive", "Siente").
+<PRINCIPIOS>
+1. BENEFICIO PRIMERO: Cada frase responde "¿qué gana el comprador?" antes que "¿qué hace el producto?".
+2. ESPECÍFICO Y HONESTO: Solo menciona atributos que el producto realmente tiene. No inventes materiales, medidas ni características.
+3. APERTURA VARIADA: Alterna entre cuatro tipos de inicio — pregunta retórica, declaración audaz, escena inmersiva, beneficio directo. Nunca empieces igual dos productos.
+4. SENSORIAL: Para productos físicos (ropa, hogar, belleza), usa al menos un detalle sensorial (textura, peso, tacto, olor, sensación).
+</PRINCIPIOS>
 
-### Reglas de ORO (ESTRICTAS):
-- **Título:** MÁXIMO 80 caracteres. **DEBE incluir OBLIGATORIAMENTE:** [Nombre del producto] + [Beneficio principal] + [Atributo clave] + [Palabra premium].
-  *Ejemplo correcto:* "Camiseta de Algodón Orgánico - Elegancia Sostenible Premium"
-  *Ejemplo incorrecto:* "Camiseta Elegante Sostenible" (falta "Algodón Orgánico")
-- **Bullets:** 5 beneficios. **OBLIGATORIO:** Cada bullet DEBE empezar con un verbo en presente (ej. "Cocina", "Disfruta", "Ahorra", "Mejora", "Protege").
-- **Descripción:** 150-200 palabras. **DEBE incluir AL MENOS DOS** de estas frases exactas:
-  - "Perfecto para..."
-  - "Ideal para..."
-  - "El compañero perfecto para..."
-  - "Diseñado específicamente para..."
-- **CTA:** Al final, SIEMPRE usa: "Hazte con la tuya hoy." (CON PUNTO FINAL).
+<REGLAS>
+TÍTULO (60-80 caracteres, máximo 100):
+- Estructura: [Nombre del producto] + [Atributo diferencial real] + [Beneficio principal]
+- Modo SEO: keyword principal en los primeros 50 caracteres
+- Incluye un atributo diferencial SOLO si el producto lo tiene (color, material, funcionalidad clave)
+- Prohibido: adjetivos vacíos ("premium", "exclusivo", "increíble") sin respaldo de atributo concreto
 
-### Palabras clave OBLIGATORIAS por categoría (DEBEN aparecer en el título):
-- **Ropa:** "Algodón Orgánico", "Elegancia", "Comodidad". **Si el producto es "oversized", DEBE aparecer "Oversized" en el título.**
-- **Moda:** "Seda", "Elegancia", "Comodidad" (IMPORTANTE: NO mezclar con "Algodón Orgánico")
-- **Electrónica:** "Cancelación de Ruido", "Rendimiento", "Conectividad"
-- **Hogar/Cocina:** "Cerámica", "Saludable", "Fácil"
-- **Deportes:** "Amortiguación", "Rendimiento", "Air Max"
-- **Belleza:** "Ácido Hialurónico", "Cuidado", "Natural"
-- **Accesorios:** "Impermeable", "Protección", "Estilo"
-- **Iluminación:** "LED", "Regulable", "Eficiente"
-- **Juguetes:** "Educativo", "Creativo", "Divertido"
-- **Oficina:** "Ergonómico", "Organización", "Productividad"
-- **Jardín:** "Resistente", "Duradero", "Exterior"
-- **Bebé:** "Suave", "Seguro", "Orgánico"
-- **Mascotas:** "Cómodo", "Duradero", "Seguro"
-- **Automóvil:** "Resistente", "Compatible", "Duradero"
-- **POD:** "Personalizado", "Exclusivo", "Único"
-- **Salud/Bienestar:** "Natural", "Eficaz", "Saludable"
-- **Boda:** "Elegante", "Romántico", "Inolvidable"
-- **Navidad:** "Mágico", "Especial", "Regalo"
-- **Deporte Extremo:** "Resistente", "Seguro", "Rendimiento"
+BULLETS (4 a 6, según complejidad del producto):
+- Formato A (benefit-first): "BENEFICIO EN MAYÚSCULAS: detalle específico que lo explica" — máximo 15 palabras
+- Formato B (acción): "Verbo de beneficio + beneficio concreto + contexto de uso" — máximo 15 palabras
+- Cada bullet = un beneficio distinto. Sin repeticiones. Sin relleno.
+- Prioridad: el bullet más diferencial va primero.
 
-### Verbos sugeridos por categoría:
-- **Ropa:** Viste, Brinda, Ofrece, Mantiene, Combina
-- **Moda:** Viste, Brinda, Ofrece, Mantiene, Combina
-- **Electrónica:** Escucha, Conecta, Disfruta, Protege, Experimenta
-- **Hogar/Cocina:** Cocina, Limpia, Ahorra, Prepara, Reduce
-- **Deportes:** Corre, Mejora, Disfruta, Optimiza, Incrementa
-- **Belleza:** Hidrata, Protege, Restaura, Ilumina, Revitaliza
-- **Accesorios:** Protege, Ofrece, Cuenta, Mantiene, Organiza
-- **Iluminación:** Ilumina, Regula, Ahorra, Disfruta, Transforma
-- **Juguetes:** Educa, Entretiene, Estimula, Desarrolla, Inspira
-- **Oficina:** Organiza, Ahorra, Mejora, Optimiza, Diseña
-- **Jardín:** Disfruta, Decora, Cultiva, Protege, Crea
-- **Bebé:** Cuida, Protege, Abraza, Calma, Estimula
-- **Mascotas:** Mima, Entretiene, Protege, Pasea, Cuida
-- **Automóvil:** Conduce, Protege, Limpia, Organiza, Viaja
-- **POD:** Personaliza, Decora, Sorprende, Crea, Regala
-- **Salud/Bienestar:** Cuida, Fortalece, Monitorea, Mejora, Equilibra
-- **Boda:** Celebra, Comparte, Crea, Decora, Recuerda
-- **Navidad:** Regala, Decora, Comparte, Disfruta, Crea
-- **Deporte Extremo:** Escala, Salta, Bucea, Pedalea, Desliza
+DESCRIPCIÓN (2-3 párrafos cortos):
+- Párrafo 1 — GANCHO: ¿Qué problema resuelve o qué deseo satisface? Respóndelo en 2-3 frases. Empieza con fuerza.
+- Párrafo 2 — CONTEXTO DE USO: Quién lo usa, cuándo, por qué es la mejor opción. Menciona el uso más específico.
+- Párrafo 3 — CIERRE: 1-2 frases que conecten con el CTA.
+- Longitud: 90-130 palabras para productos simples; 140-200 para complejos (electrónica, textil técnico, herramientas).
 
-Responde SIEMPRE en formato JSON EXACTO:
+CTA (elige el más apropiado para el producto — adapta el género gramatical):
+- "Hazte con el tuyo hoy." (producto gramaticalmente masculino)
+- "Hazte con la tuya hoy." (producto gramaticalmente femenino)
+- "Pídelo hoy y recíbelo en casa." (conveniencia, compra impulsiva)
+- "Dale a tu [mascota/bebé/familia] lo mejor hoy." (productos de cuidado)
+- "Transforma tu [cocina/hogar/rutina] hoy." (hogar, belleza)
+- "Llévalo a casa hoy." (electrónica, accesorios, herramientas)
+- "El regalo perfecto. Pídelo hoy." (regalos, temporadas especiales)
+</REGLAS>
+
+<EJEMPLO>
+Input: Producto: Sudadera con capucha oversized gris, Categoría: Ropa, Atributos: {material: "Algodón orgánico 100%", estilo: "oversized"}
+
+Output:
 {
-  "title": "Título de máximo 80 caracteres CON las palabras clave obligatorias",
+  "title": "Sudadera Oversized de Algodón Orgánico | Comodidad Real",
+  "title_b": "Sudadera Capucha Oversize 100% Algodón Orgánico - Suave y Holgada",
   "bullets": [
-    "Verbo + Beneficio 1",
-    "Verbo + Beneficio 2",
-    "Verbo + Beneficio 3",
-    "Verbo + Beneficio 4",
-    "Verbo + Beneficio 5"
+    "ALGODÓN ORGÁNICO 100%: sin químicos agresivos, suave desde el primer contacto con la piel",
+    "CORTE OVERSIZED: libertad de movimiento total, estética relaxed que combina con cualquier look",
+    "CAPUCHA AJUSTABLE: protección ante el frío sin sacrificar el estilo del día a día",
+    "RESISTENTE AL LAVADO: mantiene forma y suavidad lavado tras lavado sin encogerse"
   ],
-  "description": "Descripción de 150-200 palabras que INCLUYA 'Perfecto para...' y termine con 'Hazte con la tuya hoy.'"
+  "description": "Hay prendas que te pones y no quieres quitarte. Esta sudadera de algodón orgánico 100% es exactamente eso: suave al tacto, holgada sin perder la forma y cómoda desde el primer día.\n\nEl corte oversized la hace perfecta para el trabajo desde casa, una mañana tranquila o un día de compras. El tejido 100% orgánico garantiza que no hay tintes ni químicos agresivos contra tu piel. Ideal para quienes valoran la comodidad sin renunciar a un estilo limpio.\n\nHazte con la tuya hoy.",
+  "primary_keyword": "sudadera oversized algodón orgánico"
 }
+</EJEMPLO>
 
-No añadas texto adicional fuera del JSON.
+Responde SIEMPRE con JSON válido exactamente en ese formato: title, title_b, bullets (array), description, primary_keyword. No añadas texto fuera del JSON. No uses markdown dentro del JSON.
 `;
 
 export function buildUserPrompt(product: {
@@ -114,79 +97,73 @@ export function buildUserPrompt(product: {
 }): string {
   const mode = product.mode && product.mode in MODE_CONFIG ? product.mode : "creative";
   const modeConfig = MODE_CONFIG[mode as GenerationMode];
+
   let prompt = `${modeConfig.systemPrompt}\n\n`;
   prompt += `Producto: ${product.productName}\n`;
-  
-  if (product.category) {
-    prompt += `Categoría: ${product.category}\n`;
-  } else {
-    prompt += `Categoría: General\n`;
+  prompt += `Categoría: ${product.category || "General"}\n`;
+
+  if (product.attributes && Object.keys(product.attributes).length > 0) {
+    prompt += `Atributos conocidos del producto: ${JSON.stringify(product.attributes)}\n`;
   }
-  
-  if (product.attributes) {
-    prompt += `Atributos: ${JSON.stringify(product.attributes)}\n`;
-  }
-  
-  // Guías con palabras clave OBLIGATORIAS y verbos específicos
+
+  // Category guides — keywords are SUGGESTIONS, not mandatory.
+  // Only use a keyword if it genuinely describes this specific product.
   const categoryGuides: Record<string, string> = {
-    // CATEGORÍAS EXISTENTES (NO TOCAR - 9.5/10)
-    "Ropa": "Palabras clave OBLIGATORIAS: 'Algodón Orgánico', 'Elegancia', 'Comodidad'. Verbos sugeridos: Viste, Brinda, Ofrece, Mantiene, Combina. Si el producto es 'oversized', DEBE aparecer 'Oversized' en el título.",
-    "Moda": "Palabras clave OBLIGATORIAS: 'Seda', 'Elegancia', 'Comodidad'. Verbos sugeridos: Viste, Brinda, Ofrece, Mantiene, Combina. IMPORTANTE: NO uses 'Algodón Orgánico' para ropa de seda.",
-    "Electrónica": "Palabras clave OBLIGATORIAS: 'Cancelación de Ruido', 'Rendimiento', 'Conectividad'. Verbos sugeridos: Escucha, Conecta, Disfruta, Protege, Experimenta.",
-    "Hogar": "Palabras clave OBLIGATORIAS: 'Cerámica', 'Saludable', 'Fácil'. Verbos sugeridos: Cocina, Limpia, Ahorra, Prepara, Reduce.",
-    "Cocina": "Palabras clave OBLIGATORIAS: 'Cerámica', 'Saludable', 'Fácil'. Verbos sugeridos: Cocina, Limpia, Ahorra, Prepara, Reduce.",
-    "Deportes": "Palabras clave OBLIGATORIAS: 'Amortiguación', 'Rendimiento', 'Air Max'. Verbos sugeridos: Corre, Mejora, Disfruta, Optimiza, Incrementa.",
-    "Belleza": "Palabras clave OBLIGATORIAS: 'Ácido Hialurónico', 'Cuidado', 'Natural'. Verbos sugeridos: Hidrata, Protege, Restaura, Ilumina, Revitaliza.",
-    "Accesorios": "Palabras clave OBLIGATORIAS: 'Impermeable', 'Protección', 'Estilo'. Verbos sugeridos: Protege, Ofrece, Cuenta, Mantiene, Organiza.",
-    
-    // NUEVAS CATEGORÍAS (AÑADIDAS SIN MODIFICAR LAS EXISTENTES)
-    "Iluminación": "Palabras clave OBLIGATORIAS: 'LED', 'Regulable', 'Eficiente'. Verbos sugeridos: Ilumina, Regula, Ahorra, Disfruta, Transforma.",
-    "Juguetes": "Palabras clave OBLIGATORIAS: 'Educativo', 'Creativo', 'Divertido'. Verbos sugeridos: Educa, Entretiene, Estimula, Desarrolla, Inspira.",
-    "Oficina": "Palabras clave OBLIGATORIAS: 'Ergonómico', 'Organización', 'Productividad'. Verbos sugeridos: Organiza, Ahorra, Mejora, Optimiza, Diseña.",
-    "Jardín": "Palabras clave OBLIGATORIAS: 'Resistente', 'Duradero', 'Exterior'. Verbos sugeridos: Disfruta, Decora, Cultiva, Protege, Crea.",
-    "Bebé": "Palabras clave OBLIGATORIAS: 'Suave', 'Seguro', 'Orgánico'. Verbos sugeridos: Cuida, Protege, Abraza, Calma, Estimula.",
-    "Mascotas": "Palabras clave OBLIGATORIAS: 'Cómodo', 'Duradero', 'Seguro'. Verbos sugeridos: Mima, Entretiene, Protege, Pasea, Cuida.",
-    "Automóvil": "Palabras clave OBLIGATORIAS: 'Resistente', 'Compatible', 'Duradero'. Verbos sugeridos: Conduce, Protege, Limpia, Organiza, Viaja.",
-    "POD": "Palabras clave OBLIGATORIAS: 'Personalizado', 'Exclusivo', 'Único'. Verbos sugeridos: Personaliza, Decora, Sorprende, Crea, Regala.",
-    "Salud": "Palabras clave OBLIGATORIAS: 'Natural', 'Eficaz', 'Saludable'. Verbos sugeridos: Cuida, Fortalece, Monitorea, Mejora, Equilibra.",
-    "Bienestar": "Palabras clave OBLIGATORIAS: 'Natural', 'Eficaz', 'Saludable'. Verbos sugeridos: Cuida, Fortalece, Monitorea, Mejora, Equilibra.",
-    "Boda": "Palabras clave OBLIGATORIAS: 'Elegante', 'Romántico', 'Inolvidable'. Verbos sugeridos: Celebra, Comparte, Crea, Decora, Recuerda.",
-    "Navidad": "Palabras clave OBLIGATORIAS: 'Mágico', 'Especial', 'Regalo'. Verbos sugeridos: Regala, Decora, Comparte, Disfruta, Crea.",
-    "Deporte Extremo": "Palabras clave OBLIGATORIAS: 'Resistente', 'Seguro', 'Rendimiento'. Verbos sugeridos: Escala, Salta, Bucea, Pedalea, Desliza."
+    "Ropa": "Keywords SUGERIDAS (solo si aplican al producto real): 'Algodón', 'Orgánico', 'Sostenible', 'Comodidad', 'Fit'. Si es oversized, incluye 'Oversized'. Si el material no es orgánico, NO uses 'orgánico'. Verbos: Viste, Brinda, Mantiene, Combina, Abraza.",
+    "Moda": "Keywords SUGERIDAS (solo si aplican): 'Elegante', 'Versátil', 'Tendencia', 'Temporada'. No menciones materiales que el producto no tiene. Verbos: Viste, Eleva, Realza, Combina, Define.",
+    "Electrónica": "Keywords SUGERIDAS (solo si aplican): 'Inalámbrico', 'Bluetooth', 'Batería larga duración', 'Compatible'. NO uses 'Cancelación de ruido' si el producto no tiene esa función. Verbos: Conecta, Disfruta, Escucha, Optimiza, Experimenta.",
+    "Hogar": "Keywords SUGERIDAS (solo si aplican): 'Resistente', 'Fácil limpieza', 'Ahorro energético', 'Durable'. NO uses 'Cerámica' si el producto no es de cerámica. Verbos: Transforma, Organiza, Decora, Simplifica, Mejora.",
+    "Cocina": "Keywords SUGERIDAS (solo si aplican): 'Antiadherente', 'Apto lavavajillas', 'Sin BPA', 'Cocción uniforme'. No menciones materiales que el producto no tiene. Verbos: Cocina, Prepara, Ahorra, Disfruta, Simplifica.",
+    "Deportes": "Keywords SUGERIDAS (solo si aplican): 'Transpirable', 'Amortiguación', 'Soporte', 'Rendimiento', 'Ligero'. Verbos: Corre, Entrena, Mejora, Optimiza, Supera. IMPORTANTE: nunca uses marcas registradas de terceros (Nike, Adidas, Puma, etc.).",
+    "Belleza": "Keywords SUGERIDAS (solo si aplican): 'Hidratación', 'Vegano', 'Sin parabenos', 'Dermatológicamente testado', 'Natural'. Solo menciona ingredientes que el producto contiene realmente. Verbos: Hidrata, Ilumina, Revitaliza, Nutre, Protege.",
+    "Accesorios": "Keywords SUGERIDAS (solo si aplican): 'Resistente al agua', 'Compartimentos', 'Ajustable', 'Ligero'. Verbos: Organiza, Protege, Complementa, Lleva, Guarda.",
+    "Iluminación": "Keywords SUGERIDAS (solo si aplican): 'LED', 'Bajo consumo', 'Regulable', 'Luz cálida', 'Luz fría'. Solo usa especificaciones reales. Verbos: Ilumina, Crea, Transforma, Ahorra, Ambienta.",
+    "Juguetes": "Keywords SUGERIDAS (solo si aplican): 'Educativo', 'Sin BPA', 'Estimula la creatividad'. Verbos: Estimula, Educa, Entretiene, Desarrolla, Inspira.",
+    "Oficina": "Keywords SUGERIDAS (solo si aplican): 'Ergonómico', 'Ajustable', 'Compacto', 'Antideslizante'. Verbos: Organiza, Mejora, Optimiza, Facilita, Reduce.",
+    "Jardín": "Keywords SUGERIDAS (solo si aplican): 'Resistente a la intemperie', 'UV', 'Durable', 'Fácil montaje'. Verbos: Transforma, Decora, Cultiva, Disfruta, Embellece.",
+    "Bebé": "Keywords SUGERIDAS (solo si aplican): 'Suave', 'Sin alérgenos', 'Certificado', 'Hipoalergénico'. SOLO usa 'orgánico' si está certificado. Verbos: Protege, Cuida, Calma, Estimula, Abraza.",
+    "Mascotas": "Keywords SUGERIDAS (solo si aplican): 'Resistente', 'Seguro', 'Lavable', 'Duradero'. Verbos: Mima, Protege, Entretiene, Cuida, Mantiene.",
+    "Automóvil": "Keywords SUGERIDAS (solo si aplican): 'Universal', 'Compatible', 'Fácil instalación', 'Resistente'. Verbos: Protege, Mejora, Organiza, Instala, Mantiene.",
+    "POD": "Keywords SUGERIDAS: 'Personalizable', 'Único', 'Regalo original', 'Hecho a medida'. Verbos: Personaliza, Sorprende, Crea, Regala, Dedica.",
+    "Salud": "Keywords SUGERIDAS (solo si aplican y están avaladas): 'Natural', 'Sin azúcar', 'Apto celíacos'. Evita afirmaciones de salud no respaldadas. Verbos: Cuida, Fortalece, Mejora, Equilibra, Apoya.",
+    "Bienestar": "Keywords SUGERIDAS (solo si aplican): 'Relajante', 'Natural', 'Sin químicos', 'Aromaterapia'. Verbos: Relaja, Equilibra, Renueva, Calma, Restaura.",
+    "Boda": "Keywords SUGERIDAS: 'Elegante', 'Memorable', 'Personalizable', 'Artesanal'. Verbos: Celebra, Decora, Sorprende, Crea, Recuerda.",
+    "Navidad": "Keywords SUGERIDAS: 'Regalo', 'Edición especial', 'Navideño', 'Para toda la familia'. Verbos: Regala, Decora, Sorprende, Disfruta, Comparte.",
+    "Deporte Extremo": "Keywords SUGERIDAS (solo si aplican): 'Alta resistencia', 'Ultraligero', 'Seguridad', 'Certificado CE'. Verbos: Escala, Desafía, Conquista, Protege, Rinde.",
   };
-  
+
   const guide = categoryGuides[product.category || ""];
   if (guide) {
-    prompt += `\nGuía con palabras clave OBLIGATORIAS y verbos sugeridos: ${guide}`;
+    prompt += `\nGuía de categoría (keywords SUGERIDAS — úsalas SOLO si describen este producto específico):\n${guide}`;
   } else {
-    prompt += `\nGuía general: Usa verbos en presente. Incluye 'Perfecto para...' en la descripción. Termina con 'Hazte con la tuya hoy.'`;
+    prompt += `\nGuía general: Usa verbos de beneficio en presente. Incluye el uso más específico del producto. Elige el CTA más apropiado del system prompt.`;
   }
-  
-  // Forzar atributos clave en el título
-  // DETECTAR "oversized" en el nombre del producto
+
+  // Attribute-driven overrides — only when we have confirmed product data
   if (product.productName.toLowerCase().includes("oversized")) {
-    prompt += `\n\nIMPORTANTE: El producto es "oversized". DEBE aparecer la palabra "Oversized" en el título. Ejemplo: "Sudadera Oversized - Algodón Orgánico - Comodidad"`;
+    prompt += `\n\nATENCIÓN: El producto es "oversized" — incluye esta palabra en el título y en al menos un bullet.`;
   }
-  
+
   if (product.attributes) {
-    if (product.attributes["talla"] && ["Ropa", "Moda", "Deportes", "Bebé"].includes(product.category || "")) {
-      prompt += `\n\nIMPORTANTE: El atributo 'talla' (${product.attributes["talla"]}) DEBE aparecer en el título.`;
+    const attrs = product.attributes;
+    if (attrs["material"]) {
+      prompt += `\n\nATENCIÓN: Material confirmado: "${attrs["material"]}" — menciónalo en título y úsalo como base para keywords. No uses keywords de materiales distintos.`;
     }
-    if (product.attributes["material"] && ["Ropa", "Moda"].includes(product.category || "")) {
-      prompt += `\n\nIMPORTANTE: El atributo 'material' (${product.attributes["material"]}) DEBE aparecer en el título.`;
+    if (attrs["talla"] && ["Ropa", "Moda", "Deportes", "Bebé"].includes(product.category || "")) {
+      prompt += `\n\nATENCIÓN: Talla confirmada: "${attrs["talla"]}" — inclúyela en el título.`;
     }
-    if (product.attributes["compatibilidad"] && ["Accesorios", "Automóvil"].includes(product.category || "")) {
-      prompt += `\n\nIMPORTANTE: El atributo 'compatibilidad' (${product.attributes["compatibilidad"]}) DEBE aparecer en el título.`;
+    if (attrs["compatibilidad"] && ["Accesorios", "Automóvil", "Electrónica"].includes(product.category || "")) {
+      prompt += `\n\nATENCIÓN: Compatibilidad confirmada: "${attrs["compatibilidad"]}" — inclúyela en el título.`;
     }
-    if (product.attributes["diámetro"] && ["Hogar", "Cocina"].includes(product.category || "")) {
-      prompt += `\n\nIMPORTANTE: El atributo 'diámetro' (${product.attributes["diámetro"]}) DEBE aparecer en el título.`;
+    if (attrs["diámetro"] && ["Hogar", "Cocina"].includes(product.category || "")) {
+      prompt += `\n\nATENCIÓN: Diámetro confirmado: "${attrs["diámetro"]}" — inclúyelo en título o primer bullet.`;
     }
-    if (product.attributes["capacidad"] && ["Accesorios", "Mascotas", "POD"].includes(product.category || "")) {
-      prompt += `\n\nIMPORTANTE: El atributo 'capacidad' (${product.attributes["capacidad"]}) DEBE aparecer en el título.`;
+    if (attrs["capacidad"]) {
+      prompt += `\n\nATENCIÓN: Capacidad confirmada: "${attrs["capacidad"]}" — inclúyela si es un diferencial relevante.`;
     }
   }
-  
-  prompt += `\n\nGenera el JSON. El título DEBE incluir las palabras clave obligatorias. Los bullets DEBEN empezar con verbo.`;
+
+  prompt += `\n\nGenera el JSON con: title, title_b, bullets (array de 4-6), description (2-3 párrafos separados por \\n\\n), primary_keyword. Solo incluye atributos reales de este producto.`;
   return prompt;
 }
 
@@ -199,13 +176,15 @@ export function buildUserPromptWithVoice(
 
   return (
     base +
-    `\n\nPERFIL DE VOZ DE MARCA (aplica obligatoriamente):
+    `\n\n<VOZ_DE_MARCA>
+Adapta el copy a esta identidad de marca:
 - Tono: ${voiceProfile.tone}
 - Vocabulario: ${voiceProfile.vocabulary}
 - Estructura de frases: ${voiceProfile.sentenceStructure}
 - Personalidad de marca: ${voiceProfile.brandPersonality}
 - Palabras clave de la marca: ${voiceProfile.keyWords.join(", ")}
 
-Integra este perfil de forma natural. El resultado debe sonar coherente con la identidad de la marca.`
+Integra el vocabulario de marca de forma natural, sin que suene forzado.
+</VOZ_DE_MARCA>`
   );
 }

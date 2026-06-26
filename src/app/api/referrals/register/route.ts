@@ -94,13 +94,24 @@ export async function POST(req: Request) {
       .limit(1);
 
     const total = referrerData?.totalReferrals ?? 0;
-    if (BADGE_MAP[total]) {
-      const badge = BADGE_MAP[total];
-      await db
-        .insert(schema.badges)
-        .values({ id: uuidv4(), userId: referrer.id, type: badge.type, name: badge.name, icon: badge.icon, earnedAt: now })
-        .onConflictDoNothing();
-      console.log(`🏅 [Referidos] Insignia "${badge.name}" otorgada a ${referrer.id}`);
+
+    // Check ALL milestones crossed — awards retroactively if a previous milestone was missed
+    const earnedBadges = await db
+      .select({ type: schema.badges.type })
+      .from(schema.badges)
+      .where(eq(schema.badges.userId, referrer.id));
+
+    const earnedTypes = new Set(earnedBadges.map((b) => b.type));
+
+    for (const [milestoneStr, badge] of Object.entries(BADGE_MAP)) {
+      const milestone = parseInt(milestoneStr);
+      if (total >= milestone && !earnedTypes.has(badge.type)) {
+        await db
+          .insert(schema.badges)
+          .values({ id: uuidv4(), userId: referrer.id, type: badge.type, name: badge.name, icon: badge.icon, earnedAt: now })
+          .onConflictDoNothing();
+        console.log(`🏅 [Referidos] Insignia "${badge.name}" otorgada a ${referrer.id} (${total} registros >= ${milestone})`);
+      }
     }
 
     console.log(`✅ [Referidos] Registrado: referee=${userId} (${refereeEmail}) → referrer=${referrer.id}`);
