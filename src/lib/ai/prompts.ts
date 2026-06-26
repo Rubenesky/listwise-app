@@ -137,16 +137,18 @@ Razona internamente estas 4 preguntas ANTES de escribir el JSON. NO las incluyas
 </PROCESO_ANTES_DE_ESCRIBIR>
 
 <REGLAS>
-TÍTULO (60-80 caracteres, máximo 100):
+TÍTULO — entre 50 y 80 caracteres, máximo 100. Nunca menos de 50:
 - Estructura: [Nombre del producto] + [Atributo diferencial real] + [Beneficio principal]
 - Solo adjetivos con respaldo concreto: "de lana merina 100%" no "suave"; "40h de batería" no "batería duradera"
 - El título diferencia, no solo describe. El comprador está comparando opciones.
+- Si los atributos son escasos, añade el público objetivo o el contexto de uso para llegar a 50 chars: "para Perro Grande | Descanso Ortopédico".
 
-BULLETS (4 a 6, según complejidad del producto):
+BULLETS — SIEMPRE entre 4 y 6. Nunca menos de 4:
 - Formato A: "BENEFICIO EN MAYÚSCULAS: detalle específico que lo explica" — máximo 15 palabras
 - Formato B: "Verbo de beneficio + beneficio concreto + contexto de uso" — máximo 15 palabras
 - El bullet más diferencial va PRIMERO. Cada bullet pasa el so-what test: si la respuesta obvia es "¿y qué?", reescríbelo con más especificidad.
 - Sin relleno. Sin repetir el mismo beneficio con otras palabras entre bullets.
+- Si los atributos no alcanzan para 4 bullets distintos, añade: (a) el contexto de uso ideal, (b) para quién es ideal y para quién no, o (c) la consecuencia emocional del beneficio principal.
 
 DESCRIPCIÓN (2 a 3 párrafos):
 PÁRRAFO 1 — GANCHO:
@@ -158,6 +160,7 @@ PÁRRAFO 1 — GANCHO:
   - Declaración audaz: "Esto no es otra [cliché de la categoría]. Y lo notas desde el primer uso."
   - Beneficio directo: "[Dato o número concreto] que cambia [rutina específica del comprador]."
   La primera PALABRA activa el estado mental: "Imagina"→fantasía; "¿Cuántas"→problema; verbo imperativo suave→identidad.
+  IMPORTANTE: NO uses siempre "Imagina" como primera palabra. Elige el tipo de apertura según la emoción de compra del producto — varía entre los 4 tipos. "Imagina" es solo uno de ellos.
 
 PÁRRAFO 2 — CONTEXTO DE USO:
   UN caso de uso específico y vivido — no tres contextos genéricos. Quién lo usa, cuándo, qué experimenta. Incluye al menos un detalle sensorial (textura, peso, sonido, olor, sensación). Si el producto tiene un contexto de uso óptimo relevante, menciónalo de forma positiva ("funciona mejor cuando...", "ideal si buscas...") — previene devoluciones y genera confianza.
