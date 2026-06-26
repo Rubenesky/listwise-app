@@ -37,7 +37,7 @@ export function getAvailableProviders(): AIProvider[] {
 
 export function getDefaultProvider(): AIProvider {
   const available = getAvailableProviders();
-  if (available.includes("groq")) return "groq";
+  if (available.includes("gemini")) return "gemini";
   return available[0];
 }
 

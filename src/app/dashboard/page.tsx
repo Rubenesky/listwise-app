@@ -118,8 +118,7 @@ export default function DashboardPage() {
   const [saving, setSaving] = useState(false);
   const [sharing, setSharing] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
-  const [aiProvider, setAiProvider] = useState("groq");
-  const [availableProviders, setAvailableProviders] = useState<string[]>(["groq"]);
+  const aiProvider = "gemini";
   const currentPageRef = useRef(1);
   const [marketplace, setMarketplace] = useState<string>(() => {
     if (typeof window !== "undefined") return localStorage.getItem("listwise_marketplace") ?? "general";
@@ -248,14 +247,6 @@ export default function DashboardPage() {
       .catch(() => localStorage.removeItem("listwise_ref"));
   }, [isSignedIn]);
 
-  useEffect(() => {
-    fetch("/api/ai/providers")
-      .then((r) => r.json())
-      .then((d) => {
-        if (d.providers?.length) setAvailableProviders(d.providers);
-      })
-      .catch(() => {});
-  }, []);
 
   const openModal = (listing: ListingRow) => {
     setSelectedListingId(listing.id);
@@ -888,30 +879,9 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* AI Provider selector */}
-        {availableProviders.length > 1 && (
+        {/* AI provider is managed automatically (Gemini primary, Groq fallback) */}
+        {false && (
           <div>
-            <div className="flex items-center gap-1.5 mb-2">
-              <label className="text-sm font-medium text-gray-700">Proveedor de IA</label>
-            </div>
-            <div className="flex gap-2 flex-wrap">
-              {availableProviders.map((p) => {
-                const labels: Record<string, string> = { groq: "⚡ Groq", gemini: "✨ Gemini" };
-                return (
-                  <button
-                    key={p}
-                    onClick={() => setAiProvider(p)}
-                    className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                      aiProvider === p
-                        ? "bg-purple-600 text-white"
-                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-                    }`}
-                  >
-                    {labels[p] ?? p}
-                  </button>
-                );
-              })}
-            </div>
           </div>
         )}
 
