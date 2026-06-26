@@ -233,7 +233,7 @@ export async function POST(req: Request) {
     }
 
     console.log(`🚀 [Competitor] Análisis iniciado: ${analysisId}`);
-    return NextResponse.json({ analysisId, cached: false });
+    return NextResponse.json({ analysisId, cached: false, remainingCredits: creditResult.remainingCredits });
   } catch (error) {
     console.error("❌ [Competitor] Error:", error);
     return NextResponse.json({ error: "Error interno" }, { status: 500 });

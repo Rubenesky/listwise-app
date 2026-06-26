@@ -104,9 +104,10 @@ async function scrapeUrl(initialUrl: string): Promise<{
 
     const $ = cheerio.load(html);
 
-    // Extract JSON-LD product data BEFORE removing scripts
+    // 1. Extract JSON-LD product data BEFORE removing scripts
     let jsonLdTitle = "";
     let jsonLdDescription = "";
+    let jsonLdPrice = "";
     $('script[type="application/ld+json"]').each((_, el) => {
       if (jsonLdTitle) return;
       try {
@@ -115,9 +116,13 @@ async function scrapeUrl(initialUrl: string): Promise<{
         const items: unknown[] = Array.isArray(data) ? data : [data];
         for (const item of items) {
           const typed = item as Record<string, unknown>;
-          if (typed["@type"] === "Product" || typed["@type"] === "ItemPage") {
+          const t = typed["@type"];
+          if (t === "Product" || t === "ItemPage" || t === "Offer") {
             if (typeof typed.name === "string") jsonLdTitle = typed.name.slice(0, 200);
             if (typeof typed.description === "string") jsonLdDescription = typed.description.slice(0, 500);
+            const offers = typed.offers as Record<string, unknown> | undefined;
+            if (offers && typeof offers.price === "string") jsonLdPrice = offers.price;
+            if (offers && typeof offers.price === "number") jsonLdPrice = String(offers.price);
             if (jsonLdTitle) break;
           }
         }
@@ -126,12 +131,33 @@ async function scrapeUrl(initialUrl: string): Promise<{
       }
     });
 
+    // 2. Try to extract product data from inline scripts (SPA sites like SHEIN)
+    if (!jsonLdTitle) {
+      $("script:not([src])").each((_, el) => {
+        if (jsonLdTitle) return;
+        const src = $(el).html() ?? "";
+        const nameMatch = src.match(/"(?:name|productName|title)"\s*:\s*"([^"]{5,200})"/);
+        const priceMatch = src.match(/"(?:price|salePrice|retailPrice)"\s*:\s*"?([0-9.,]{1,12})"?/);
+        if (nameMatch && nameMatch[1].length > 5 && !nameMatch[1].startsWith("http")) {
+          jsonLdTitle = nameMatch[1].replace(/\\u[\dA-Fa-f]{4}/g, "").slice(0, 200);
+        }
+        if (priceMatch && !jsonLdPrice) jsonLdPrice = priceMatch[1];
+      });
+    }
+
     $("script, style, nav, footer, header, iframe, noscript, svg, [hidden]").remove();
 
-    // Prioritize: JSON-LD Product → OG tags → h1 → <title>
+    // 3. Prioritize: JSON-LD → OG → image alt → h1 → <title>
+    const ogTitle = $('meta[property="og:title"]').attr("content")?.trim();
+    const imgAlt = $('img[alt]').filter((_, el) => {
+      const alt = $(el).attr("alt") ?? "";
+      return alt.length > 10 && alt.length < 200 && !alt.toLowerCase().includes("logo") && !alt.toLowerCase().includes("banner");
+    }).first().attr("alt")?.trim();
+
     const title =
       jsonLdTitle ||
-      $('meta[property="og:title"]').attr("content")?.trim().slice(0, 200) ||
+      ogTitle?.slice(0, 200) ||
+      imgAlt?.slice(0, 200) ||
       $("h1").first().text().trim().slice(0, 200) ||
       $("title").first().text().trim().slice(0, 200) ||
       "";
@@ -144,12 +170,28 @@ async function scrapeUrl(initialUrl: string): Promise<{
 
     const keywords = $('meta[name="keywords"]').attr("content")?.trim().slice(0, 300) || "";
 
-    const textNodes: string[] = [];
-    $("h1, h2, h3, p, li").each((_, el) => {
+    // 4. Extract product-specific structured content with labels
+    const productTextNodes: string[] = [];
+    $("h1, h2").each((_, el) => {
       const text = $(el).text().trim();
-      if (text.length > 20) textNodes.push(text);
+      if (text.length > 5 && text.length < 300) productTextNodes.push(`[TÍTULO] ${text}`);
     });
-    const mainContent = textNodes.join(" ").slice(0, 3000);
+    $("[class*='price'],[class*='Price'],[class*='amount'],[class*='Amount'],[itemprop='price']").each((_, el) => {
+      const text = $(el).text().trim();
+      if (text.length > 0 && text.length < 30 && /[\d.,€$£]/.test(text)) {
+        productTextNodes.push(`[PRECIO] ${text}`);
+      }
+    });
+    if (jsonLdPrice) productTextNodes.push(`[PRECIO] ${jsonLdPrice}`);
+    $("ul li, ol li").each((_, el) => {
+      const text = $(el).text().trim();
+      if (text.length > 10 && text.length < 200) productTextNodes.push(`[BULLET] ${text}`);
+    });
+    $("p, [class*='desc'],[class*='Desc'],[class*='detail'],[class*='Detail']").each((_, el) => {
+      const text = $(el).text().trim();
+      if (text.length > 30 && text.length < 500) productTextNodes.push(text);
+    });
+    const mainContent = productTextNodes.slice(0, 60).join("\n").slice(0, 3000);
 
     return { title, description, keywords, mainContent };
   }
@@ -187,16 +229,21 @@ export const analyzeCompetitorTask = task({
       return { success: false, error: msg };
     }
 
-    const userPrompt = `Analiza este listing de un competidor:
+    const userPrompt = `Analiza este LISTING ESPECÍFICO de producto de un competidor de ecommerce:
 
-TÍTULO: ${scraped.title}
-DESCRIPCIÓN: ${scraped.description}
-KEYWORDS: ${scraped.keywords}
-CONTENIDO: ${scraped.mainContent.slice(0, 1500)}
-${payload.listingTitle ? `\nMI LISTING ACTUAL:\nTÍTULO: ${payload.listingTitle}\nDESCRIPCIÓN: ${payload.listingDescription ?? ""}` : ""}
+=== DATOS DEL PRODUCTO ===
+NOMBRE/TÍTULO: ${scraped.title || "(no detectado)"}
+DESCRIPCIÓN: ${scraped.description || "(no detectada)"}
+CONTENIDO DE LA PÁGINA:
+${scraped.mainContent.slice(0, 2000)}
+${scraped.keywords ? `KEYWORDS META: ${scraped.keywords}` : ""}
+${payload.listingTitle ? `\n=== MI LISTING ACTUAL (para comparar) ===\nTÍTULO: ${payload.listingTitle}\nDESCRIPCIÓN: ${payload.listingDescription ?? ""}` : ""}
 
-Responde SOLO con JSON:
-{"tone":"string","strengths":["..."],"weaknesses":["..."],"keywords":["..."],"suggestions":["..."]}`;
+Analiza el COPY y LISTING del producto específico (título, bullets, descripción, precio si lo hay).
+NO analices la web en general — analiza solo cómo venden ESTE producto.
+
+Responde SOLO con JSON válido:
+{"tone":"string (ej: emocional, técnico, aspiracional, informativo)","strengths":["fortaleza específica del copy/listing"],"weaknesses":["debilidad específica del copy/listing"],"keywords":["keyword relevante del producto"],"suggestions":["acción concreta para mejorar MI listing basada en este análisis"]}`;
 
     let analysis: CompetitorAnalysis;
     try {
@@ -210,12 +257,12 @@ Responde SOLO con JSON:
           {
             role: "system",
             content:
-              "Eres un experto en marketing de ecommerce. Analiza listings de competidores. Responde SIEMPRE en JSON válido.",
+              "Eres un experto en copywriting de ecommerce y análisis de listings de productos (Amazon, Shopify, Etsy, SHEIN...). Tu especialidad es analizar el copy de un listing específico: título, bullets de características, descripción y precio. Evalúas qué tan efectivo es para convertir compradores y para SEO. Nunca analices la web en general — solo el producto específico. Responde SIEMPRE en JSON válido.",
           },
           { role: "user", content: userPrompt },
         ],
-        temperature: 0.4,
-        max_tokens: 800,
+        temperature: 0.3,
+        max_tokens: 1000,
         response_format: { type: "json_object" },
       });
 

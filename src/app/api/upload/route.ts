@@ -295,6 +295,7 @@ export async function POST(req: Request) {
       batchId: batchId,
       plan: userPlan,
       remaining: planLimit === Infinity ? null : planLimit - totalAfterUpload,
+      remainingCredits: creditResult.remainingCredits,
       ...(warnings.length > 0 && { warnings }),
     });
 

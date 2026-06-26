@@ -124,6 +124,10 @@ export default function CompetitorPage() {
         }
         setLoading(false);
       } else {
+        // Dispatch credits-update immediately after deduction
+        if (typeof data.remainingCredits === "number") {
+          window.dispatchEvent(new CustomEvent("credits-update", { detail: { credits: data.remainingCredits } }));
+        }
         startPolling(data.analysisId);
       }
     } catch {

@@ -157,6 +157,27 @@ export default function DashboardPage() {
       .catch(() => {});
   }, []);
 
+  // Register referral code from localStorage after sign-up
+  useEffect(() => {
+    if (!isSignedIn) return;
+    const refCode = localStorage.getItem("listwise_ref");
+    if (!refCode) return;
+    fetch("/api/referrals/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code: refCode }),
+    })
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.success) {
+          window.dispatchEvent(new Event("gamification-update"));
+        }
+        // Clean up regardless: success or idempotent 409
+        localStorage.removeItem("listwise_ref");
+      })
+      .catch(() => localStorage.removeItem("listwise_ref"));
+  }, [isSignedIn]);
+
   useEffect(() => {
     fetch("/api/ai/providers")
       .then((r) => r.json())
@@ -267,6 +288,9 @@ export default function DashboardPage() {
       setBatchTotal(data.count || 0);
       setIsProcessing(true);
       window.dispatchEvent(new Event("gamification-update"));
+      if (typeof data.remainingCredits === "number") {
+        window.dispatchEvent(new CustomEvent("credits-update", { detail: { credits: data.remainingCredits } }));
+      }
       await fetchListings();
     } catch {
       setUploadErrors(["Error de red al subir el archivo. Inténtalo de nuevo."]);

@@ -1,11 +1,11 @@
 import { db, schema } from "@/db";
-import { and, eq, sql } from "drizzle-orm";
+import { and, eq, or, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 
 const BADGE_MAP: Record<number, { type: string; name: string; icon: string }> = {
-  1: { type: "first_referral", name: "Primer Referido", icon: "🌱" },
-  5: { type: "5_referrals", name: "5 Referidos", icon: "⭐" },
-  10: { type: "10_referrals", name: "10 Referidos", icon: "🏆" },
+  1: { type: "first_referral", name: "Primer Referido", icon: "🤝" },
+  5: { type: "5_referrals", name: "5 Referidos", icon: "💫" },
+  10: { type: "10_referrals", name: "10 Referidos", icon: "👑" },
 };
 
 export async function convertReferral(
@@ -42,7 +42,7 @@ export async function convertReferral(
     const updated = await db
       .update(schema.referrals)
       .set({ status: "converted", convertedAt: now, refereeId: refereeUserId })
-      .where(and(eq(schema.referrals.id, referralId), eq(schema.referrals.status, "pending")))
+      .where(and(eq(schema.referrals.id, referralId), or(eq(schema.referrals.status, "pending"), eq(schema.referrals.status, "registered"))))
       .returning({ id: schema.referrals.id });
 
     if (updated.length === 0) {

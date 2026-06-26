@@ -12,17 +12,45 @@ const ACTION_COSTS = [
   { label: "Compartir landing", cost: 0 },
 ];
 
+interface Transaction {
+  id: string;
+  amount: number;
+  type: string;
+  description: string | null;
+  createdAt: number;
+}
+
+const TX_ICONS: Record<string, string> = {
+  agent: "🤖",
+  csv: "📄",
+  competitor: "🔍",
+  pack: "💳",
+  subscription: "💳",
+  bonus: "🎁",
+  referral: "🤝",
+};
+
+function txIcon(type: string): string {
+  return TX_ICONS[type] ?? "⚡";
+}
+
 export default function CreditsPopover() {
   const [credits, setCredits] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
+  const [history, setHistory] = useState<Transaction[]>([]);
   const ref = useRef<HTMLDivElement>(null);
 
   const fetchCredits = () => {
     fetch("/api/user/credits")
       .then((r) => r.json())
-      .then((d) => {
-        setCredits(d.credits ?? 0);
-      })
+      .then((d) => setCredits(d.credits ?? 0))
+      .catch(() => {});
+  };
+
+  const fetchHistory = () => {
+    fetch("/api/user/credits/history")
+      .then((r) => r.json())
+      .then((d) => setHistory((d.transactions ?? []).slice(0, 5)))
       .catch(() => {});
   };
 
@@ -51,6 +79,10 @@ export default function CreditsPopover() {
   }, []);
 
   useEffect(() => {
+    if (open) fetchHistory();
+  }, [open]);
+
+  useEffect(() => {
     if (!open) return;
     const handler = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
@@ -76,7 +108,7 @@ export default function CreditsPopover() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-64 bg-white rounded-xl shadow-lg border border-gray-100 z-50 p-3">
+        <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl shadow-lg border border-gray-100 z-50 p-3">
           <p className="text-xs font-semibold text-gray-700 mb-2.5">Coste por acción</p>
           <div className="space-y-1.5">
             {ACTION_COSTS.map(({ label, cost }) => (
@@ -88,6 +120,31 @@ export default function CreditsPopover() {
               </div>
             ))}
           </div>
+
+          {history.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <p className="text-xs font-semibold text-gray-700 mb-2">Últimos movimientos</p>
+              <div className="space-y-1.5">
+                {history.map((tx) => (
+                  <div key={tx.id} className="flex items-center gap-2 text-xs">
+                    <span>{txIcon(tx.type)}</span>
+                    <span className="flex-1 text-gray-500 truncate">{tx.description ?? tx.type}</span>
+                    <span className={tx.amount >= 0 ? "font-semibold text-green-600" : "font-semibold text-red-500"}>
+                      {tx.amount >= 0 ? `+${tx.amount}` : tx.amount}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <Link
+                href="/dashboard/credits"
+                onClick={() => setOpen(false)}
+                className="mt-2 block text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+              >
+                Ver historial completo →
+              </Link>
+            </div>
+          )}
+
           <Link
             href="/pricing"
             onClick={() => setOpen(false)}
