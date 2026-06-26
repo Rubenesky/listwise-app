@@ -1,10 +1,16 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { eq, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { addCredits } from "@/lib/credits/use-credits";
 import { ensureUser } from "@/lib/user/ensure-user";
+
+const BADGE_MAP: Record<number, { type: string; name: string; icon: string }> = {
+  1: { type: "first_referral", name: "Primer Referido", icon: "🤝" },
+  5: { type: "5_referrals", name: "5 Referidos", icon: "💫" },
+  10: { type: "10_referrals", name: "10 Referidos", icon: "👑" },
+};
 
 export async function POST(req: Request) {
   try {
@@ -18,7 +24,7 @@ export async function POST(req: Request) {
 
     const cleanCode = code.trim();
 
-    // Find referrer by their personal referral code stored in users table
+    // Find referrer by personal referral code
     const [referrer] = await db
       .select({ id: schema.users.id })
       .from(schema.users)
@@ -29,14 +35,13 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Código inválido" }, { status: 404 });
     }
 
-    // Block self-referral
     if (referrer.id === userId) {
       return NextResponse.json({ error: "No puedes usar tu propio código" }, { status: 400 });
     }
 
     await ensureUser(userId);
 
-    // Idempotency: check if this user already has a referral registered
+    // Idempotency: one referral per user
     const [existing] = await db
       .select({ id: schema.referrals.id })
       .from(schema.referrals)
@@ -44,36 +49,61 @@ export async function POST(req: Request) {
       .limit(1);
 
     if (existing) {
-      // 409 signals "already done" — client should clean localStorage
       return NextResponse.json({ error: "Ya tienes un referido registrado" }, { status: 409 });
+    }
+
+    // Get referee email from Clerk (non-blocking)
+    let refereeEmail: string | null = null;
+    try {
+      const clerk = await clerkClient();
+      const clerkUser = await clerk.users.getUser(userId);
+      refereeEmail = clerkUser.emailAddresses[0]?.emailAddress ?? null;
+    } catch {
+      // Email is optional — don't fail the registration
     }
 
     const now = Math.floor(Date.now() / 1000);
 
-    // Create referral record — code must be unique in DB, so suffix with random bytes
+    // DB has UNIQUE on code column — suffix with random bytes to avoid collision
     await db.insert(schema.referrals).values({
       id: uuidv4(),
       referrerId: referrer.id,
       refereeId: userId,
+      email: refereeEmail,
       code: `${cleanCode}_${uuidv4().slice(0, 8)}`,
       status: "registered",
       createdAt: now,
       registeredAt: now,
     });
 
-    // Give 10 agentCredits to the new user (referee)
-    await addCredits(userId, 10, "bonus", "Bienvenida: créditos por registrarte con enlace de invitación");
-
-    // Give 10 agentCredits to the referrer
+    // 10 credits to both parties
+    await addCredits(userId, 10, "bonus", "Bienvenida: 10 créditos por registrarte con enlace de invitación");
     await addCredits(referrer.id, 10, "bonus", "Créditos por invitar a un nuevo usuario");
 
-    // Increment referrer's totalReferrals counter
+    // Increment referrer totalReferrals
     await db
       .update(schema.users)
       .set({ totalReferrals: sql`total_referrals + 1` })
       .where(eq(schema.users.id, referrer.id));
 
-    console.log(`✅ [Referidos] Registrado: referee=${userId} → referrer=${referrer.id} código=${cleanCode}`);
+    // Award registration badge if milestone reached
+    const [referrerData] = await db
+      .select({ totalReferrals: schema.users.totalReferrals })
+      .from(schema.users)
+      .where(eq(schema.users.id, referrer.id))
+      .limit(1);
+
+    const total = referrerData?.totalReferrals ?? 0;
+    if (BADGE_MAP[total]) {
+      const badge = BADGE_MAP[total];
+      await db
+        .insert(schema.badges)
+        .values({ id: uuidv4(), userId: referrer.id, type: badge.type, name: badge.name, icon: badge.icon, earnedAt: now })
+        .onConflictDoNothing();
+      console.log(`🏅 [Referidos] Insignia "${badge.name}" otorgada a ${referrer.id}`);
+    }
+
+    console.log(`✅ [Referidos] Registrado: referee=${userId} (${refereeEmail}) → referrer=${referrer.id}`);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("❌ [Referidos] Error en register:", error);

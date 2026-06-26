@@ -344,9 +344,9 @@ export default function ReferralsPage() {
         </div>
         <div className="grid grid-cols-3 gap-2 text-center text-xs border-t border-purple-100 pt-3">
           {[
-            { icon: "🌱", title: "1 conversión", reward: "Insignia" },
-            { icon: "⭐", title: "5 conversiones", reward: "1 mes Pro gratis" },
-            { icon: "🏆", title: "10 conversiones", reward: "1 mes Enterprise" },
+            { icon: "🤝", title: "1 conversión", reward: "Insignia" },
+            { icon: "💫", title: "5 conversiones", reward: "1 mes Pro gratis" },
+            { icon: "👑", title: "10 conversiones", reward: "1 mes Enterprise" },
           ].map((r) => (
             <div key={r.title}>
               <span className="text-xl">{r.icon}</span>

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { headers } from "next/headers";
 import { db, schema } from "@/db";
-import { eq } from "drizzle-orm";
+import { eq, or, and } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { convertReferral } from "@/lib/referrals/convert";
 import { clerkClient } from "@clerk/nextjs/server";
@@ -79,30 +79,28 @@ export async function POST(req: Request) {
 
         console.log(`📨 [Stripe Webhook] Pago completado para usuario: ${userId}, plan: ${plan}`);
 
-        // Auto-convert referral if the checkout included a referral code
-        const referralCode = session.metadata?.referralCode;
-        if (referralCode) {
-          console.log(`🔗 [Stripe Webhook] Usuario ${userId} tiene código de referido: ${referralCode}`);
+        // Auto-convert referral: look up by refereeId (set at registration time)
+        const [pendingReferral] = await db
+          .select()
+          .from(schema.referrals)
+          .where(
+            and(
+              eq(schema.referrals.refereeId, userId),
+              or(eq(schema.referrals.status, "registered"), eq(schema.referrals.status, "pending"))
+            )
+          )
+          .limit(1);
 
-          const [pendingReferral] = await db
-            .select()
-            .from(schema.referrals)
-            .where(eq(schema.referrals.code, referralCode))
-            .limit(1);
-
-          if (pendingReferral && pendingReferral.status !== "converted") {
-            console.log(`💰 [Stripe Webhook] Referido encontrado, convirtiendo: ${pendingReferral.id}`);
-            const ok = await convertReferral(pendingReferral.id, userId, plan);
-            if (ok) {
-              console.log(`✅ [Stripe Webhook] Referido convertido automáticamente para usuario ${userId}`);
-            } else {
-              console.log(`⚠️ [Stripe Webhook] Conversión de referido falló silenciosamente para ${userId}`);
-            }
+        if (pendingReferral) {
+          console.log(`💰 [Stripe Webhook] Referido encontrado para ${userId}, convirtiendo: ${pendingReferral.id}`);
+          const ok = await convertReferral(pendingReferral.id, userId, plan);
+          if (ok) {
+            console.log(`✅ [Stripe Webhook] Referido convertido para usuario ${userId}`);
           } else {
-            console.log(`ℹ️ [Stripe Webhook] Código ${referralCode} no tiene referido pendiente`);
+            console.log(`⚠️ [Stripe Webhook] Conversión de referido falló silenciosamente para ${userId}`);
           }
         } else {
-          console.log(`ℹ️ [Stripe Webhook] Usuario ${userId} no tiene código de referido registrado`);
+          console.log(`ℹ️ [Stripe Webhook] Usuario ${userId} no tiene referido registrado`);
         }
 
         const existing = await db

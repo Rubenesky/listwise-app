@@ -4,7 +4,6 @@ import { db, schema } from "@/db";
 import { eq, and, gt } from "drizzle-orm";
 import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
-import { ratelimitCompetitor } from "@/lib/rate-limit";
 import { promises as dns, LookupAddress } from "dns";
 import { useCredits } from "@/lib/credits/use-credits";
 
@@ -126,14 +125,6 @@ export async function POST(req: Request) {
     if (!checkOrigin(req)) {
       console.warn(`⚠️ [Competitor] Origin mismatch from userId=${userId}`);
       return NextResponse.json({ error: "Solicitud no permitida" }, { status: 403 });
-    }
-
-    const { success } = await ratelimitCompetitor.limit(`competitor:${userId}`);
-    if (!success) {
-      return NextResponse.json(
-        { error: "Has alcanzado el límite de 5 análisis por día." },
-        { status: 429 }
-      );
     }
 
     const body = await req.json();
