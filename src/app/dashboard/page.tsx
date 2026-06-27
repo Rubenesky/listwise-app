@@ -411,7 +411,7 @@ export default function DashboardPage() {
             if (e.target === e.currentTarget) closeModal();
           }}
         >
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl mx-4 max-h-[90vh] flex flex-col">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-4xl mx-4 max-h-[90vh] flex flex-col">
             <div className="flex items-center justify-between px-6 py-4 border-b">
               <div className="flex items-center gap-3 min-w-0">
                 <h2 className="text-lg font-semibold text-gray-900 truncate">
@@ -535,9 +535,10 @@ export default function DashboardPage() {
                     <div className="space-y-2">
                       {editBullets.map((bullet, i) => (
                         <div key={i} className="flex items-start gap-2">
-                          <span className="mt-2 text-xs text-gray-400 w-5 shrink-0 text-right">{i + 1}.</span>
-                          <input
-                            className="flex-1 border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          <span className="mt-2.5 text-xs text-gray-400 w-5 shrink-0 text-right">{i + 1}.</span>
+                          <textarea
+                            className="flex-1 border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                            rows={2}
                             value={bullet}
                             onChange={(e) => {
                               const next = [...editBullets];
@@ -554,7 +555,7 @@ export default function DashboardPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
                     <textarea
                       className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                      rows={7}
+                      rows={9}
                       value={editDescription}
                       onChange={(e) => setEditDescription(e.target.value)}
                     />

@@ -23,7 +23,7 @@ const SUPPORTED_CATEGORIES = new Set([
   "dietetica", "suplementos",
   "cosmética", "cosmetica", "belleza", "perfumes", "salud",
   "bienestar", "farmacia",
-  "juguetes", "bebés", "bebes", "niños", "ninos", "juegos",
+  "juguetes", "bebé", "bebe", "bebés", "bebes", "niños", "ninos", "juegos",
   "libros", "librería", "libreria", "arte", "música", "musica",
   "películas", "peliculas", "series",
   "mascotas", "animales",

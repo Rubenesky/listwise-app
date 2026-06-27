@@ -181,6 +181,7 @@ export const processProductsTask = task({
           totalProcessed++;
           trackGamification(userId, "complete_product").catch(() => {});
         } catch (parseError) {
+          console.error(`❌ [parse] Error al parsear respuesta:`, parseError);
           await markFailed(product.id, humanizeError(parseError));
         }
       } catch (error) {

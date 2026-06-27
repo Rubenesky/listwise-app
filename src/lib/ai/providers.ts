@@ -16,13 +16,13 @@ export const providers: Record<AIProvider, AIProviderConfig> = {
   groq: {
     name: "groq",
     client: groq,
-    defaultModel: "llama-3.3-70b-versatile",
+    defaultModel: "llama-3.1-8b-instant",
     isAvailable: () => !!process.env.GROQ_API_KEY,
   },
   gemini: {
     name: "gemini",
     client: gemini,
-    defaultModel: "gemini-1.5-flash-8b",
+    defaultModel: "gemini-2.5-flash",
     isAvailable: () => !!process.env.GEMINI_API_KEY,
   },
 };
@@ -62,10 +62,15 @@ export async function getAIResponse(
     if (!fallback) throw error;
     console.log(`🔄 [AI] Usando fallback: ${fallback}`);
     const fb = providers[fallback];
-    return await fb.client.chat.completions.create({
-      model: fb.defaultModel,
-      messages,
-      ...options,
-    });
+    try {
+      return await fb.client.chat.completions.create({
+        model: fb.defaultModel,
+        messages,
+        ...options,
+      });
+    } catch (fallbackError) {
+      console.error(`❌ [AI] Falló fallback ${fallback}:`, fallbackError);
+      throw fallbackError;
+    }
   }
 }
