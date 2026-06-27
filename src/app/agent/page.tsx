@@ -20,7 +20,12 @@ export default function AgentPage() {
   const [loadingListings, setLoadingListings] = useState(true);
   const [search, setSearch] = useState("");
 
-  const handleApplyChanges = () => {
+  const handleApplyChanges = (_changes?: {
+    title?: string | null;
+    bullets?: string[] | null;
+    description?: string | null;
+  }) => {
+    void _changes;
     if (!selectedListing) return;
     setUpdatedIds((prev) => new Set(prev).add(selectedListing.id));
     setTimeout(() => {

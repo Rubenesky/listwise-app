@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Send, Sparkles, Loader2, Zap, CheckCircle2, Copy, ChevronDown, ChevronUp, History } from "lucide-react";
+import { Send, Sparkles, Loader2, Zap, CheckCircle2, Copy, ChevronDown, ChevronUp, History, Save } from "lucide-react";
 
 interface AgentChatProps {
   listingId: string;
@@ -28,22 +28,59 @@ interface Message {
 }
 
 const QUICK_ACTIONS = [
-  { label: "Acortar", command: "Acórtala a 100 palabras" },
-  { label: "Hacer formal", command: "Hazla más formal y profesional" },
-  { label: "Añadir SEO", command: "Añade palabras clave SEO relevantes" },
-  { label: "Hacer juvenil", command: "Hazla más juvenil y fresca" },
+  { label: "✂️ Acortar", command: "Acórtala a unas 100 palabras conservando los datos clave" },
+  { label: "📏 Alargar", command: "Extiéndela con más detalle y beneficios, hasta unas 250 palabras" },
+  { label: "💼 Formal", command: "Hazla más formal y profesional, tono corporativo" },
+  { label: "⚡ Juvenil", command: "Hazla más juvenil, directa y fresca" },
+  { label: "❤️ Emocional", command: "Hazla más emotiva, conectada al sentimiento del usuario" },
+  { label: "🔧 Técnica", command: "Hazla más técnica, destacando especificaciones y datos concretos" },
+  { label: "🎯 SEO", command: "Optimiza para SEO: inserta palabras clave en posiciones naturales" },
+  { label: "🛡️ Confianza", command: "Añade elementos de confianza: garantías, certificaciones y casos de uso reales" },
 ];
 
-function ChangeCard({ changes }: { changes: Changes }) {
+type SaveState = "idle" | "saving" | "saved" | "error";
+
+function ChangeCard({
+  changes,
+  listingId,
+  onSaved,
+}: {
+  changes: Changes;
+  listingId: string;
+  onSaved?: () => void;
+}) {
   const [descExpanded, setDescExpanded] = useState(false);
   const [bulletsExpanded, setBulletsExpanded] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [saveState, setSaveState] = useState<SaveState>("idle");
 
   const copyToClipboard = (text: string, field: string) => {
     navigator.clipboard.writeText(text).then(() => {
       setCopiedField(field);
       setTimeout(() => setCopiedField(null), 2000);
     });
+  };
+
+  const handleSave = async () => {
+    setSaveState("saving");
+    try {
+      const body: Record<string, unknown> = {};
+      if (changes.title) body.title = changes.title;
+      if (changes.bullets?.length) body.bullets = changes.bullets;
+      if (changes.description) body.description = changes.description;
+
+      const res = await fetch(`/api/listings/${listingId}/save`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error("save failed");
+      setSaveState("saved");
+      onSaved?.();
+    } catch {
+      setSaveState("error");
+      setTimeout(() => setSaveState("idle"), 3000);
+    }
   };
 
   const hasChanges =
@@ -66,45 +103,30 @@ function ChangeCard({ changes }: { changes: Changes }) {
 
   return (
     <div className="rounded-xl border border-green-200 bg-green-50 overflow-hidden text-xs w-full max-w-[90%]">
-      {/* Header */}
       <div className="flex items-center gap-2 px-3 py-2 bg-gradient-to-r from-green-500 to-emerald-500">
         <CheckCircle2 className="h-3.5 w-3.5 text-white shrink-0" />
-        <span className="text-white font-semibold text-xs">Cambios aplicados</span>
+        <span className="text-white font-semibold text-xs">Cambios listos</span>
       </div>
 
       <div className="p-3 space-y-2.5">
-        {/* Title */}
         {changes.title && changes.title.trim() && (
           <div>
             <div className="flex items-center justify-between gap-2 mb-1">
-              <span className="font-semibold text-green-800 uppercase tracking-wide" style={{ fontSize: "10px" }}>
-                Título
-              </span>
-              <button
-                onClick={() => copyToClipboard(changes.title!, "title")}
-                className="flex items-center gap-1 text-green-700 hover:text-green-900 transition-colors"
-              >
+              <span className="font-semibold text-green-800 uppercase tracking-wide" style={{ fontSize: "10px" }}>Título</span>
+              <button onClick={() => copyToClipboard(changes.title!, "title")} className="flex items-center gap-1 text-green-700 hover:text-green-900 transition-colors">
                 <Copy className="h-3 w-3" />
                 <span>{copiedField === "title" ? "¡Copiado!" : "Copiar"}</span>
               </button>
             </div>
-            <p className="text-gray-800 leading-snug bg-white rounded-lg px-2.5 py-1.5 border border-green-100">
-              {changes.title}
-            </p>
+            <p className="text-gray-800 leading-snug bg-white rounded-lg px-2.5 py-1.5 border border-green-100">{changes.title}</p>
           </div>
         )}
 
-        {/* Bullets */}
         {changes.bullets && changes.bullets.length > 0 && (
           <div>
             <div className="flex items-center justify-between gap-2 mb-1">
-              <span className="font-semibold text-green-800 uppercase tracking-wide" style={{ fontSize: "10px" }}>
-                Bullets ({changes.bullets.length})
-              </span>
-              <button
-                onClick={() => copyToClipboard(changes.bullets!.join("\n"), "bullets")}
-                className="flex items-center gap-1 text-green-700 hover:text-green-900 transition-colors"
-              >
+              <span className="font-semibold text-green-800 uppercase tracking-wide" style={{ fontSize: "10px" }}>Bullets ({changes.bullets.length})</span>
+              <button onClick={() => copyToClipboard(changes.bullets!.join("\n"), "bullets")} className="flex items-center gap-1 text-green-700 hover:text-green-900 transition-colors">
                 <Copy className="h-3 w-3" />
                 <span>{copiedField === "bullets" ? "¡Copiado!" : "Copiar"}</span>
               </button>
@@ -118,10 +140,7 @@ function ChangeCard({ changes }: { changes: Changes }) {
               ))}
             </ul>
             {hasMoreBullets && (
-              <button
-                onClick={() => setBulletsExpanded((v) => !v)}
-                className="mt-1 flex items-center gap-1 text-green-700 hover:text-green-900 transition-colors"
-              >
+              <button onClick={() => setBulletsExpanded((v) => !v)} className="mt-1 flex items-center gap-1 text-green-700 hover:text-green-900 transition-colors">
                 {bulletsExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                 {bulletsExpanded ? "Ver menos" : `Ver ${changes.bullets.length - 3} más`}
               </button>
@@ -129,17 +148,11 @@ function ChangeCard({ changes }: { changes: Changes }) {
           </div>
         )}
 
-        {/* Description */}
         {changes.description && changes.description.trim() && (
           <div>
             <div className="flex items-center justify-between gap-2 mb-1">
-              <span className="font-semibold text-green-800 uppercase tracking-wide" style={{ fontSize: "10px" }}>
-                Descripción
-              </span>
-              <button
-                onClick={() => copyToClipboard(changes.description!, "description")}
-                className="flex items-center gap-1 text-green-700 hover:text-green-900 transition-colors"
-              >
+              <span className="font-semibold text-green-800 uppercase tracking-wide" style={{ fontSize: "10px" }}>Descripción</span>
+              <button onClick={() => copyToClipboard(changes.description!, "description")} className="flex items-center gap-1 text-green-700 hover:text-green-900 transition-colors">
                 <Copy className="h-3 w-3" />
                 <span>{copiedField === "description" ? "¡Copiado!" : "Copiar"}</span>
               </button>
@@ -147,10 +160,7 @@ function ChangeCard({ changes }: { changes: Changes }) {
             <div className="bg-white rounded-lg px-2.5 py-1.5 border border-green-100">
               <p className="text-gray-800 leading-snug whitespace-pre-wrap">{descPreview}</p>
               {changes.description.length > 180 && (
-                <button
-                  onClick={() => setDescExpanded((v) => !v)}
-                  className="mt-1 flex items-center gap-1 text-green-700 hover:text-green-900 transition-colors"
-                >
+                <button onClick={() => setDescExpanded((v) => !v)} className="mt-1 flex items-center gap-1 text-green-700 hover:text-green-900 transition-colors">
                   {descExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                   {descExpanded ? "Ver menos" : "Ver más"}
                 </button>
@@ -158,6 +168,31 @@ function ChangeCard({ changes }: { changes: Changes }) {
             </div>
           </div>
         )}
+
+        {/* Primary CTA: save to DB */}
+        <button
+          onClick={handleSave}
+          disabled={saveState === "saving" || saveState === "saved"}
+          className={`w-full mt-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-colors ${
+            saveState === "saved"
+              ? "bg-green-700 text-white cursor-default"
+              : saveState === "error"
+              ? "bg-red-100 text-red-700 hover:bg-red-200"
+              : saveState === "saving"
+              ? "bg-green-400 text-white cursor-wait"
+              : "bg-green-600 text-white hover:bg-green-700"
+          }`}
+        >
+          {saveState === "saving" ? (
+            <><Loader2 className="h-3 w-3 animate-spin" />Guardando...</>
+          ) : saveState === "saved" ? (
+            <><CheckCircle2 className="h-3 w-3" />Guardado en el producto</>
+          ) : saveState === "error" ? (
+            "Error — inténtalo de nuevo"
+          ) : (
+            <><Save className="h-3 w-3" />Guardar en el producto</>
+          )}
+        </button>
       </div>
     </div>
   );
@@ -190,7 +225,6 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Load conversation history when product changes
   useEffect(() => {
     setMessages([]);
     setConversationId(null);
@@ -218,7 +252,7 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
                   return msgs;
                 }
               } catch {
-                // not JSON — display as plain text
+                // not JSON — show as plain text
               }
             }
             return [{ role: m.role as "user" | "assistant", content: m.content }];
@@ -276,9 +310,7 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
         return;
       }
 
-      if (!response.ok || !response.body) {
-        throw new Error("Error en la consulta");
-      }
+      if (!response.ok || !response.body) throw new Error("Error en la consulta");
 
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
@@ -316,15 +348,11 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
                 bullets: Array.isArray(p.updatedBullets) ? (p.updatedBullets as string[]) : null,
                 description: typeof p.updatedDescription === "string" ? p.updatedDescription : null,
               };
-
               const hasChanges = changes.title || (changes.bullets && changes.bullets.length > 0) || changes.description;
 
-              // Replace typing indicator with text message, then optionally add change card
               setMessages((prev) => {
                 const withMsg: Message[] = [...prev.slice(0, -1), { role: "assistant", content: msg }];
-                if (hasChanges) {
-                  withMsg.push({ role: "changes", content: "", changes });
-                }
+                if (hasChanges) withMsg.push({ role: "changes", content: "", changes });
                 return withMsg;
               });
 
@@ -336,10 +364,6 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
               }
               window.dispatchEvent(new Event("gamification-update"));
               if (data.conversationId) setConversationId(data.conversationId);
-
-              if (onApplyChanges && hasChanges) {
-                onApplyChanges(changes);
-              }
             }
           } catch {
             // Skip malformed SSE frames
@@ -401,18 +425,10 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
               <Zap className="h-3 w-3" /> Pro
             </span>
           ) : (
-            <span>
-              💡 <span className="font-semibold text-blue-600">{credits}</span> consultas
-            </span>
+            <span>💡 <span className="font-semibold text-blue-600">{credits}</span> consultas</span>
           )}
           {!inline && (
-            <button
-              onClick={() => setIsOpen(false)}
-              className="text-gray-400 hover:text-gray-600 ml-1"
-              aria-label="Cerrar chat"
-            >
-              ✕
-            </button>
+            <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-gray-600 ml-1" aria-label="Cerrar chat">✕</button>
           )}
         </div>
       </div>
@@ -445,48 +461,33 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
             <Sparkles className="h-10 w-10 mx-auto mb-2 text-gray-200" />
             <p className="font-medium text-sm">¡Hola! Soy tu asistente de copywriting.</p>
             <p className="text-xs mt-1 text-gray-400">
-              Pídeme que mejore <strong>{productName}</strong>.
+              Pídeme que mejore <strong>{productName}</strong> o usa una acción rápida.
             </p>
-            <div className="mt-3 flex flex-wrap gap-1.5 justify-center">
-              {QUICK_ACTIONS.map((a) => (
-                <button
-                  key={a.label}
-                  onClick={() => {
-                    setInput(a.command);
-                    inputRef.current?.focus();
-                  }}
-                  className="text-xs bg-gray-100 hover:bg-gray-200 px-2.5 py-1 rounded-full transition-colors"
-                >
-                  {a.label}
-                </button>
-              ))}
-            </div>
           </div>
         ) : (
           messages.map((msg, i) => {
             if (msg.role === "changes" && msg.changes) {
               return (
                 <div key={i} className="flex justify-start">
-                  <ChangeCard changes={msg.changes} />
+                  <ChangeCard
+                    changes={msg.changes}
+                    listingId={listingId}
+                    onSaved={onApplyChanges ? () => onApplyChanges(msg.changes!) : undefined}
+                  />
                 </div>
               );
             }
             return (
               <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-[82%] rounded-xl px-3 py-2 text-sm ${
-                    msg.role === "user"
-                      ? "bg-blue-600 text-white"
-                      : msg.isTyping
-                      ? "bg-gray-100 text-gray-400 flex items-center gap-1.5"
-                      : "bg-gray-100 text-gray-800"
-                  }`}
-                >
+                <div className={`max-w-[82%] rounded-xl px-3 py-2 text-sm ${
+                  msg.role === "user"
+                    ? "bg-blue-600 text-white"
+                    : msg.isTyping
+                    ? "bg-gray-100 text-gray-400 flex items-center gap-1.5"
+                    : "bg-gray-100 text-gray-800"
+                }`}>
                   {msg.isTyping ? (
-                    <>
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                      <span className="text-xs">IA escribiendo...</span>
-                    </>
+                    <><Loader2 className="h-3.5 w-3.5 animate-spin" /><span className="text-xs">IA escribiendo...</span></>
                   ) : (
                     <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                   )}
@@ -498,29 +499,32 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Upsell panel when out of credits */}
+      {/* Upsell panel */}
       {isFreeWithNoCredits && (
         <div className="px-3 py-2 bg-amber-50 border-t border-amber-200 shrink-0">
           <p className="text-xs text-amber-800 font-medium mb-1.5">Sin consultas disponibles</p>
           <div className="flex gap-1.5 flex-wrap">
-            <button
-              onClick={() => buyCredits("pack_s")}
-              className="text-xs bg-amber-600 text-white px-2.5 py-1 rounded-full hover:bg-amber-700 transition-colors"
-            >
-              20 consultas – 0,99 €
-            </button>
-            <button
-              onClick={() => buyCredits("pack_m")}
-              className="text-xs bg-amber-600 text-white px-2.5 py-1 rounded-full hover:bg-amber-700 transition-colors"
-            >
-              50 consultas – 1,99 €
-            </button>
-            <a
-              href="/pricing"
-              className="text-xs bg-blue-600 text-white px-2.5 py-1 rounded-full hover:bg-blue-700 transition-colors"
-            >
-              Plan Pro
-            </a>
+            <button onClick={() => buyCredits("pack_s")} className="text-xs bg-amber-600 text-white px-2.5 py-1 rounded-full hover:bg-amber-700 transition-colors">20 consultas – 0,99 €</button>
+            <button onClick={() => buyCredits("pack_m")} className="text-xs bg-amber-600 text-white px-2.5 py-1 rounded-full hover:bg-amber-700 transition-colors">50 consultas – 1,99 €</button>
+            <a href="/pricing" className="text-xs bg-blue-600 text-white px-2.5 py-1 rounded-full hover:bg-blue-700 transition-colors">Plan Pro</a>
+          </div>
+        </div>
+      )}
+
+      {/* Quick actions — persistent scrollable row */}
+      {!isFreeWithNoCredits && (
+        <div className="px-2.5 pt-2 shrink-0 overflow-x-auto">
+          <div className="flex gap-1.5 w-max pb-1">
+            {QUICK_ACTIONS.map((a) => (
+              <button
+                key={a.label}
+                onClick={() => { setInput(a.command); inputRef.current?.focus(); }}
+                disabled={loading}
+                className="text-xs bg-gray-100 hover:bg-blue-50 hover:text-blue-700 border border-gray-200 hover:border-blue-200 px-2.5 py-1 rounded-full transition-colors whitespace-nowrap disabled:opacity-40"
+              >
+                {a.label}
+              </button>
+            ))}
           </div>
         </div>
       )}
@@ -534,7 +538,7 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-            placeholder={isFreeWithNoCredits ? "Sin consultas disponibles" : "Escribe tu mensaje..."}
+            placeholder={isFreeWithNoCredits ? "Sin consultas disponibles" : "Escribe tu instrucción..."}
             disabled={loading || isFreeWithNoCredits}
             maxLength={500}
             className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-400 outline-none"

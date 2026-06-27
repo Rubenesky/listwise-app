@@ -16,7 +16,8 @@ export async function PUT(
     }
 
     const { id } = await params;
-    const { title, bullets, description, variantId, style } = await req.json();
+    const body = await req.json();
+    const { title, bullets, description, variantId, style } = body;
 
     console.log(`💾 [Save] Guardando descripción para producto ${id}`);
     if (variantId) console.log(`📝 [Save] Variante seleccionada: ${variantId} (${style})`);
@@ -33,14 +34,22 @@ export async function PUT(
       return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
     }
 
+    // Partial update — only touch fields that were explicitly sent in the request body
+    const updateSet = {
+      ...("title" in body ? { generatedTitle: title as string } : {}),
+      ...("bullets" in body ? { generatedBullets: bullets as string[] } : {}),
+      ...("description" in body ? { generatedDescription: description as string } : {}),
+      ...("variantId" in body ? { selectedVariant: (variantId as string | null) ?? null } : {}),
+    };
+
+    if (Object.keys(updateSet).length === 0) {
+      return NextResponse.json({ error: "Sin campos para actualizar" }, { status: 400 });
+    }
+
     await db
       .update(schema.listings)
-      .set({
-        generatedTitle: title,
-        generatedBullets: bullets,
-        generatedDescription: description,
-        selectedVariant: variantId ?? null,
-      })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .set(updateSet as any)
       .where(and(eq(schema.listings.id, id), eq(schema.listings.userId, userId)));
 
     // Record variant selection for analytics when a specific variant was chosen
