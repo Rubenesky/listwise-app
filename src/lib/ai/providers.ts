@@ -22,7 +22,7 @@ export const providers: Record<AIProvider, AIProviderConfig> = {
   gemini: {
     name: "gemini",
     client: gemini,
-    defaultModel: "gemini-1.5-flash",
+    defaultModel: "gemini-1.5-flash-8b",
     isAvailable: () => !!process.env.GEMINI_API_KEY,
   },
 };
