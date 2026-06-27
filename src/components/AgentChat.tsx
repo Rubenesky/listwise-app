@@ -26,6 +26,7 @@ interface Message {
   content: string;
   isTyping?: boolean;
   isNew?: boolean;
+  isProactive?: boolean;
   changes?: Changes;
 }
 
@@ -255,6 +256,7 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const analyzedRef = useRef<string | null>(null);
 
   useEffect(() => {
     fetch("/api/agent/credits/status")
@@ -310,6 +312,26 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
       .catch(() => {})
       .finally(() => setLoadingHistory(false));
   }, [listingId]);
+
+  // Proactive analysis: fires once per listing when history is empty
+  useEffect(() => {
+    if (loadingHistory) return;
+    if (messages.length > 0) return;
+    if (analyzedRef.current === listingId) return;
+    analyzedRef.current = listingId;
+
+    setMessages([{ role: "assistant", content: "", isTyping: true }]);
+    fetch(`/api/agent/analyze?listingId=${listingId}`)
+      .then((r) => r.json())
+      .then((d) => {
+        if (d.message) {
+          setMessages([{ role: "assistant", content: d.message, isNew: true, isProactive: true }]);
+        } else {
+          setMessages([]);
+        }
+      })
+      .catch(() => setMessages([]));
+  }, [loadingHistory, listingId, messages.length]);
 
   const isFreeWithNoCredits = plan === "free" && credits === 0;
 
@@ -541,16 +563,24 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
               );
             }
             return (
-              <div key={i} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+              <div key={i} className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}>
+                {msg.isProactive && (
+                  <div className="flex items-center gap-1 mb-1 px-1">
+                    <Sparkles className="h-3 w-3 text-blue-400" />
+                    <span className="text-xs text-blue-500 font-medium">Análisis automático</span>
+                  </div>
+                )}
                 <div className={`max-w-[82%] rounded-xl px-3 py-2 text-sm ${
                   msg.role === "user"
                     ? "bg-blue-600 text-white"
                     : msg.isTyping
                     ? "bg-gray-100 text-gray-400 flex items-center gap-1.5"
+                    : msg.isProactive
+                    ? "bg-blue-50 text-gray-800 border border-blue-100"
                     : "bg-gray-100 text-gray-800"
                 }`}>
                   {msg.isTyping ? (
-                    <><Loader2 className="h-3.5 w-3.5 animate-spin" /><span className="text-xs">IA escribiendo...</span></>
+                    <><Loader2 className="h-3.5 w-3.5 animate-spin" /><span className="text-xs">Analizando listing...</span></>
                   ) : msg.isNew ? (
                     <AnimatedText text={msg.content} />
                   ) : (

@@ -4,6 +4,7 @@ import { db, schema } from "@/db";
 import { eq, and } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { trackGamification } from "@/lib/gamification/track";
+import { ratelimitSave } from "@/lib/rate-limit";
 
 export async function PUT(
   req: Request,
@@ -16,6 +17,12 @@ export async function PUT(
     }
 
     const { id } = await params;
+
+    const { success: saveOk } = await ratelimitSave.limit(`save:${userId}`);
+    if (!saveOk) {
+      return NextResponse.json({ error: "Demasiadas guardadas. Espera un momento." }, { status: 429 });
+    }
+
     const body = await req.json();
     const { title, bullets, description, variantId, style } = body;
 

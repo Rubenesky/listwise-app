@@ -44,3 +44,11 @@ export const ratelimitCompetitor = new Ratelimit({
   analytics: false,
   prefix: "@upstash/ratelimit/competitor",
 });
+
+// Listing save: 30 saves per minute per user (anti-spam)
+export const ratelimitSave = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(30, "1 m"),
+  analytics: false,
+  prefix: "@upstash/ratelimit/save",
+});
