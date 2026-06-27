@@ -113,6 +113,11 @@ export async function GET(req: Request) {
     return NextResponse.json({
       message,
       scores: { title: titleA.score, bullets: bulletsA.score, description: descA.score, total },
+      current: {
+        title: listing.generatedTitle ?? null,
+        bullets: bullets ?? null,
+        description: listing.generatedDescription ?? null,
+      },
     });
   } catch (error) {
     console.error("❌ [Analyze] Error:", error);
