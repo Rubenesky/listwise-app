@@ -191,6 +191,7 @@ PÁRRAFO 1 — GANCHO:
 
 PÁRRAFO 2 — CONTEXTO DE USO:
   UN caso de uso específico y vivido — no tres contextos genéricos. Quién lo usa, cuándo, qué experimenta. Incluye al menos un detalle sensorial (textura, peso, sonido, olor, sensación). Si el producto tiene un contexto de uso óptimo relevante, menciónalo de forma positiva ("funciona mejor cuando...", "ideal si buscas...") — previene devoluciones y genera confianza.
+  PROHIBIDO: no enumeres en párrafo las mismas características que ya están en los bullets. "La batería de 12h... El sensor de temperatura... La visión nocturna..." en párrafo = error grave. La descripción cuenta UNA historia sobre el beneficio principal, no parafrasea las especificaciones.
 
 PÁRRAFO 3 — CIERRE:
   Una frase que activa la consecuencia emocional: "el resultado es...", "lo que notas desde el primer día...", "sin tener que...". Seguida del CTA.
@@ -222,6 +223,7 @@ ANTES DE ESCRIBIR EL JSON, verifica internamente — NO lo incluyas en la respue
 9. ¿El CTA funcionaría para cualquier producto de esta categoría? Si sí → Personalízalo vinculándolo al beneficio principal de este producto.
 10. ¿"nuestra/nuestro" o "tu [nombre del producto]" aparece más de una vez en la descripción? → Sustituye las repeticiones por pronombres ("ella", "este", "la pieza") o referencias implícitas.
 11. ¿Hay errores de concordancia de género o número? (ej: "es bueno para ti" cuando el sujeto es femenino → "es buena"). → Corrígelos antes de escribir el JSON.
+12. ¿El párrafo 2 de la descripción es una lista de características del producto en forma de frases? (ej: "La función X... El componente Y... La tecnología Z...") → REESCRIBE: cuenta UNA situación concreta vivida por el comprador, no un catálogo.
 </AUTOVERIFICACION>
 
 Responde SIEMPRE con JSON válido exactamente con estos campos. Nada de texto fuera del JSON:
