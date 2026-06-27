@@ -18,12 +18,14 @@ interface Changes {
   title?: string | null;
   bullets?: string[] | null;
   description?: string | null;
+  _warning?: string | null;
 }
 
 interface Message {
   role: "user" | "assistant" | "changes";
   content: string;
   isTyping?: boolean;
+  isNew?: boolean;
   changes?: Changes;
 }
 
@@ -39,6 +41,35 @@ const QUICK_ACTIONS = [
 ];
 
 type SaveState = "idle" | "saving" | "saved" | "error";
+
+// Character-by-character reveal — completes in ~650ms regardless of text length
+function AnimatedText({ text }: { text: string }) {
+  const [displayed, setDisplayed] = useState("");
+
+  useEffect(() => {
+    if (!text) return;
+    setDisplayed("");
+    let i = 0;
+    const step = Math.max(1, Math.floor(text.length / 40));
+    const id = setInterval(() => {
+      i = Math.min(i + step, text.length);
+      setDisplayed(text.slice(0, i));
+      if (i >= text.length) clearInterval(id);
+    }, 16);
+    return () => clearInterval(id);
+  }, [text]);
+
+  const isDone = displayed.length >= text.length;
+
+  return (
+    <p className="whitespace-pre-wrap leading-relaxed">
+      {displayed}
+      {!isDone && (
+        <span className="inline-block w-px h-3.5 bg-gray-500 ml-px opacity-75 animate-pulse" />
+      )}
+    </p>
+  );
+}
 
 function ChangeCard({
   changes,
@@ -140,7 +171,10 @@ function ChangeCard({
               ))}
             </ul>
             {hasMoreBullets && (
-              <button onClick={() => setBulletsExpanded((v) => !v)} className="mt-1 flex items-center gap-1 text-green-700 hover:text-green-900 transition-colors">
+              <button
+                onClick={() => setBulletsExpanded((v) => !v)}
+                className="mt-1 flex items-center gap-1 text-green-700 hover:text-green-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 rounded"
+              >
                 {bulletsExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                 {bulletsExpanded ? "Ver menos" : `Ver ${changes.bullets.length - 3} más`}
               </button>
@@ -160,7 +194,10 @@ function ChangeCard({
             <div className="bg-white rounded-lg px-2.5 py-1.5 border border-green-100">
               <p className="text-gray-800 leading-snug whitespace-pre-wrap">{descPreview}</p>
               {changes.description.length > 180 && (
-                <button onClick={() => setDescExpanded((v) => !v)} className="mt-1 flex items-center gap-1 text-green-700 hover:text-green-900 transition-colors">
+                <button
+                  onClick={() => setDescExpanded((v) => !v)}
+                  className="mt-1 flex items-center gap-1 text-green-700 hover:text-green-900 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500 rounded"
+                >
                   {descExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
                   {descExpanded ? "Ver menos" : "Ver más"}
                 </button>
@@ -169,7 +206,14 @@ function ChangeCard({
           </div>
         )}
 
-        {/* Primary CTA: save to DB */}
+        {/* Warning: possible invented specs */}
+        {changes._warning && (
+          <div className="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-2 text-xs text-amber-800">
+            <span className="shrink-0 text-sm">⚠️</span>
+            <span>{changes._warning}</span>
+          </div>
+        )}
+
         <button
           onClick={handleSave}
           disabled={saveState === "saving" || saveState === "saved"}
@@ -210,6 +254,7 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
   const [isOpen, setIsOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     fetch("/api/agent/credits/status")
@@ -271,6 +316,12 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
   const sendMessage = async () => {
     if (!input.trim() || loading || isFreeWithNoCredits) return;
 
+    // Cancel any in-flight request
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const timeoutId = setTimeout(() => controller.abort(), 25000);
+
     const userMessage = input.trim();
     setInput("");
     setMessages((prev) => [
@@ -285,6 +336,7 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: userMessage, listingId, conversationId }),
+        signal: controller.signal,
       });
 
       if (response.status === 403) {
@@ -343,15 +395,19 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
                   : "Cambios procesados correctamente.";
 
               const p = data.parsed as Record<string, unknown>;
+              const inventedSpecs = Array.isArray(p._inventedSpecs) ? (p._inventedSpecs as string[]) : null;
               const changes: Changes = {
                 title: typeof p.updatedTitle === "string" ? p.updatedTitle : null,
                 bullets: Array.isArray(p.updatedBullets) ? (p.updatedBullets as string[]) : null,
                 description: typeof p.updatedDescription === "string" ? p.updatedDescription : null,
+                _warning: inventedSpecs?.length
+                  ? `Verifica antes de publicar: el agente añadió "${inventedSpecs.join('", "')}" — no aparece en tus atributos originales`
+                  : null,
               };
               const hasChanges = changes.title || (changes.bullets && changes.bullets.length > 0) || changes.description;
 
               setMessages((prev) => {
-                const withMsg: Message[] = [...prev.slice(0, -1), { role: "assistant", content: msg }];
+                const withMsg: Message[] = [...prev.slice(0, -1), { role: "assistant", content: msg, isNew: true }];
                 if (hasChanges) withMsg.push({ role: "changes", content: "", changes });
                 return withMsg;
               });
@@ -370,12 +426,19 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
           }
         }
       }
-    } catch {
+    } catch (error) {
+      const isAbort = error instanceof Error && error.name === "AbortError";
       setMessages((prev) => [
         ...prev.slice(0, -1),
-        { role: "assistant", content: "❌ Error al procesar la consulta. Inténtalo de nuevo." },
+        {
+          role: "assistant",
+          content: isAbort
+            ? "⏱️ La IA tardó demasiado en responder. Inténtalo de nuevo."
+            : "❌ Error al procesar la consulta. Inténtalo de nuevo.",
+        },
       ]);
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   };
@@ -488,6 +551,8 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
                 }`}>
                   {msg.isTyping ? (
                     <><Loader2 className="h-3.5 w-3.5 animate-spin" /><span className="text-xs">IA escribiendo...</span></>
+                  ) : msg.isNew ? (
+                    <AnimatedText text={msg.content} />
                   ) : (
                     <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
                   )}
@@ -511,21 +576,25 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
         </div>
       )}
 
-      {/* Quick actions — persistent scrollable row */}
+      {/* Quick actions — persistent scrollable row with fade hint */}
       {!isFreeWithNoCredits && (
-        <div className="px-2.5 pt-2 shrink-0 overflow-x-auto">
-          <div className="flex gap-1.5 w-max pb-1">
-            {QUICK_ACTIONS.map((a) => (
-              <button
-                key={a.label}
-                onClick={() => { setInput(a.command); inputRef.current?.focus(); }}
-                disabled={loading}
-                className="text-xs bg-gray-100 hover:bg-blue-50 hover:text-blue-700 border border-gray-200 hover:border-blue-200 px-2.5 py-1 rounded-full transition-colors whitespace-nowrap disabled:opacity-40"
-              >
-                {a.label}
-              </button>
-            ))}
+        <div className="relative shrink-0">
+          <div className="px-2.5 pt-2 overflow-x-auto scrollbar-hide">
+            <div className="flex gap-1.5 w-max pb-1">
+              {QUICK_ACTIONS.map((a) => (
+                <button
+                  key={a.label}
+                  onClick={() => { setInput(a.command); inputRef.current?.focus(); }}
+                  disabled={loading}
+                  className="text-xs bg-gray-100 hover:bg-blue-50 hover:text-blue-700 border border-gray-200 hover:border-blue-200 px-2.5 py-1 rounded-full transition-colors whitespace-nowrap disabled:opacity-40"
+                >
+                  {a.label}
+                </button>
+              ))}
+            </div>
           </div>
+          {/* Fade hint — indicates more chips to the right */}
+          <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white to-transparent pointer-events-none" />
         </div>
       )}
 

@@ -17,6 +17,38 @@ const requestSchema = z.object({
   command: z.string().optional(),
 });
 
+const SPEC_PATTERNS: RegExp[] = [
+  /\bIPX?\d+\b/gi,
+  /garantía\s+(?:de\s+)?\d+\s*año/gi,
+  /\bISO\s+\d+/gi,
+  /\bRoHS\b/gi,
+  /\bFDA\b/gi,
+  /\bECOCERT\b/gi,
+  /\bCOSMOS\s+Organic\b/gi,
+  /\bUIAA\b/gi,
+  /certificación\s+[A-Z]{2,}\d*/gi,
+];
+
+function detectInventedSpecs(parsedResponse: Record<string, unknown>, attributes: unknown): string[] {
+  const bullets = Array.isArray(parsedResponse.updatedBullets)
+    ? (parsedResponse.updatedBullets as string[]).join(" ")
+    : "";
+  const description = typeof parsedResponse.updatedDescription === "string"
+    ? parsedResponse.updatedDescription : "";
+  const generated = (bullets + " " + description).toLowerCase();
+  const attrStr = JSON.stringify(attributes ?? "").toLowerCase();
+  const invented: string[] = [];
+  for (const pattern of SPEC_PATTERNS) {
+    const re = new RegExp(pattern.source, pattern.flags);
+    let match;
+    while ((match = re.exec(generated)) !== null) {
+      const spec = match[0].replace(/\s+/g, " ").trim().toLowerCase();
+      if (!attrStr.includes(spec)) invented.push(match[0]);
+    }
+  }
+  return [...new Set(invented)];
+}
+
 function detectCommand(message: string): string {
   const lower = message.toLowerCase();
   if (lower.includes("acort") || lower.includes("resum")) return "acortar";
@@ -166,6 +198,13 @@ export async function POST(req: Request) {
             parsedResponse = JSON.parse(fullResponse);
           } catch {
             parsedResponse = { message: "Respuesta procesada.", updatedDescription: fullResponse };
+          }
+
+          // Detect specs that may have been fabricated (not present in original attributes)
+          const inventedSpecs = detectInventedSpecs(parsedResponse, listing.attributes);
+          if (inventedSpecs.length > 0) {
+            parsedResponse._inventedSpecs = inventedSpecs;
+            console.warn(`⚠️ [Agent] Posibles specs inventadas: ${inventedSpecs.join(", ")}`);
           }
 
           const latency = Date.now() - startTime;
