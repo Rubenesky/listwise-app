@@ -146,10 +146,10 @@ export async function POST(req: Request) {
       if (conv) conversation = conv;
     }
 
-    const messages: { role: string; content: string }[] = Array.isArray(conversation?.messages)
-      ? (conversation.messages as { role: string; content: string }[])
+    const messages: { role: string; content: string; timestamp?: number }[] = Array.isArray(conversation?.messages)
+      ? (conversation.messages as { role: string; content: string; timestamp?: number }[])
       : [];
-    messages.push({ role: "user", content: message });
+    messages.push({ role: "user", content: message, timestamp: Math.floor(Date.now() / 1000) });
 
     // Build system prompt with product context
     const bullets = (listing.generatedBullets as string[] | null) ?? [];
@@ -223,7 +223,7 @@ export async function POST(req: Request) {
           });
 
           // Save or update conversation
-          messages.push({ role: "assistant", content: fullResponse });
+          messages.push({ role: "assistant", content: fullResponse, timestamp: Math.floor(Date.now() / 1000) });
           const now = Math.floor(Date.now() / 1000);
           if (conversation) {
             await db.update(schema.agentConversations)
