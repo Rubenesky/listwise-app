@@ -14,6 +14,7 @@ Bullets actuales:
 {currentBullets}
 Descripción actual:
 {currentDescription}
+{marketplaceContext}{voiceProfileContext}{competitorContext}
 
 ═══════════════════════════════════════════
 REGLAS DE FORMATO — OBLIGATORIAS
@@ -46,6 +47,29 @@ DESCRIPCIÓN:
 • Entre 120 y 280 palabras
 • Tono coherente con el género gramatical del producto en español
 • Adapta el tono según la instrucción del usuario (juvenil, formal, técnico, emocional) manteniendo la estructura de 3 bloques
+
+═══════════════════════════════════════════
+GUÍA DE TONOS — CÓMO APLICARLOS
+═══════════════════════════════════════════
+
+TONO FORMAL/PROFESIONAL — significa frases claras, datos concretos, sin coloquialismos, sin emojis:
+❌ INCORRECTO: "COMPOSICIÓN TÉXTIL AVANZADA: mezcla equilibrada que confiere propiedades óptimas al conjunto"
+❌ INCORRECTO: "prenda apta para diversas configuraciones de vestuario en entornos multifuncionales"
+✅ CORRECTO: "ALGODÓN 80% / POLIÉSTER 20%: combinación que mantiene la forma tras 50 lavados y resulta suave al tacto"
+✅ CORRECTO: "CORTE OVERSIZED: silueta holgada que combina con vaqueros, joggers o falda midi sin esfuerzo"
+→ NO uses jerga corporativa. Sé directo, claro y basado en datos reales de los atributos.
+
+TONO JUVENIL — energético, primera persona del lector, lenguaje Gen Z español sin tecnicismos:
+❌ INCORRECTO: "facilita la expresión individual en contextos sociales diversificados"
+✅ CORRECTO: "la prenda que llevas a todas partes — del sofá al plan de viernes sin cambiar de look"
+
+TONO TÉCNICO — datos primero, beneficio después, sin metáforas ni eufemismos:
+❌ INCORRECTO: "materiales de primera calidad para durabilidad superior"
+✅ CORRECTO: "tejido 320 g/m² — el doble del gramaje estándar, más abrigo y sin deformarse con el uso"
+
+TONO EMOCIONAL — future pacing fuerte, momentos concretos de uso, conecta con identidad real:
+❌ INCORRECTO: "te hará sentir bien en cualquier momento del día"
+✅ CORRECTO: "Imagina ese domingo en el que no quieres pensar en nada — solo estar cómoda y recibir el '¿dónde compraste eso?'"
 
 PRINCIPIOS DE CONSERVACIÓN:
 • Si el usuario pide cambiar solo el tono → mantén los datos específicos, cambia el estilo de escritura

@@ -15,6 +15,7 @@ const requestSchema = z.object({
   listingId: z.string().min(1),
   conversationId: z.string().nullable().optional(),
   command: z.string().optional(),
+  marketplace: z.enum(["generico", "amazon_es", "etsy", "shopify", "wallapop"]).optional().default("generico"),
 });
 
 const SPEC_PATTERNS: RegExp[] = [
@@ -73,7 +74,7 @@ export async function POST(req: Request) {
     if (!parsedBody.success) {
       return NextResponse.json({ error: "Datos inválidos", details: parsedBody.error.errors }, { status: 400 });
     }
-    const { message, listingId, conversationId, command } = parsedBody.data;
+    const { message, listingId, conversationId, command, marketplace } = parsedBody.data;
 
     console.log(`🤖 [Agent] Usuario ${userId} - Mensaje: ${message.slice(0, 80)}`);
 
@@ -151,6 +152,50 @@ export async function POST(req: Request) {
       : [];
     messages.push({ role: "user", content: message, timestamp: Math.floor(Date.now() / 1000) });
 
+    // Build marketplace context
+    const marketplaceRules: Record<string, string> = {
+      amazon_es: `\n═══════════════════════════════════════════\nPLATAFORMA: Amazon España\n- Título: máximo 200 caracteres, keyword principal en las primeras 5 palabras\n- Bullets: máximo 200 caracteres cada uno, sin punto final, empezar con mayúsculas\n- Descripción: sin HTML, sin emojis en bullets, prioriza keywords del algoritmo A9\n- Prioridad: conversión + posicionamiento orgánico Amazon\n═══════════════════════════════════════════\n`,
+      etsy: `\n═══════════════════════════════════════════\nPLATAFORMA: Etsy\n- Título: máximo 140 caracteres, muy rico en keywords long-tail separadas por comas\n- Estilo: artesanal, personal, historia del producto, tono cercano y auténtico\n- Descripción: narrativa larga con múltiples variaciones de keywords para SEO Etsy\n- Prioridad: búsqueda orgánica Etsy + conexión emocional con el comprador\n═══════════════════════════════════════════\n`,
+      shopify: `\n═══════════════════════════════════════════\nPLATAFORMA: Tienda Shopify / Web propia\n- Sin límite estricto de caracteres\n- Descripción narrativa larga favorece el SEO de Google (300-500 palabras ideal)\n- Puedes usar formato rico: párrafos, énfasis, estructura clara\n- Prioridad: conversión directa + SEO Google + diferenciación de marca\n═══════════════════════════════════════════\n`,
+      wallapop: `\n═══════════════════════════════════════════\nPLATAFORMA: Wallapop\n- Título: máximo 60 caracteres, muy conciso, incluye estado y precio si aplica\n- Descripción: corta (80-120 palabras), tono informal y directo, sin bullets formales\n- El precio, estado y disponibilidad deben quedar claros en las primeras líneas\n- Prioridad: claridad, confianza, respuesta rápida del comprador\n═══════════════════════════════════════════\n`,
+    };
+    const marketplaceContext = marketplaceRules[marketplace ?? "generico"] ?? "";
+
+    // Fetch active voice profile for this user
+    const [voiceProfile] = await db
+      .select({ profile: schema.voiceProfiles.profile, name: schema.voiceProfiles.name })
+      .from(schema.voiceProfiles)
+      .where(and(eq(schema.voiceProfiles.userId, userId), eq(schema.voiceProfiles.isActive, 1)))
+      .limit(1);
+
+    let voiceProfileContext = "";
+    if (voiceProfile?.profile) {
+      const vp = voiceProfile.profile as { tone?: string; vocabulary?: string; sentenceStructure?: string; keyWords?: string[]; brandPersonality?: string };
+      voiceProfileContext = `\n═══════════════════════════════════════════\nVOZ DE MARCA ACTIVA: "${voiceProfile.name}"\n- Tono: ${vp.tone ?? "no definido"}\n- Vocabulario: ${vp.vocabulary ?? "no definido"}\n- Estructura de frases: ${vp.sentenceStructure ?? "no definido"}\n- Palabras clave de marca: ${(vp.keyWords ?? []).join(", ") || "ninguna"}\n- Personalidad: ${vp.brandPersonality ?? "no definida"}\nAdapta el copy respetando esta voz cuando no contradiga la instrucción del usuario.\n═══════════════════════════════════════════\n`;
+    }
+
+    // Fetch competitor keywords for this listing (Sprint C)
+    const competitors = await db
+      .select({ scrapedTitle: schema.competitorAnalyses.scrapedTitle, scrapedKeywords: schema.competitorAnalyses.scrapedKeywords })
+      .from(schema.competitorAnalyses)
+      .where(and(eq(schema.competitorAnalyses.listingId, listingId), eq(schema.competitorAnalyses.status, "COMPLETED")))
+      .limit(3);
+
+    let competitorContext = "";
+    if (competitors.length > 0) {
+      const kwList = competitors
+        .flatMap((c) => {
+          const kw = c.scrapedKeywords ? String(c.scrapedKeywords).split(/[,\n]+/).map((k) => k.trim()).filter(Boolean) : [];
+          const titleWords = c.scrapedTitle ? c.scrapedTitle.split(/\s+/).slice(0, 6).join(" ") : "";
+          return [...kw.slice(0, 5), ...(titleWords ? [titleWords] : [])];
+        })
+        .filter((v, i, a) => a.indexOf(v) === i)
+        .slice(0, 15);
+      if (kwList.length > 0) {
+        competitorContext = `\n═══════════════════════════════════════════\nKEYWORDS DE COMPETIDORES (${competitors.length} analizados)\nÚsalas de forma natural cuando aplique para SEO:\n${kwList.map((k) => `• ${k}`).join("\n")}\n═══════════════════════════════════════════\n`;
+      }
+    }
+
     // Build system prompt with product context
     const bullets = (listing.generatedBullets as string[] | null) ?? [];
     const systemPrompt = AGENT_SYSTEM_PROMPT
@@ -159,7 +204,10 @@ export async function POST(req: Request) {
       .replace("{attributes}", JSON.stringify(listing.attributes ?? {}))
       .replace("{currentTitle}", listing.generatedTitle ?? "")
       .replace("{currentBullets}", bullets.join("\n"))
-      .replace("{currentDescription}", listing.generatedDescription ?? "");
+      .replace("{currentDescription}", listing.generatedDescription ?? "")
+      .replace("{marketplaceContext}", marketplaceContext)
+      .replace("{voiceProfileContext}", voiceProfileContext)
+      .replace("{competitorContext}", competitorContext);
 
     const detectedCommand = command ?? detectCommand(message);
     const startTime = Date.now();

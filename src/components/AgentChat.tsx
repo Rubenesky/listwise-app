@@ -248,6 +248,7 @@ function ChangeCard({
               </button>
             </div>
             <p className={`${textColor} leading-snug bg-white rounded-lg px-2.5 py-1.5 border ${itemBorder}`}>{displayTitle}</p>
+            <span className="text-xs text-gray-400 mt-0.5 block">{displayTitle.length} caracteres</span>
           </div>
         )}
 
@@ -356,6 +357,7 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
   const [seoModalOpen, setSeoModalOpen] = useState(false);
   const [seoKeyword, setSeoKeyword] = useState("");
   const [showHistoryOnly, setShowHistoryOnly] = useState(false);
+  const [marketplace, setMarketplace] = useState("generico");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const seoInputRef = useRef<HTMLInputElement>(null);
@@ -494,7 +496,7 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
       const response = await fetch("/api/agent/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage, listingId, conversationId }),
+        body: JSON.stringify({ message: userMessage, listingId, conversationId, marketplace }),
         signal: controller.signal,
       });
 
@@ -642,6 +644,17 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
           <Sparkles className="h-4 w-4 text-blue-600" />
           <span className="font-semibold text-gray-900 text-sm">Agente IA</span>
           <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Beta</span>
+          <select
+            value={marketplace}
+            onChange={(e) => setMarketplace(e.target.value)}
+            className="text-xs border border-gray-200 rounded-lg px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white text-gray-600 cursor-pointer"
+          >
+            <option value="generico">🛒 Genérico</option>
+            <option value="amazon_es">📦 Amazon ES</option>
+            <option value="etsy">🎨 Etsy</option>
+            <option value="shopify">🛍️ Shopify</option>
+            <option value="wallapop">💬 Wallapop</option>
+          </select>
         </div>
         <div className="flex items-center gap-2 text-xs text-gray-500">
           {plan !== "free" ? (

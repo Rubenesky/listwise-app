@@ -85,6 +85,17 @@ export async function GET(req: Request) {
     const descA = analyzeDescription(listing.generatedDescription);
     const total = titleA.score + bulletsA.score + descA.score;
 
+    const attrStr = JSON.stringify(listing.attributes ?? {}).toLowerCase();
+    const missingAttrs: string[] = [];
+    if (!/(material|composición|algodón|poliéster|tejido|fibra|cotton|polyester|silk|seda|lana|wool|nylon|lycra)/.test(attrStr))
+      missingAttrs.push("composición del material");
+    if (!/(color|colour|negro|blanco|azul|rojo|verde|gris|beige|rosa|amarillo|naranja|morado)/.test(attrStr))
+      missingAttrs.push("color disponible");
+    if (!/(talla|size|medida|dimensión|peso|weight|\bcm\b|\bmm\b|\bml\b|\bl\b|\bxl\b|\bxs\b|\bs\b|\bm\b|alto|ancho|largo)/.test(attrStr))
+      missingAttrs.push("talla o medidas");
+    if (!/(lavado|cuidado|care|wash|mantenimiento|lavar|planchar|secar)/.test(attrStr))
+      missingAttrs.push("instrucciones de cuidado");
+
     const scoreEmoji = total >= 85 ? "🏆" : total >= 70 ? "✅" : total >= 50 ? "⚠️" : "🔴";
     const titleIcon = titleA.score >= 20 ? "✅" : "⚠️";
     const bulletsIcon = bulletsA.score >= 28 ? "✅" : "⚠️";
@@ -102,12 +113,17 @@ export async function GET(req: Request) {
         ? `Te recomiendo empezar por ${worst.name} — puedo sumar hasta ${worst.missing} pts. ¿Lo optimizamos ahora?`
         : `El listing está bien optimizado. ¿Quieres ajustar algún aspecto en concreto?`;
 
+    const missingNote = missingAttrs.length > 0
+      ? `\n💡 Para mejores resultados añade a la ficha: ${missingAttrs.join(", ")}.`
+      : "";
+
     const message = [
       `He analizado "${listing.productName}". Puntuación actual: ${total}/100 ${scoreEmoji}\n`,
       `${titleIcon} Título (${titleA.score}/25): ${titleA.notes.join(" · ")}`,
       `${bulletsIcon} Bullets (${bulletsA.score}/35): ${bulletsA.notes.join(" · ")}`,
       `${descIcon} Descripción (${descA.score}/40): ${descA.notes.join(" · ")}`,
       `\n${suggestion}`,
+      missingNote,
     ].join("\n");
 
     return NextResponse.json({
