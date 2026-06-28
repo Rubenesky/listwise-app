@@ -171,7 +171,7 @@ export async function POST(req: Request) {
     console.log(`🤖 [Agent] Usando proveedor: ${aiProvider} (${aiConfig.defaultModel})`);
     const stream = await aiConfig.client.chat.completions.create({
       model: aiConfig.defaultModel,
-      messages: [{ role: "system", content: systemPrompt }, ...messages] as never,
+      messages: [{ role: "system", content: systemPrompt }, ...messages.map(({ role, content }) => ({ role, content }))] as never,
       temperature: 0.7,
       max_tokens: 1024,
       stream: true,
