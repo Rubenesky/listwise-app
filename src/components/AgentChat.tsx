@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Send, Sparkles, Loader2, Zap, CheckCircle2, Copy, ChevronDown, ChevronUp, History, Save } from "lucide-react";
+import { Send, Sparkles, Loader2, Zap, CheckCircle2, Copy, ChevronDown, ChevronUp, History, Save, Clock } from "lucide-react";
 
 interface AgentChatProps {
   listingId: string;
@@ -28,12 +28,20 @@ interface Changes {
   _fromHistory?: boolean;
 }
 
+interface ClarificationOption {
+  label: string;
+  command: string;
+}
+
 interface Message {
   role: "user" | "assistant" | "changes";
   content: string;
   isTyping?: boolean;
   isNew?: boolean;
   isProactive?: boolean;
+  isClarification?: boolean;
+  clarificationOptions?: ClarificationOption[];
+  timestamp?: number;
   changes?: Changes;
 }
 
@@ -47,6 +55,34 @@ const QUICK_ACTIONS = [
   { label: "🎯 SEO", command: "", seo: true },
   { label: "🛡️ Confianza", command: "Añade elementos de confianza: garantías, certificaciones y casos de uso reales", seo: false },
 ];
+
+const CLARIFICATION_OPTIONS: ClarificationOption[] = [
+  { label: "✂️ Más corta", command: "Acórtala a unas 100 palabras conservando los datos clave" },
+  { label: "📏 Más larga", command: "Extiéndela con más detalle y beneficios, hasta unas 250 palabras" },
+  { label: "🎯 SEO", command: "Optimiza para SEO: inserta palabras clave en posiciones naturales" },
+  { label: "💼 Más formal", command: "Hazla más formal y profesional, tono corporativo" },
+  { label: "⚡ Más juvenil", command: "Hazla más juvenil, directa y fresca" },
+  { label: "🔧 Más técnica", command: "Hazla más técnica, destacando especificaciones y datos concretos" },
+  { label: "🛡️ Confianza", command: "Añade elementos de confianza: garantías, certificaciones y casos de uso reales" },
+  { label: "⭐ Todo optimizado", command: "Optimiza el título, los bullets y la descripción para máxima conversión" },
+];
+
+const AMBIGUOUS_RE = /^(mejora|mejorar|cambiar|cambia|arreglar|arregla|mejor|editar|edita|optimiza|optimizar|reescribir|reescribe|hazlo|hazla|modificar|modifica|perfecciona|perfeccionar)\.?\s*$/i;
+
+function isAmbiguousMessage(msg: string) {
+  const trimmed = msg.trim();
+  return AMBIGUOUS_RE.test(trimmed) || (trimmed.length < 10 && !/https?:/.test(trimmed));
+}
+
+function formatRelativeTime(timestamp: number): string {
+  const now = Math.floor(Date.now() / 1000);
+  const diff = now - timestamp;
+  if (diff < 60) return "Hace un momento";
+  if (diff < 3600) return `Hace ${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `Hace ${Math.floor(diff / 3600)}h ${Math.floor((diff % 3600) / 60)}min`;
+  const date = new Date(timestamp * 1000);
+  return date.toLocaleDateString("es-ES", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+}
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -83,11 +119,13 @@ function ChangeCard({
   listingId,
   onSaved,
   originalContent,
+  timestamp,
 }: {
   changes: Changes;
   listingId: string;
   onSaved?: () => void;
   originalContent?: OriginalContent;
+  timestamp?: number;
 }) {
   const [descExpanded, setDescExpanded] = useState(false);
   const [bulletsExpanded, setBulletsExpanded] = useState(false);
@@ -95,7 +133,6 @@ function ChangeCard({
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [view, setView] = useState<"new" | "original">("new");
 
-  // Show comparison tabs only for current-session changes with overlapping content
   const hasComparison =
     !changes._fromHistory &&
     originalContent &&
@@ -117,8 +154,10 @@ function ChangeCard({
     });
   };
 
+  // Optimistic save: flip to saved immediately, roll back on error
   const handleSave = async () => {
-    setSaveState("saving");
+    setSaveState("saved");
+    onSaved?.();
     try {
       const body: Record<string, unknown> = {};
       if (changes.title) body.title = changes.title;
@@ -130,8 +169,6 @@ function ChangeCard({
         body: JSON.stringify(body),
       });
       if (!res.ok) throw new Error("save failed");
-      setSaveState("saved");
-      onSaved?.();
     } catch {
       setSaveState("error");
       setTimeout(() => setSaveState("idle"), 3000);
@@ -156,12 +193,9 @@ function ChangeCard({
 
   const descText = displayDescription ?? "";
   const descPreview = descText
-    ? descExpanded
-      ? descText
-      : descText.slice(0, 180) + (descText.length > 180 ? "…" : "")
+    ? descExpanded ? descText : descText.slice(0, 180) + (descText.length > 180 ? "…" : "")
     : null;
 
-  // Color tokens switch based on view
   const labelColor = isOriginalView ? "text-gray-500" : "text-green-800";
   const itemBorder = isOriginalView ? "border-gray-100" : "border-green-100";
   const textColor = isOriginalView ? "text-gray-500" : "text-gray-800";
@@ -171,11 +205,19 @@ function ChangeCard({
   return (
     <div className={`rounded-xl border ${isOriginalView ? "border-gray-200 bg-gray-50" : "border-green-200 bg-green-50"} overflow-hidden text-xs w-full max-w-[90%]`}>
       {/* Header */}
-      <div className={`flex items-center gap-2 px-3 py-2 ${isOriginalView ? "bg-gray-400" : "bg-gradient-to-r from-green-500 to-emerald-500"}`}>
-        <CheckCircle2 className="h-3.5 w-3.5 text-white shrink-0" />
-        <span className="text-white font-semibold text-xs">
-          {isOriginalView ? "Versión original" : changes._fromHistory ? "Versión guardada" : "Cambios listos"}
-        </span>
+      <div className={`flex items-center justify-between gap-2 px-3 py-2 ${isOriginalView ? "bg-gray-400" : "bg-gradient-to-r from-green-500 to-emerald-500"}`}>
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="h-3.5 w-3.5 text-white shrink-0" />
+          <span className="text-white font-semibold text-xs">
+            {isOriginalView ? "Versión original" : changes._fromHistory ? "Versión guardada" : "Cambios listos"}
+          </span>
+        </div>
+        {timestamp && (
+          <span className="text-white/70 text-xs flex items-center gap-1">
+            <Clock className="h-2.5 w-2.5" />
+            {formatRelativeTime(timestamp)}
+          </span>
+        )}
       </div>
 
       {/* Before/after tabs */}
@@ -277,23 +319,19 @@ function ChangeCard({
         ) : (
           <button
             onClick={handleSave}
-            disabled={saveState === "saving" || saveState === "saved"}
+            disabled={saveState === "saved"}
             className={`w-full mt-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-xs font-semibold transition-colors ${
               saveState === "saved"
                 ? "bg-green-700 text-white cursor-default"
                 : saveState === "error"
                 ? "bg-red-100 text-red-700 hover:bg-red-200"
-                : saveState === "saving"
-                ? "bg-green-400 text-white cursor-wait"
                 : "bg-green-600 text-white hover:bg-green-700"
             }`}
           >
-            {saveState === "saving" ? (
-              <><Loader2 className="h-3 w-3 animate-spin" />Guardando...</>
+            {saveState === "error" ? (
+              "Error — inténtalo de nuevo"
             ) : saveState === "saved" ? (
               <><CheckCircle2 className="h-3 w-3" />Guardado en el producto</>
-            ) : saveState === "error" ? (
-              "Error — inténtalo de nuevo"
             ) : (
               <><Save className="h-3 w-3" />{changes._fromHistory ? "Restaurar esta versión" : "Guardar en el producto"}</>
             )}
@@ -317,6 +355,7 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
   const [initialContent, setInitialContent] = useState<OriginalContent>(null);
   const [seoModalOpen, setSeoModalOpen] = useState(false);
   const [seoKeyword, setSeoKeyword] = useState("");
+  const [showHistoryOnly, setShowHistoryOnly] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const seoInputRef = useRef<HTMLInputElement>(null);
@@ -326,10 +365,7 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
   useEffect(() => {
     fetch("/api/agent/credits/status")
       .then((r) => r.json())
-      .then((d) => {
-        setCredits(d.credits ?? 0);
-        setPlan(d.plan ?? "free");
-      })
+      .then((d) => { setCredits(d.credits ?? 0); setPlan(d.plan ?? "free"); })
       .catch(() => {});
   }, []);
 
@@ -342,13 +378,14 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
     setConversationId(null);
     setHistoricalCount(0);
     setInitialContent(null);
+    setShowHistoryOnly(false);
     setLoadingHistory(true);
 
     fetch(`/api/agent/conversation?listingId=${listingId}`)
       .then((r) => r.json())
       .then((d) => {
         if (d.conversation) {
-          const stored = d.conversation.messages as { role: string; content: string }[];
+          const stored = d.conversation.messages as { role: string; content: string; timestamp?: number }[];
           const mapped: Message[] = stored.flatMap((m) => {
             if (m.role === "assistant") {
               try {
@@ -361,15 +398,15 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
                     _fromHistory: true,
                   };
                   const hasChanges = changes.title || (changes.bullets && changes.bullets.length > 0) || changes.description;
-                  const msgs: Message[] = [{ role: "assistant", content: parsed.message }];
-                  if (hasChanges) msgs.push({ role: "changes", content: "", changes });
+                  const msgs: Message[] = [{ role: "assistant", content: parsed.message, timestamp: m.timestamp }];
+                  if (hasChanges) msgs.push({ role: "changes", content: "", changes, timestamp: m.timestamp });
                   return msgs;
                 }
               } catch {
-                // plain text message
+                // plain text fallback
               }
             }
-            return [{ role: m.role as "user" | "assistant", content: m.content }];
+            return [{ role: m.role as "user" | "assistant", content: m.content, timestamp: m.timestamp }];
           });
           setMessages(mapped);
           setConversationId(d.conversation.id);
@@ -380,7 +417,7 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
       .finally(() => setLoadingHistory(false));
   }, [listingId]);
 
-  // Proactive analysis: fires once per listing when history is empty
+  // Proactive analysis when history is empty
   useEffect(() => {
     if (loadingHistory) return;
     if (messages.length > 0) return;
@@ -401,11 +438,8 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
       .catch(() => setMessages([]));
   }, [loadingHistory, listingId, messages.length]);
 
-  // Focus SEO input when modal opens
   useEffect(() => {
-    if (seoModalOpen) {
-      setTimeout(() => seoInputRef.current?.focus(), 50);
-    }
+    if (seoModalOpen) setTimeout(() => seoInputRef.current?.focus(), 50);
   }, [seoModalOpen]);
 
   const isFreeWithNoCredits = plan === "free" && credits === 0;
@@ -418,21 +452,42 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
     inputRef.current?.focus();
   };
 
-  const sendMessage = async () => {
-    if (!input.trim() || loading || isFreeWithNoCredits) return;
+  const sendMessage = async (overrideMessage?: string) => {
+    const userMessage = overrideMessage ?? input.trim();
+    if (!userMessage || loading || isFreeWithNoCredits) return;
+
+    // Ambiguity detection — only for user-typed messages, not chip commands
+    if (!overrideMessage && isAmbiguousMessage(userMessage)) {
+      setInput("");
+      setMessages((prev) => [
+        ...prev,
+        { role: "user", content: userMessage },
+        {
+          role: "assistant",
+          content: "Para ayudarte mejor, ¿qué quieres hacer exactamente?",
+          isClarification: true,
+          clarificationOptions: CLARIFICATION_OPTIONS,
+        },
+      ]);
+      return;
+    }
+
+    if (!overrideMessage) setInput("");
 
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
     const timeoutId = setTimeout(() => controller.abort(), 25000);
 
-    const userMessage = input.trim();
-    setInput("");
-    setMessages((prev) => [
-      ...prev,
-      { role: "user", content: userMessage },
-      { role: "assistant", content: "Escribiendo...", isTyping: true },
-    ]);
+    setMessages((prev) => {
+      // Remove trailing clarification messages before appending new exchange
+      const cleaned = prev.filter((m) => !m.isClarification);
+      return [
+        ...cleaned,
+        { role: "user", content: userMessage },
+        { role: "assistant", content: "Escribiendo...", isTyping: true },
+      ];
+    });
     setLoading(true);
 
     try {
@@ -475,7 +530,6 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-
         buffer += decoder.decode(value, { stream: true });
         const frames = buffer.split("\n\n");
         buffer = frames.pop() ?? "";
@@ -493,13 +547,13 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
             }
 
             if (data.done && data.parsed) {
-              const msg =
-                typeof data.parsed.message === "string"
-                  ? data.parsed.message
-                  : "Cambios procesados correctamente.";
+              const msg = typeof data.parsed.message === "string"
+                ? data.parsed.message
+                : "Cambios procesados correctamente.";
 
               const p = data.parsed as Record<string, unknown>;
               const inventedSpecs = Array.isArray(p._inventedSpecs) ? (p._inventedSpecs as string[]) : null;
+              const now = Math.floor(Date.now() / 1000);
               const changes: Changes = {
                 title: typeof p.updatedTitle === "string" ? p.updatedTitle : null,
                 bullets: Array.isArray(p.updatedBullets) ? (p.updatedBullets as string[]) : null,
@@ -511,8 +565,8 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
               const hasChanges = changes.title || (changes.bullets && changes.bullets.length > 0) || changes.description;
 
               setMessages((prev) => {
-                const withMsg: Message[] = [...prev.slice(0, -1), { role: "assistant", content: msg, isNew: true }];
-                if (hasChanges) withMsg.push({ role: "changes", content: "", changes });
+                const withMsg: Message[] = [...prev.slice(0, -1), { role: "assistant", content: msg, isNew: true, timestamp: now }];
+                if (hasChanges) withMsg.push({ role: "changes", content: "", changes, timestamp: now });
                 return withMsg;
               });
 
@@ -574,6 +628,9 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
     );
   }
 
+  const historyVersions = messages.filter((m) => m.role === "changes" && m.changes);
+  const displayMessages = showHistoryOnly ? messages.filter((m) => m.role === "changes") : messages;
+
   return (
     <div className={inline
       ? "flex flex-col h-full bg-white rounded-2xl border border-gray-200"
@@ -594,6 +651,21 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
           ) : (
             <span>💡 <span className="font-semibold text-blue-600">{credits}</span> consultas</span>
           )}
+          {/* Version history toggle */}
+          {historyVersions.length > 0 && (
+            <button
+              onClick={() => setShowHistoryOnly((v) => !v)}
+              title={showHistoryOnly ? "Ver conversación completa" : "Ver versiones guardadas"}
+              className={`flex items-center gap-1 px-2 py-0.5 rounded-full transition-colors ${
+                showHistoryOnly
+                  ? "bg-indigo-600 text-white"
+                  : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+              }`}
+            >
+              <Clock className="h-3 w-3" />
+              <span>{historyVersions.length}</span>
+            </button>
+          )}
           {!inline && (
             <button onClick={() => setIsOpen(false)} className="text-gray-400 hover:text-gray-600 ml-1" aria-label="Cerrar chat">✕</button>
           )}
@@ -601,7 +673,7 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
       </div>
 
       {/* History bar */}
-      {historicalCount > 0 && (
+      {historicalCount > 0 && !showHistoryOnly && (
         <div className="flex items-center justify-between px-3 py-1.5 bg-indigo-50 border-b border-indigo-100 shrink-0">
           <span className="flex items-center gap-1.5 text-xs text-indigo-600">
             <History className="h-3 w-3" />
@@ -616,6 +688,19 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
         </div>
       )}
 
+      {/* History-only mode banner */}
+      {showHistoryOnly && (
+        <div className="flex items-center justify-between px-3 py-1.5 bg-indigo-600 shrink-0">
+          <span className="text-xs text-white font-medium flex items-center gap-1.5">
+            <Clock className="h-3 w-3" />
+            {historyVersions.length} versión{historyVersions.length !== 1 ? "es" : ""} guardada{historyVersions.length !== 1 ? "s" : ""}
+          </span>
+          <button onClick={() => setShowHistoryOnly(false)} className="text-xs text-indigo-200 hover:text-white transition-colors">
+            Ver conversación →
+          </button>
+        </div>
+      )}
+
       {/* Messages */}
       <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
         {loadingHistory ? (
@@ -623,7 +708,37 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
             <Loader2 className="h-5 w-5 animate-spin text-indigo-400" />
             <span className="text-xs">Cargando historial...</span>
           </div>
-        ) : messages.length === 0 ? (
+        ) : showHistoryOnly ? (
+          historyVersions.length === 0 ? (
+            <div className="text-center text-gray-400 pt-6 text-xs">Sin versiones guardadas aún</div>
+          ) : (
+            <div className="space-y-4">
+              {historyVersions.map((msg, i) => (
+                <div key={i}>
+                  {msg.timestamp && (
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="flex-1 h-px bg-gray-200" />
+                      <span className="text-xs text-gray-400 flex items-center gap-1 shrink-0">
+                        <Clock className="h-2.5 w-2.5" />
+                        {formatRelativeTime(msg.timestamp)}
+                      </span>
+                      <div className="flex-1 h-px bg-gray-200" />
+                    </div>
+                  )}
+                  <div className="flex justify-start">
+                    <ChangeCard
+                      changes={msg.changes!}
+                      listingId={listingId}
+                      originalContent={msg.changes?._fromHistory ? null : initialContent}
+                      timestamp={undefined}
+                      onSaved={onApplyChanges ? () => onApplyChanges(msg.changes!) : undefined}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )
+        ) : displayMessages.length === 0 ? (
           <div className="text-center text-gray-500 pt-6">
             <Sparkles className="h-10 w-10 mx-auto mb-2 text-gray-200" />
             <p className="font-medium text-sm">¡Hola! Soy tu asistente de copywriting.</p>
@@ -632,7 +747,7 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
             </p>
           </div>
         ) : (
-          messages.map((msg, i) => {
+          displayMessages.map((msg, i) => {
             if (msg.role === "changes" && msg.changes) {
               return (
                 <div key={i} className="flex justify-start">
@@ -640,6 +755,7 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
                     changes={msg.changes}
                     listingId={listingId}
                     originalContent={msg.changes._fromHistory ? null : initialContent}
+                    timestamp={msg.timestamp}
                     onSaved={onApplyChanges ? () => onApplyChanges(msg.changes!) : undefined}
                   />
                 </div>
@@ -660,6 +776,8 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
                     ? "bg-gray-100 text-gray-400 flex items-center gap-1.5"
                     : msg.isProactive
                     ? "bg-blue-50 text-gray-800 border border-blue-100"
+                    : msg.isClarification
+                    ? "bg-orange-50 text-gray-800 border border-orange-100 w-full max-w-full"
                     : "bg-gray-100 text-gray-800"
                 }`}>
                   {msg.isTyping ? (
@@ -668,6 +786,21 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
                     <AnimatedText text={msg.content} />
                   ) : (
                     <p className="whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                  )}
+                  {/* Clarification chips */}
+                  {msg.isClarification && msg.clarificationOptions && (
+                    <div className="flex flex-wrap gap-1.5 mt-2.5">
+                      {msg.clarificationOptions.map((opt) => (
+                        <button
+                          key={opt.label}
+                          onClick={() => sendMessage(opt.command)}
+                          disabled={loading}
+                          className="text-xs bg-orange-100 text-orange-800 border border-orange-200 px-2.5 py-1 rounded-full hover:bg-orange-200 transition-colors disabled:opacity-40"
+                        >
+                          {opt.label}
+                        </button>
+                      ))}
+                    </div>
                   )}
                 </div>
               </div>
@@ -689,8 +822,8 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
         </div>
       )}
 
-      {/* Quick actions with fade hint */}
-      {!isFreeWithNoCredits && (
+      {/* Quick actions */}
+      {!isFreeWithNoCredits && !showHistoryOnly && (
         <div className="relative shrink-0">
           <div className="px-2.5 pt-2 overflow-x-auto scrollbar-hide">
             <div className="flex gap-1.5 w-max pb-1">
@@ -749,36 +882,36 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
             onClick={() => { setSeoModalOpen(false); setSeoKeyword(""); }}
             className="text-gray-400 hover:text-gray-600 shrink-0 text-sm"
             aria-label="Cerrar"
-          >
-            ✕
-          </button>
+          >✕</button>
         </div>
       )}
 
-      {/* Input */}
-      <div className="border-t border-gray-200 p-2.5 bg-gray-50 rounded-b-2xl shrink-0">
-        <div className="flex gap-2">
-          <input
-            ref={inputRef}
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
-            placeholder={isFreeWithNoCredits ? "Sin consultas disponibles" : "Escribe tu instrucción..."}
-            disabled={loading || isFreeWithNoCredits}
-            maxLength={500}
-            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-400 outline-none"
-          />
-          <button
-            onClick={sendMessage}
-            disabled={loading || !input.trim() || isFreeWithNoCredits}
-            className="bg-blue-600 text-white rounded-lg px-3 py-2 hover:bg-blue-700 disabled:bg-blue-300 transition-colors shrink-0"
-            aria-label="Enviar"
-          >
-            <Send className="h-4 w-4" />
-          </button>
+      {/* Input — hidden in history-only mode */}
+      {!showHistoryOnly && (
+        <div className="border-t border-gray-200 p-2.5 bg-gray-50 rounded-b-2xl shrink-0">
+          <div className="flex gap-2">
+            <input
+              ref={inputRef}
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
+              placeholder={isFreeWithNoCredits ? "Sin consultas disponibles" : "Escribe tu instrucción..."}
+              disabled={loading || isFreeWithNoCredits}
+              maxLength={500}
+              className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100 disabled:text-gray-400 outline-none"
+            />
+            <button
+              onClick={() => sendMessage()}
+              disabled={loading || !input.trim() || isFreeWithNoCredits}
+              className="bg-blue-600 text-white rounded-lg px-3 py-2 hover:bg-blue-700 disabled:bg-blue-300 transition-colors shrink-0"
+              aria-label="Enviar"
+            >
+              <Send className="h-4 w-4" />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
