@@ -22,8 +22,13 @@ export default clerkMiddleware(async (auth, req) => {
     return NextResponse.redirect(new URL("/sign-in", req.url));
   }
 
-  // Si está autenticado y es pública (excepto pricing y share), redirigir a dashboard
-  if (userId && isPublic && req.nextUrl.pathname === "/") {
+  // Si está autenticado y está en landing o sign-in/sign-up, redirigir a dashboard
+  const path = req.nextUrl.pathname;
+  const isAuthOrLanding =
+    path === "/" ||
+    (path.startsWith("/sign-in") && !path.includes("/sso-callback") && !path.includes("/verify")) ||
+    (path.startsWith("/sign-up") && !path.includes("/sso-callback") && !path.includes("/verify"));
+  if (userId && isAuthOrLanding) {
     return NextResponse.redirect(new URL("/dashboard", req.url));
   }
 

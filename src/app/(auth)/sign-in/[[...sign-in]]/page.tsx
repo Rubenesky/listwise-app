@@ -14,7 +14,7 @@ export default function SignInPage() {
           priority
         />
       </div>
-      <SignIn />
+      <SignIn fallbackRedirectUrl="/dashboard" />
     </div>
   );
 }
