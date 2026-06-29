@@ -218,13 +218,26 @@ export async function POST(req: Request) {
     const startTime = Date.now();
     const newConvId = uuidv4();
 
+    // When formal tone is requested, inject anti-jargon guard into the AI user message.
+    // The stored/displayed message remains the original — only the AI sees the injected version.
+    const JARGON_WORDS = ["idónea", "idóneo", "óptima", "óptimo", "fusionando", "integración de", "Considere", "pieza esencial", "estética refinada", "configuraciones de vestuario", "resistencia óptima", "diversas situaciones", "entornos multifuncionales", "confiere", "multifuncional"];
+    const aiUserMessage = FORMAL_TRIGGER_RE.test(message)
+      ? `⚡ REGLA CRÍTICA PARA ESTA RESPUESTA — tono formal/profesional significa EXACTAMENTE:\n- Frases directas con datos reales de los atributos\n- Sin adjetivos vagos ni vocabulario elevado\n- PROHIBIDAS estas palabras exactas: ${JARGON_WORDS.map((w) => `"${w}"`).join(", ")}\n- EJEMPLO CORRECTO: "ALGODÓN 80% / POLIÉSTER 20%: mantiene la forma tras 50 lavados, suave al tacto"\n- EJEMPLO INCORRECTO: "COMPOSICIÓN PREMIUM: mezcla óptima que confiere propiedades superiores"\n\nInstrucción del usuario: ${message}`
+      : message;
+
+    const historyMessages = messages.slice(0, -1).map(({ role, content }) => ({ role, content }));
+
     // Call AI provider with streaming
     const aiProvider = getDefaultProvider();
     const aiConfig = providers[aiProvider];
     console.log(`🤖 [Agent] Usando proveedor: ${aiProvider} (${aiConfig.defaultModel})`);
     const stream = await aiConfig.client.chat.completions.create({
       model: aiConfig.defaultModel,
-      messages: [{ role: "system", content: systemPrompt }, ...messages.map(({ role, content }) => ({ role, content }))] as never,
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...historyMessages,
+        { role: "user", content: aiUserMessage },
+      ] as never,
       temperature: 0.7,
       max_tokens: 1024,
       stream: true,
@@ -253,26 +266,27 @@ export async function POST(req: Request) {
             parsedResponse = { message: "Respuesta procesada.", updatedDescription: fullResponse };
           }
 
-          // Jargon validation: if formal tone was requested but output contains corporate jargon, retry once
+          // Jargon validation: if formal tone was requested but output still contains corporate jargon, retry once
           if (FORMAL_TRIGGER_RE.test(message)) {
             const textToCheck = [
               String(parsedResponse.updatedDescription ?? ""),
               ...(Array.isArray(parsedResponse.updatedBullets) ? parsedResponse.updatedBullets.map(String) : []),
             ].join(" ");
-            if (JARGON_RE.test(textToCheck)) {
-              console.log("⚠️ [Agent] Jerga corporativa detectada — reintentando con instrucción reforzada");
+            const foundJargon = JARGON_WORDS.filter((w) => textToCheck.toLowerCase().includes(w.toLowerCase()));
+            if (foundJargon.length > 0) {
+              console.log(`⚠️ [Agent] Jerga detectada [${foundJargon.join(", ")}] — reintentando`);
               try {
                 const retryContent = await aiConfig.client.chat.completions.create({
                   model: aiConfig.defaultModel,
                   messages: [
                     { role: "system", content: systemPrompt },
-                    ...messages.slice(0, -1).map(({ role, content }) => ({ role, content })),
+                    ...historyMessages,
                     {
                       role: "user",
-                      content: message + "\n\n⚠️ CORRECCIÓN OBLIGATORIA: tu respuesta anterior usó jerga corporativa prohibida (palabras como 'idónea', 'óptima', 'fusionando', 'integración', 'Considere'). REESCRÍBELA siendo DIRECTO: usa los materiales exactos de los atributos, acciones concretas y frases cortas sin adjetivos vagos.",
+                      content: `⛔ REESCRIBE COMPLETAMENTE. Tu respuesta anterior usó estas palabras PROHIBIDAS: ${foundJargon.map((w) => `"${w}"`).join(", ")}.\n\nReglas absolutas para tono formal:\n1. Cada bullet empieza con CONCEPTO EN MAYÚSCULAS: seguido de datos reales del producto\n2. Usa los materiales exactos: ${JSON.stringify(mergedAttributes)}\n3. Frases cortas (máx 15 palabras por cláusula), sin subordinadas largas\n4. Sin las palabras prohibidas listadas arriba\n\nInstrucción original del usuario: ${message}`,
                     },
                   ] as never,
-                  temperature: 0.3,
+                  temperature: 0.2,
                   max_tokens: 1024,
                   stream: false,
                   response_format: { type: "json_object" },
@@ -281,10 +295,10 @@ export async function POST(req: Request) {
                 if (retryText) {
                   parsedResponse = JSON.parse(retryText);
                   parsedResponse._retried = true;
-                  console.log("✅ [Agent] Retry con tono formal corregido");
+                  console.log("✅ [Agent] Retry formal corregido");
                 }
               } catch (retryErr) {
-                console.warn("⚠️ [Agent] Retry fallido, usando respuesta original:", retryErr);
+                console.warn("⚠️ [Agent] Retry fallido:", retryErr);
               }
             }
           }
