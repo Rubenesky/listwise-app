@@ -61,6 +61,29 @@ export async function GET(
   return NextResponse.json(listing as ListingRow);
 }
 
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+): Promise<NextResponse<{ success: boolean } | { error: string }>> {
+  const { userId } = await auth();
+  if (!userId) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const { id } = await params;
+  if (!validateUuid(id)) return NextResponse.json({ error: "ID inválido" }, { status: 400 });
+
+  const [existing] = await db
+    .select({ id: schema.listings.id })
+    .from(schema.listings)
+    .where(and(eq(schema.listings.id, id), eq(schema.listings.userId, userId)))
+    .limit(1);
+
+  if (!existing) return NextResponse.json({ error: "Listing not found" }, { status: 404 });
+
+  await db.delete(schema.listings).where(eq(schema.listings.id, id));
+
+  return NextResponse.json({ success: true });
+}
+
 // Updates generated content after the user edits it in the modal
 export async function PATCH(
   request: NextRequest,

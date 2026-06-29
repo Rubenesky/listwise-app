@@ -125,6 +125,11 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | ListingStatus>("all");
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [sortByHealth, setSortByHealth] = useState<"none" | "asc" | "desc">("none");
+  const [dragActive, setDragActive] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [bulkWorking, setBulkWorking] = useState(false);
 
   const dismissChecklist = () => {
     localStorage.setItem("listwise_checklist_dismissed", "true");
@@ -145,6 +150,57 @@ export default function DashboardPage() {
     setCopiedField(fieldId);
     setTimeout(() => setCopiedField(null), 2000);
   };
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    try {
+      await fetch(`/api/listings/${id}`, { method: "DELETE" });
+      setListings((prev) => prev.filter((l) => l.id !== id));
+      if (selectedListingId === id) closeModal();
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const handleDeleteAllFailed = async () => {
+    if (!confirm(`¿Eliminar todos los listings fallidos? Esta acción no se puede deshacer.`)) return;
+    setBulkWorking(true);
+    try {
+      await fetch("/api/listings/bulk", { method: "DELETE" });
+      setListings((prev) => prev.filter((l) => l.status !== "FAILED"));
+    } finally {
+      setBulkWorking(false);
+    }
+  };
+
+  const handleRetryFailed = async () => {
+    setBulkWorking(true);
+    try {
+      const res = await fetch("/api/listings/bulk", { method: "POST" });
+      const data = await res.json();
+      if (data.retrying > 0) {
+        setBatchTotal(data.retrying);
+        setIsProcessing(true);
+        await fetchListings();
+      }
+    } finally {
+      setBulkWorking(false);
+    }
+  };
+
+  const handleOpenInAgent = (listing: ListingRow) => {
+    localStorage.setItem("agent_prefill", JSON.stringify({ listingId: listing.id }));
+    window.location.href = "/agent";
+  };
+
+  const toggleExpand = (id: string) => {
+    setExpandedRows((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
   const aiProvider = "gemini";
   const currentPageRef = useRef(1);
   const [marketplace, setMarketplace] = useState<string>(() => {
@@ -163,12 +219,18 @@ export default function DashboardPage() {
   ).length;
   const failedCount = listings.filter((l) => l.status === "FAILED").length;
 
-  // Filtered listings for search + status filter
-  const filteredListings = listings.filter((l) => {
-    const matchesSearch = !searchQuery || l.productName.toLowerCase().includes(searchQuery.toLowerCase()) || (l.generatedTitle ?? "").toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || l.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  // Filtered + sorted listings
+  const filteredListings = listings
+    .filter((l) => {
+      const matchesSearch = !searchQuery || l.productName.toLowerCase().includes(searchQuery.toLowerCase()) || (l.generatedTitle ?? "").toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === "all" || l.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      if (sortByHealth === "none") return 0;
+      const diff = calcHealthScore(a) - calcHealthScore(b);
+      return sortByHealth === "asc" ? diff : -diff;
+    });
 
   // Progress bar
   const processedInBatch = Math.max(0, batchTotal - pendingOrProcessingCount);
@@ -832,7 +894,21 @@ export default function DashboardPage() {
         </div>
 
         {/* Upload area */}
-        <div className="upload-area border-2 border-dashed border-gray-300 rounded-lg p-5 text-center hover:border-blue-500 transition-colors">
+        <div
+          className={`upload-area border-2 border-dashed rounded-lg p-5 text-center transition-colors ${dragActive ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-blue-500"}`}
+          onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+          onDragLeave={() => setDragActive(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragActive(false);
+            const dropped = e.dataTransfer.files[0];
+            if (dropped?.name.toLowerCase().endsWith(".csv")) {
+              setFile(dropped);
+            } else if (dropped) {
+              setUploadErrors(["Solo se aceptan archivos CSV."]);
+            }
+          }}
+        >
           <div className="flex flex-col items-center gap-2">
             {file ? (
               <>
@@ -1071,6 +1147,24 @@ export default function DashboardPage() {
                     </button>
                   ))}
                 </div>
+                {failedCount > 0 && (
+                  <div className="flex gap-1.5 ml-1">
+                    <button
+                      onClick={handleRetryFailed}
+                      disabled={bulkWorking}
+                      className="px-2.5 py-1.5 text-xs rounded-lg font-medium bg-amber-50 border border-amber-200 text-amber-700 hover:bg-amber-100 disabled:opacity-50 transition-colors"
+                    >
+                      {bulkWorking ? "..." : `↺ Reintentar (${failedCount})`}
+                    </button>
+                    <button
+                      onClick={handleDeleteAllFailed}
+                      disabled={bulkWorking}
+                      className="px-2.5 py-1.5 text-xs rounded-lg font-medium bg-red-50 border border-red-200 text-red-600 hover:bg-red-100 disabled:opacity-50 transition-colors"
+                    >
+                      {bulkWorking ? "..." : `🗑 Eliminar fallidos`}
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1129,8 +1223,21 @@ export default function DashboardPage() {
               <table className="w-full text-xs">
                 <thead className="bg-gray-50 border-b">
                   <tr>
+                    <th className="px-6 py-4 text-left font-medium text-gray-700 w-8"></th>
                     <th className="px-6 py-4 text-left font-medium text-gray-700">Producto</th>
                     <th className="px-6 py-4 text-left font-medium text-gray-700">Estado</th>
+                    <th className="px-6 py-4 text-left font-medium text-gray-700">
+                      <button
+                        onClick={() => setSortByHealth(s => s === "none" ? "desc" : s === "desc" ? "asc" : "none")}
+                        className="flex items-center gap-1 hover:text-blue-600 transition-colors"
+                        title="Ordenar por Health Score"
+                      >
+                        Health
+                        <span className="text-gray-400">
+                          {sortByHealth === "desc" ? "↓" : sortByHealth === "asc" ? "↑" : "↕"}
+                        </span>
+                      </button>
+                    </th>
                     <th className="px-6 py-4 text-left font-medium text-gray-700">Título generado</th>
                     <th className="px-6 py-4 text-left font-medium text-gray-700">Acciones</th>
                   </tr>
@@ -1143,72 +1250,123 @@ export default function DashboardPage() {
                       </td>
                     </tr>
                   )}
-                  {filteredListings.map((listing) => (
-                    <tr key={listing.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 max-w-[200px]">
-                        <button
-                          onClick={(e) => { e.stopPropagation(); openModal(listing); }}
-                          className="font-medium text-gray-900 hover:text-blue-600 text-left truncate w-full transition-colors"
-                        >
-                          {listing.productName}
-                        </button>
-                        {listing.status === "COMPLETED" && (() => {
-                          const score = calcHealthScore(listing);
-                          const { label, color } = getHealthLabel(score);
-                          return (
-                            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium mt-0.5 ${color}`}>
-                              {score} · {label}
-                            </span>
-                          );
-                        })()}
-                        {listing.userRating === 1 && <span className="ml-1 text-xs">👍</span>}
-                        {listing.userRating === -1 && <span className="ml-1 text-xs">👎</span>}
-                      </td>
-                      <td className="px-6 py-4">{getStatusBadge(listing.status)}</td>
-                      <td className="px-6 py-4 text-gray-500 max-w-[300px]">
-                        <div className="flex items-start gap-1.5">
-                          <span className="truncate">{listing.generatedTitle || "—"}</span>
-                          {listing.generatedTitle && (
+                  {filteredListings.map((listing) => {
+                    const score = calcHealthScore(listing);
+                    const { label, color } = getHealthLabel(score);
+                    const isExpanded = expandedRows.has(listing.id);
+                    return (
+                      <>
+                        <tr key={listing.id} className="hover:bg-gray-50">
+                          {/* Expand toggle */}
+                          <td className="pl-4 py-4 w-8">
+                            {listing.status === "COMPLETED" && listing.generatedBullets?.length ? (
+                              <button
+                                onClick={(e) => { e.stopPropagation(); toggleExpand(listing.id); }}
+                                className="text-gray-400 hover:text-gray-600 transition-transform"
+                                style={{ transform: isExpanded ? "rotate(90deg)" : undefined }}
+                                title={isExpanded ? "Colapsar" : "Ver bullets"}
+                              >
+                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                                </svg>
+                              </button>
+                            ) : null}
+                          </td>
+                          <td className="px-4 py-4 max-w-[180px]">
                             <button
-                              onClick={(e) => { e.stopPropagation(); copyToClipboard(listing.generatedTitle!, `title-${listing.id}`); }}
-                              className="shrink-0 p-1 rounded text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition-colors"
-                              title="Copiar título"
+                              onClick={(e) => { e.stopPropagation(); openModal(listing); }}
+                              className="font-medium text-gray-900 hover:text-blue-600 text-left truncate w-full transition-colors block"
                             >
-                              {copiedField === `title-${listing.id}` ? (
-                                <svg className="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                                </svg>
-                              ) : (
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                </svg>
+                              {listing.productName}
+                            </button>
+                            {listing.userRating === 1 && <span className="text-xs">👍</span>}
+                            {listing.userRating === -1 && <span className="text-xs">👎</span>}
+                          </td>
+                          <td className="px-4 py-4">{getStatusBadge(listing.status)}</td>
+                          <td className="px-4 py-4">
+                            {listing.status === "COMPLETED" && (
+                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${color}`}>
+                                {score} · {label}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-4 text-gray-500 max-w-[260px]">
+                            <div className="flex items-start gap-1.5">
+                              <span className="truncate text-xs">{listing.generatedTitle || "—"}</span>
+                              {listing.generatedTitle && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); copyToClipboard(listing.generatedTitle!, `title-${listing.id}`); }}
+                                  className="shrink-0 p-1 rounded text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+                                  title="Copiar título"
+                                >
+                                  {copiedField === `title-${listing.id}` ? (
+                                    <svg className="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                                  ) : (
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                  )}
+                                </button>
                               )}
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-1">
-                          <button
-                            onClick={(e) => { e.stopPropagation(); openModal(listing); }}
-                            className="px-3 py-1 text-sm text-blue-600 hover:text-blue-800 transition-colors"
-                          >
-                            {listing.status === "COMPLETED" ? "Editar" : "Ver"}
-                          </button>
-                          {listing.status === "COMPLETED" && (
-                            <button
-                              onClick={(e) => { e.stopPropagation(); handleShare(listing.id); }}
-                              disabled={sharing === listing.id}
-                              className="px-3 py-1 text-sm text-gray-500 hover:text-gray-700 transition-colors disabled:opacity-50"
-                              title="Compartir landing page"
-                            >
-                              {sharing === listing.id ? "..." : "🔗"}
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            </div>
+                          </td>
+                          <td className="px-4 py-4">
+                            <div className="flex items-center gap-1 flex-wrap">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); openModal(listing); }}
+                                className="px-2.5 py-1 text-xs text-blue-600 hover:text-blue-800 transition-colors"
+                              >
+                                {listing.status === "COMPLETED" ? "Editar" : "Ver"}
+                              </button>
+                              {listing.status === "COMPLETED" && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleOpenInAgent(listing); }}
+                                  className="px-2.5 py-1 text-xs text-indigo-600 hover:text-indigo-800 font-medium transition-colors"
+                                  title="Mejorar con el Agente de IA"
+                                >
+                                  🤖 Mejorar
+                                </button>
+                              )}
+                              {listing.status === "COMPLETED" && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleShare(listing.id); }}
+                                  disabled={sharing === listing.id}
+                                  className="px-2 py-1 text-xs text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+                                  title="Compartir"
+                                >
+                                  {sharing === listing.id ? "..." : "🔗"}
+                                </button>
+                              )}
+                              <button
+                                onClick={(e) => { e.stopPropagation(); handleDelete(listing.id); }}
+                                disabled={deletingId === listing.id}
+                                className="px-2 py-1 text-xs text-gray-300 hover:text-red-500 transition-colors disabled:opacity-50"
+                                title="Eliminar"
+                              >
+                                {deletingId === listing.id ? (
+                                  <span className="inline-block w-3.5 h-3.5 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+                                ) : (
+                                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                )}
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                        {isExpanded && listing.generatedBullets && (
+                          <tr key={`${listing.id}-expanded`} className="bg-blue-50/40 border-t-0">
+                            <td colSpan={6} className="px-10 py-3">
+                              <ul className="space-y-1">
+                                {listing.generatedBullets.map((b, i) => (
+                                  <li key={i} className="text-xs text-gray-600 flex items-start gap-2">
+                                    <span className="text-blue-400 shrink-0 mt-0.5">•</span>
+                                    <span>{b}</span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </td>
+                          </tr>
+                        )}
+                      </>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
