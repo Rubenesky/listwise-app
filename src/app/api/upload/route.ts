@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { eq, count } from "drizzle-orm";
 import { parse } from "csv-parse/sync";
@@ -121,7 +121,7 @@ function validateRows(records: Record<string, string>[]): ValidationResult {
 
 // ─── Trigger ──────────────────────────────────────────────────────────────────
 
-async function sendTriggerEvent(userId: string, batchId: string, mode: string, provider = "groq") {
+async function sendTriggerEvent(userId: string, batchId: string, mode: string, provider = "groq", userEmail?: string) {
   const response = await fetch("https://api.trigger.dev/api/v1/tasks/process-batch/trigger", {
     method: "POST",
     headers: {
@@ -130,10 +130,11 @@ async function sendTriggerEvent(userId: string, batchId: string, mode: string, p
     },
     body: JSON.stringify({
       payload: {
-        userId: userId,
-        batchId: batchId,
-        mode: mode,
-        provider: provider,
+        userId,
+        batchId,
+        mode,
+        provider,
+        userEmail,
       },
     }),
   });
@@ -156,6 +157,8 @@ export async function POST(req: Request) {
     if (!userId) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
+    const clerkUser = await currentUser();
+    const userEmail = clerkUser?.emailAddresses[0]?.emailAddress;
     console.log(`📤 [Upload] Usuario ${userId} subiendo archivo`);
 
     const { success } = await ratelimit.limit(userId);
@@ -290,7 +293,7 @@ export async function POST(req: Request) {
     // 7. Disparar el worker de Trigger.dev
     const batchId = uuidv4();
     console.log(`📤 [Upload] Batch ID: ${batchId}`);
-    await sendTriggerEvent(userId, batchId, mode, provider);
+    await sendTriggerEvent(userId, batchId, mode, provider, userEmail);
 
     trackGamification(userId, "upload_csv").catch(() => {});
     return NextResponse.json({

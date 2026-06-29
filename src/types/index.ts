@@ -45,6 +45,7 @@ export interface BatchProcessPayload {
   userId: string;
   mode?: string;
   provider?: string;
+  userEmail?: string;
 }
 
 export interface UploadResponse {

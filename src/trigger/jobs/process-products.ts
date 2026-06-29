@@ -1,4 +1,6 @@
 import { task, retry } from "@trigger.dev/sdk/v3";
+import { sendEmail } from "@/lib/email/send";
+import { listingReadyTemplate } from "@/lib/email/templates";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
@@ -72,7 +74,7 @@ export const processProductsTask = task({
   run: async (payload: BatchProcessPayload) => {
     console.log(`📦 [Trigger] Procesando batch para usuario: ${payload.userId}`);
     console.log(`[process-batch] ▶ Iniciando para userId: ${payload.userId}`);
-    const { userId, mode, provider } = payload;
+    const { userId, mode, provider, userEmail } = payload;
     const safeMode = (mode && mode in MODE_CONFIG ? mode : "creative") as GenerationMode;
     const safeProvider = (provider && provider in providers ? provider : "groq") as AIProvider;
     const aiConfig = providers[safeProvider];
@@ -189,6 +191,18 @@ export const processProductsTask = task({
       }
 
       await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    if (userEmail && totalProcessed > 0) {
+      const productNames = pendingListings
+        .filter((l) => l.status !== "FAILED")
+        .map((l) => l.productName)
+        .slice(0, 10);
+      await sendEmail({
+        to: userEmail,
+        subject: `✅ Tus ${totalProcessed} listing${totalProcessed === 1 ? "" : "s"} ya están listos — ListWise`,
+        html: listingReadyTemplate({ count: totalProcessed, productNames }),
+      });
     }
 
     return { processed: totalProcessed, total: pendingListings.length };
