@@ -25,6 +25,7 @@ export default function AgentPage() {
   const [search, setSearch] = useState("");
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
   const [nextSuggestion, setNextSuggestion] = useState<NextSuggestion | null>(null);
+  const [prefillMessage, setPrefillMessage] = useState<string | undefined>(undefined);
 
   const filtered = listings.filter((l) =>
     l.productName.toLowerCase().includes(search.toLowerCase())
@@ -69,6 +70,25 @@ export default function AgentPage() {
       .then((d) => {
         const completed = (d.listings ?? []).filter((l: Listing) => l.status === "COMPLETED");
         setListings(completed);
+
+        // Read competitor prefill from localStorage
+        try {
+          const raw = localStorage.getItem("agent_prefill");
+          if (raw) {
+            const { listingId, message } = JSON.parse(raw) as { listingId?: string; message?: string };
+            localStorage.removeItem("agent_prefill");
+            if (message) setPrefillMessage(message);
+            if (listingId) {
+              const target = completed.find((l: Listing) => l.id === listingId);
+              if (target) {
+                setSelectedListing(target);
+                setMobileView("chat");
+              }
+            }
+          }
+        } catch {
+          // ignore malformed localStorage
+        }
       })
       .catch(() => {})
       .finally(() => setLoadingListings(false));
@@ -230,6 +250,7 @@ export default function AgentPage() {
               listingId={selectedListing.id}
               productName={selectedListing.productName}
               inline
+              initialMessage={prefillMessage}
               onApplyChanges={handleApplyChanges}
             />
           ) : (

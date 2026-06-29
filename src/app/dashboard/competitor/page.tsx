@@ -1,7 +1,24 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import CreditsPopover from "@/components/CreditsPopover";
+
+function scoreCompetitorTitle(title: string | null): { score: number; label: string; color: string } {
+  if (!title) return { score: 0, label: "Sin datos", color: "text-gray-400" };
+  let score = 0;
+  const len = title.length;
+  if (len >= 60 && len <= 200) score += 35;
+  else if (len >= 30) score += 15;
+  if (/\d/.test(title)) score += 20;
+  if (title.trim().split(/\s+/).length >= 5) score += 15;
+  if (/[|·\-–—]/.test(title)) score += 15;
+  if (!/[®©™%]/.test(title)) score += 15;
+  const s = Math.min(100, score);
+  const label = s >= 80 ? "Fuerte" : s >= 60 ? "Moderado" : s >= 40 ? "Débil" : "Muy débil";
+  const color = s >= 80 ? "text-green-700" : s >= 60 ? "text-amber-600" : "text-red-600";
+  return { score: s, label, color };
+}
 
 interface AnalysisResult {
   id: string;
@@ -37,6 +54,7 @@ interface Listing {
 }
 
 export default function CompetitorPage() {
+  const router = useRouter();
   const [url, setUrl] = useState("");
   const [selectedListingId, setSelectedListingId] = useState("");
   const [listings, setListings] = useState<Listing[]>([]);
@@ -46,6 +64,13 @@ export default function CompetitorPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+
+  function useInAgent(suggestion: string) {
+    if (selectedListingId) {
+      localStorage.setItem("agent_prefill", JSON.stringify({ listingId: selectedListingId, message: suggestion }));
+    }
+    router.push("/agent");
+  }
 
   useEffect(() => {
     fetch("/api/listings/dashboard?page=1&limit=50")
@@ -130,6 +155,31 @@ export default function CompetitorPage() {
         }
         startPolling(data.analysisId);
       }
+    } catch {
+      setError("Error de red. Inténtalo de nuevo.");
+      setLoading(false);
+    }
+  }
+
+  async function handleReanalyze() {
+    const trimmedUrl = url.trim();
+    if (!trimmedUrl) return;
+    setError("");
+    setResult(null);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/competitor/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: trimmedUrl, listingId: selectedListingId || undefined, forceRefresh: true }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error ?? "Error al reiniciar el análisis"); setLoading(false); return; }
+      setAnalysisId(data.analysisId);
+      if (typeof data.remainingCredits === "number") {
+        window.dispatchEvent(new CustomEvent("credits-update", { detail: { credits: data.remainingCredits } }));
+      }
+      startPolling(data.analysisId);
     } catch {
       setError("Error de red. Inténtalo de nuevo.");
       setLoading(false);
@@ -241,7 +291,16 @@ export default function CompetitorPage() {
             <>
               {/* Scraped content */}
               <div className="bg-white rounded-xl border p-5">
-                <h2 className="font-semibold text-gray-900 mb-3">📄 Contenido del competidor</h2>
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <h2 className="font-semibold text-gray-900">📄 Contenido del competidor</h2>
+                  <button
+                    onClick={handleReanalyze}
+                    disabled={loading}
+                    className="text-xs px-3 py-1.5 border border-gray-200 rounded-full text-gray-500 hover:border-blue-300 hover:text-blue-600 transition-colors disabled:opacity-40"
+                  >
+                    🔄 Re-analizar
+                  </button>
+                </div>
                 <a href={result.url} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:underline block truncate mb-3">
                   {result.url}
                 </a>
@@ -256,10 +315,49 @@ export default function CompetitorPage() {
                     <p><span className="font-medium text-gray-700">Meta keywords: </span><span className="text-gray-500 text-xs">{result.scrapedKeywords}</span></p>
                   )}
                 </div>
-                <span className="mt-3 inline-flex items-center px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-medium">
-                  Tono: {result.analysis.tone}
-                </span>
+                <div className="mt-3 flex items-center gap-2 flex-wrap">
+                  <span className="inline-flex items-center px-3 py-1 bg-purple-50 text-purple-700 rounded-full text-xs font-medium">
+                    Tono: {result.analysis.tone}
+                  </span>
+                  {(() => {
+                    const { score, label, color } = scoreCompetitorTitle(result.scrapedTitle);
+                    const bg = score >= 80 ? "bg-green-50 border-green-200" : score >= 60 ? "bg-amber-50 border-amber-200" : "bg-red-50 border-red-200";
+                    return (
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 border rounded-full text-xs font-medium ${bg} ${color}`}>
+                        Listing del competidor: <strong>{score}/100</strong> — {label}
+                      </span>
+                    );
+                  })()}
+                </div>
               </div>
+
+              {/* Comparative score banner */}
+              {selectedListingId && (() => {
+                const myListing = listings.find(l => l.id === selectedListingId);
+                const myScore = scoreCompetitorTitle(myListing?.generatedTitle ?? null);
+                const compScore = scoreCompetitorTitle(result.scrapedTitle);
+                const winning = myScore.score >= compScore.score;
+                return (
+                  <div className={`rounded-xl border p-4 flex items-center justify-around gap-4 ${winning ? "bg-green-50 border-green-200" : "bg-amber-50 border-amber-200"}`}>
+                    <div className="text-center">
+                      <p className="text-xs text-gray-500 mb-0.5">Tu listing</p>
+                      <p className={`text-2xl font-bold ${myScore.color}`}>{myScore.score}<span className="text-sm font-normal text-gray-400">/100</span></p>
+                      <p className={`text-xs font-medium ${myScore.color}`}>{myScore.label}</p>
+                    </div>
+                    <div className="text-center">
+                      <p className={`text-sm font-semibold ${winning ? "text-green-700" : "text-amber-700"}`}>
+                        {winning ? "✓ Estás por delante" : "⚠️ Competidor más fuerte"}
+                      </p>
+                      <p className="text-xs text-gray-400 mt-0.5">en calidad de copy</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-xs text-gray-500 mb-0.5">Competidor</p>
+                      <p className={`text-2xl font-bold ${compScore.color}`}>{compScore.score}<span className="text-sm font-normal text-gray-400">/100</span></p>
+                      <p className={`text-xs font-medium ${compScore.color}`}>{compScore.label}</p>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Side-by-side */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -289,19 +387,67 @@ export default function CompetitorPage() {
                 <div className="space-y-4">
                   <div className="bg-blue-50 border border-blue-200 rounded-xl p-5">
                     <h3 className="font-semibold text-blue-800 mb-3">🔑 Keywords detectadas</h3>
-                    <div className="flex flex-wrap gap-2">
-                      {result.analysis.keywords.map((kw, i) => (
-                        <span key={i} className="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">{kw}</span>
-                      ))}
-                    </div>
+                    {selectedListingId ? (() => {
+                      const myListing = listings.find(l => l.id === selectedListingId);
+                      const myText = ((myListing?.generatedTitle ?? "") + " " + (myListing?.productName ?? "")).toLowerCase();
+                      return (
+                        <div className="space-y-2">
+                          <div className="flex flex-wrap gap-2">
+                            {result.analysis.keywords.map((kw, i) => {
+                              const words = kw.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+                              const present = words.length > 0 && words.some(w => myText.includes(w));
+                              return (
+                                <span key={i} className={`px-2.5 py-1 rounded-full text-xs font-medium ${present ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
+                                  {present ? "✓" : "✗"} {kw}
+                                </span>
+                              );
+                            })}
+                          </div>
+                          {(() => {
+                            const total = result.analysis.keywords.length;
+                            const present = result.analysis.keywords.filter(kw => {
+                              const words = kw.toLowerCase().split(/\s+/).filter(w => w.length > 3);
+                              return words.length > 0 && words.some(w => myText.includes(w));
+                            }).length;
+                            const missing = total - present;
+                            const opp = total > 0 ? Math.round((missing / total) * 100) : 0;
+                            return (
+                              <div className="flex items-center gap-3 mt-2 flex-wrap">
+                                <span className="text-xs text-blue-600">✓ en tu listing · ✗ keywords que te faltan</span>
+                                {total > 0 && (
+                                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${opp > 50 ? "bg-red-100 text-red-700" : opp > 20 ? "bg-amber-100 text-amber-700" : "bg-green-100 text-green-700"}`}>
+                                    {present}/{total} cubiertas · Oportunidad: {opp}%
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      );
+                    })() : (
+                      <div className="flex flex-wrap gap-2">
+                        {result.analysis.keywords.map((kw, i) => (
+                          <span key={i} className="px-2.5 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-medium">{kw}</span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                   <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-5">
                     <h3 className="font-semibold text-yellow-800 mb-3">💡 Sugerencias para tu listing</h3>
-                    <ol className="space-y-2">
+                    <ol className="space-y-3">
                       {result.analysis.suggestions.map((s, i) => (
                         <li key={i} className="text-sm text-yellow-800 flex items-start gap-2">
                           <span className="font-bold text-yellow-600 shrink-0">{i + 1}.</span>
-                          <span>{s}</span>
+                          <div className="flex-1 min-w-0">
+                            <p>{s}</p>
+                            <button
+                              onClick={() => useInAgent(s)}
+                              title={selectedListingId ? "Enviar al Agente de copywriting" : "Selecciona primero tu listing en el selector de arriba"}
+                              className={`mt-1.5 text-xs px-2.5 py-1 rounded-full border transition-colors ${selectedListingId ? "bg-white border-yellow-400 text-yellow-700 hover:bg-yellow-100" : "bg-white border-gray-200 text-gray-400 cursor-not-allowed"}`}
+                            >
+                              → Usar en Agent
+                            </button>
+                          </div>
                         </li>
                       ))}
                     </ol>

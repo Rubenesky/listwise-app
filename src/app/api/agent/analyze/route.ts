@@ -37,6 +37,11 @@ function analyzeBullets(bullets: string[] | null): { score: number; notes: strin
   else if (formatted.length > 0) { score += 10; notes.push(`${count - formatted.length} sin formato CONCEPTO:`); }
   else notes.push("ninguno sigue el formato CONCEPTO: descripción");
 
+  // Detect strongest (most data-rich) bullet not in position 0
+  const dataRe = /\b\d+\s*(?:%|g\b|kg\b|ml\b|l\b|cm\b|mm\b|m\b|h\b|min\b|€|\$|w\b|mah\b|db\b)/i;
+  const richIdx = bullets.findIndex((b) => dataRe.test(b));
+  if (richIdx > 0) notes.push(`💡 bullet ${richIdx + 1} tiene más datos — muévelo al primero`);
+
   return { score: Math.min(35, score), notes };
 }
 

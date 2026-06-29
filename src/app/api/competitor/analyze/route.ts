@@ -115,6 +115,7 @@ function checkOrigin(req: Request): boolean {
 const bodySchema = z.object({
   url: z.string().min(1).max(2048),
   listingId: z.string().optional(),
+  forceRefresh: z.boolean().optional(),
 });
 
 export async function POST(req: Request) {
@@ -132,7 +133,7 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
     }
-    const { url: rawUrl, listingId } = parsed.data;
+    const { url: rawUrl, listingId, forceRefresh } = parsed.data;
 
     // SSRF: DNS-based validation (resolves all IPs, rejects private ranges)
     const urlCheck = await validateUrlSSRF(rawUrl);
@@ -143,8 +144,8 @@ export async function POST(req: Request) {
     const normalizedUrl = urlCheck.normalized!;
     const now = Math.floor(Date.now() / 1000);
 
-    // Cache hit: reuse COMPLETED analysis from last 24h for same URL + user
-    const [cached] = await db
+    // Cache hit: reuse COMPLETED analysis from last 24h (skipped when forceRefresh)
+    const [cached] = forceRefresh ? [] : await db
       .select({ id: schema.competitorAnalyses.id })
       .from(schema.competitorAnalyses)
       .where(

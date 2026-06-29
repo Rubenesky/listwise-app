@@ -7,6 +7,7 @@ interface AgentChatProps {
   listingId: string;
   productName: string;
   inline?: boolean;
+  initialMessage?: string;
   onApplyChanges?: (changes: {
     title?: string | null;
     bullets?: string[] | null;
@@ -54,6 +55,8 @@ const QUICK_ACTIONS = [
   { label: "🔧 Técnica", command: "Hazla más técnica, destacando especificaciones y datos concretos", seo: false },
   { label: "🎯 SEO", command: "", seo: true },
   { label: "🛡️ Confianza", command: "Añade elementos de confianza: garantías, certificaciones y casos de uso reales", seo: false },
+  { label: "🎣 Otro hook", command: "Genera 3 variaciones de apertura para la descripción con estilos distintos: 1) problema→solución (empieza identificando una frustración real del comprador), 2) aspiración (empieza con el resultado deseado), 3) escena de uso (empieza con un momento concreto del día). Máx 2 frases cada una. No reescribas el resto — solo las 3 aperturas numeradas en el campo message. updatedTitle: null, updatedBullets: null, updatedDescription: null.", seo: false },
+  { label: "🎯 Auto-optimizar", command: "", seo: false, autoIter: true },
 ];
 
 const CLARIFICATION_OPTIONS: ClarificationOption[] = [
@@ -373,6 +376,16 @@ function ChangeCard({
                 </button>
               )}
             </div>
+            {!isOriginalView && (() => {
+              const wordCount = descText.trim().split(/\s+/).length;
+              const tooShort = wordCount < 120;
+              const tooLong = wordCount > 280;
+              return (
+                <span className={`text-xs mt-0.5 block ${tooShort || tooLong ? "text-amber-500 font-medium" : "text-gray-400"}`}>
+                  {wordCount} palabras{tooShort ? " ⚠️ mín 120" : tooLong ? " ⚠️ máx 280" : " ✓"}
+                </span>
+              );
+            })()}
           </div>
         )}
 
@@ -416,7 +429,7 @@ function ChangeCard({
   );
 }
 
-export default function AgentChat({ listingId, productName, inline = false, onApplyChanges }: AgentChatProps) {
+export default function AgentChat({ listingId, productName, inline = false, initialMessage, onApplyChanges }: AgentChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -434,11 +447,13 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
   const [missingAttrs, setMissingAttrs] = useState<string[]>([]);
   const [supplementalAttrs, setSupplementalAttrs] = useState<Record<string, string>>({});
   const [attrPanelOpen, setAttrPanelOpen] = useState(false);
+  const [autoIterStatus, setAutoIterStatus] = useState<{ iter: number; max: number; score: number | null } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const seoInputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
   const analyzedRef = useRef<string | null>(null);
+  const autoIterCancelRef = useRef(false);
 
   useEffect(() => {
     fetch("/api/agent/credits/status")
@@ -519,6 +534,13 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
       })
       .catch(() => setMessages([]));
   }, [loadingHistory, listingId, messages.length]);
+
+  useEffect(() => {
+    if (initialMessage && !loadingHistory) {
+      setInput(initialMessage);
+      setTimeout(() => inputRef.current?.focus(), 100);
+    }
+  }, [initialMessage, loadingHistory]);
 
   useEffect(() => {
     if (seoModalOpen) setTimeout(() => seoInputRef.current?.focus(), 50);
@@ -681,6 +703,44 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
       clearTimeout(timeoutId);
       setLoading(false);
     }
+  };
+
+  const runAutoIterate = async () => {
+    const MAX_ITER = 3;
+    const TARGET = 85;
+    autoIterCancelRef.current = false;
+
+    for (let i = 1; i <= MAX_ITER; i++) {
+      if (autoIterCancelRef.current) break;
+      setAutoIterStatus({ iter: i, max: MAX_ITER, score: null });
+      await sendMessage("Optimiza el título, los bullets y la descripción para máxima conversión");
+      if (autoIterCancelRef.current) break;
+
+      const res = await fetch(`/api/agent/analyze?listingId=${listingId}`).catch(() => null);
+      const data = res ? await res.json().catch(() => ({})) : {};
+      const score: number = data.scores?.total ?? 0;
+      setAutoIterStatus({ iter: i, max: MAX_ITER, score });
+
+      if (score >= TARGET) {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: `✅ Objetivo alcanzado: ${score}/100 en ${i} iteración${i > 1 ? "es" : ""}. El listing está optimizado.`, isNew: true },
+        ]);
+        break;
+      }
+      if (i < MAX_ITER) {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: `Puntuación: ${score}/100 — aún por debajo de 85 pts. Iteración ${i + 1}/${MAX_ITER}...` },
+        ]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: `Resultado final: ${score}/100 tras ${MAX_ITER} iteraciones. Para subir más, añade datos del producto (gramaje, medidas, instrucciones de cuidado).` },
+        ]);
+      }
+    }
+    setAutoIterStatus(null);
   };
 
   const buyCredits = async (packId: string) => {
@@ -905,6 +965,26 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
         <div ref={messagesEndRef} />
       </div>
 
+      {/* Auto-iterate status bar */}
+      {autoIterStatus && (
+        <div className="px-3 py-2 bg-indigo-50 border-t border-indigo-200 shrink-0 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-500 shrink-0" />
+            <span className="text-xs text-indigo-700 font-medium">
+              {autoIterStatus.score !== null
+                ? `Iteración ${autoIterStatus.iter}/${autoIterStatus.max} — ${autoIterStatus.score}/100 pts`
+                : `Optimizando... iteración ${autoIterStatus.iter}/${autoIterStatus.max}`}
+            </span>
+          </div>
+          <button
+            onClick={() => { autoIterCancelRef.current = true; }}
+            className="text-xs text-indigo-400 hover:text-indigo-700 transition-colors shrink-0"
+          >
+            Cancelar
+          </button>
+        </div>
+      )}
+
       {/* Upsell panel */}
       {isFreeWithNoCredits && (
         <div className="px-3 py-2 bg-amber-50 border-t border-amber-200 shrink-0">
@@ -928,15 +1008,20 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
                   onClick={() => {
                     if (a.seo) {
                       setSeoModalOpen((prev) => !prev);
+                    } else if ((a as { autoIter?: boolean }).autoIter) {
+                      setSeoModalOpen(false);
+                      runAutoIterate();
                     } else {
                       setInput(a.command);
                       setSeoModalOpen(false);
                       inputRef.current?.focus();
                     }
                   }}
-                  disabled={loading}
+                  disabled={loading || !!autoIterStatus}
                   className={`text-xs border px-2.5 py-1 rounded-full transition-colors whitespace-nowrap disabled:opacity-40 ${
-                    a.seo && seoModalOpen
+                    (a as { autoIter?: boolean }).autoIter
+                      ? "bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700"
+                      : a.seo && seoModalOpen
                       ? "bg-blue-600 text-white border-blue-600"
                       : "bg-gray-100 hover:bg-blue-50 hover:text-blue-700 border-gray-200 hover:border-blue-200"
                   }`}
