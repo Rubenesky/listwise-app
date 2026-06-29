@@ -36,7 +36,7 @@ export const metadata: Metadata = {
     siteName: "ListWise",
     images: [
       {
-        url: "/og-image.png",
+        url: "/api/og",
         width: 1200,
         height: 630,
         alt: "ListWise — Generador de listados de productos con IA",
@@ -49,7 +49,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "ListWise — Generador de Descripciones de Productos con IA",
     description: "Genera títulos SEO, bullet points y descripciones de productos con IA. Prueba gratis.",
-    images: ["/og-image.png"],
+    images: ["/api/og"],
   },
   icons: {
     icon: "/favicon.ico",
