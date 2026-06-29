@@ -358,6 +358,9 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
   const [seoKeyword, setSeoKeyword] = useState("");
   const [showHistoryOnly, setShowHistoryOnly] = useState(false);
   const [marketplace, setMarketplace] = useState("generico");
+  const [missingAttrs, setMissingAttrs] = useState<string[]>([]);
+  const [supplementalAttrs, setSupplementalAttrs] = useState<Record<string, string>>({});
+  const [attrPanelOpen, setAttrPanelOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const seoInputRef = useRef<HTMLInputElement>(null);
@@ -431,6 +434,10 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
       .then((r) => r.json())
       .then((d) => {
         if (d.current) setInitialContent(d.current as OriginalContent);
+        if (Array.isArray(d.missingAttrs) && d.missingAttrs.length > 0) {
+          setMissingAttrs(d.missingAttrs);
+          setAttrPanelOpen(true);
+        }
         if (d.message) {
           setMessages([{ role: "assistant", content: d.message, isNew: true, isProactive: true }]);
         } else {
@@ -496,7 +503,7 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
       const response = await fetch("/api/agent/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage, listingId, conversationId, marketplace }),
+        body: JSON.stringify({ message: userMessage, listingId, conversationId, marketplace, supplementalAttrs }),
         signal: controller.signal,
       });
 
@@ -896,6 +903,45 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
             className="text-gray-400 hover:text-gray-600 shrink-0 text-sm"
             aria-label="Cerrar"
           >✕</button>
+        </div>
+      )}
+
+      {/* Attribute enrichment panel */}
+      {missingAttrs.length > 0 && !showHistoryOnly && (
+        <div className="border-t border-amber-200 bg-amber-50 shrink-0">
+          <button
+            onClick={() => setAttrPanelOpen((p) => !p)}
+            className="w-full flex items-center justify-between px-3 py-2 text-xs font-medium text-amber-800 hover:bg-amber-100 transition-colors"
+          >
+            <span>💡 Añade datos para un copy más preciso ({missingAttrs.length} campos)</span>
+            <span className="text-amber-600">{attrPanelOpen ? "▲" : "▼"}</span>
+          </button>
+          {attrPanelOpen && (
+            <div className="px-3 pb-3 space-y-2">
+              {missingAttrs.map((attr) => {
+                const key = attr.replace(/\s+/g, "_");
+                const placeholders: Record<string, string> = {
+                  "composición_del_material": "ej: 80% algodón, 20% poliéster",
+                  "color_disponible": "ej: negro, blanco, azul marino",
+                  "talla_o_medidas": "ej: S, M, L, XL / 30x40cm",
+                  "instrucciones_de_cuidado": "ej: lavar a 30°, no centrifugar",
+                };
+                return (
+                  <div key={key} className="flex items-center gap-2">
+                    <label className="text-xs text-amber-700 w-32 shrink-0 capitalize">{attr}:</label>
+                    <input
+                      type="text"
+                      value={supplementalAttrs[key] ?? ""}
+                      onChange={(e) => setSupplementalAttrs((prev) => ({ ...prev, [key]: e.target.value }))}
+                      placeholder={placeholders[key] ?? ""}
+                      className="flex-1 text-xs border border-amber-200 rounded-lg px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-400 bg-white"
+                    />
+                  </div>
+                );
+              })}
+              <p className="text-xs text-amber-600 mt-1">Estos datos se usarán en tus próximas generaciones — no modifican la ficha del producto.</p>
+            </div>
+          )}
         </div>
       )}
 

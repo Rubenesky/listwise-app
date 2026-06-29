@@ -134,6 +134,7 @@ export async function GET(req: Request) {
         bullets: bullets ?? null,
         description: listing.generatedDescription ?? null,
       },
+      missingAttrs,
     });
   } catch (error) {
     console.error("❌ [Analyze] Error:", error);

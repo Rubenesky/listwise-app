@@ -16,7 +16,11 @@ const requestSchema = z.object({
   conversationId: z.string().nullable().optional(),
   command: z.string().optional(),
   marketplace: z.enum(["generico", "amazon_es", "etsy", "shopify", "wallapop"]).optional().default("generico"),
+  supplementalAttrs: z.record(z.string()).optional().default({}),
 });
+
+const FORMAL_TRIGGER_RE = /formal|profesional|corporativo/i;
+const JARGON_RE = /idónea|idóneo|óptim[ao]|fusionando|integración de|elección idónea|configuraciones de vestuario|confiere|multifuncional|vestuario contemporáneo|Considere la|pieza esencial|estética refinada|resistencia óptima|diversas situaciones|entornos multifuncionales/i;
 
 const SPEC_PATTERNS: RegExp[] = [
   /\bIPX?\d+\b/gi,
@@ -74,7 +78,7 @@ export async function POST(req: Request) {
     if (!parsedBody.success) {
       return NextResponse.json({ error: "Datos inválidos", details: parsedBody.error.errors }, { status: 400 });
     }
-    const { message, listingId, conversationId, command, marketplace } = parsedBody.data;
+    const { message, listingId, conversationId, command, marketplace, supplementalAttrs } = parsedBody.data;
 
     console.log(`🤖 [Agent] Usuario ${userId} - Mensaje: ${message.slice(0, 80)}`);
 
@@ -198,10 +202,11 @@ export async function POST(req: Request) {
 
     // Build system prompt with product context
     const bullets = (listing.generatedBullets as string[] | null) ?? [];
+    const mergedAttributes = { ...(listing.attributes as Record<string, unknown> ?? {}), ...supplementalAttrs };
     const systemPrompt = AGENT_SYSTEM_PROMPT
       .replace("{productName}", listing.productName)
       .replace("{category}", listing.category ?? "General")
-      .replace("{attributes}", JSON.stringify(listing.attributes ?? {}))
+      .replace("{attributes}", JSON.stringify(mergedAttributes))
       .replace("{currentTitle}", listing.generatedTitle ?? "")
       .replace("{currentBullets}", bullets.join("\n"))
       .replace("{currentDescription}", listing.generatedDescription ?? "")
@@ -246,6 +251,42 @@ export async function POST(req: Request) {
             parsedResponse = JSON.parse(fullResponse);
           } catch {
             parsedResponse = { message: "Respuesta procesada.", updatedDescription: fullResponse };
+          }
+
+          // Jargon validation: if formal tone was requested but output contains corporate jargon, retry once
+          if (FORMAL_TRIGGER_RE.test(message)) {
+            const textToCheck = [
+              String(parsedResponse.updatedDescription ?? ""),
+              ...(Array.isArray(parsedResponse.updatedBullets) ? parsedResponse.updatedBullets.map(String) : []),
+            ].join(" ");
+            if (JARGON_RE.test(textToCheck)) {
+              console.log("⚠️ [Agent] Jerga corporativa detectada — reintentando con instrucción reforzada");
+              try {
+                const retryContent = await aiConfig.client.chat.completions.create({
+                  model: aiConfig.defaultModel,
+                  messages: [
+                    { role: "system", content: systemPrompt },
+                    ...messages.slice(0, -1).map(({ role, content }) => ({ role, content })),
+                    {
+                      role: "user",
+                      content: message + "\n\n⚠️ CORRECCIÓN OBLIGATORIA: tu respuesta anterior usó jerga corporativa prohibida (palabras como 'idónea', 'óptima', 'fusionando', 'integración', 'Considere'). REESCRÍBELA siendo DIRECTO: usa los materiales exactos de los atributos, acciones concretas y frases cortas sin adjetivos vagos.",
+                    },
+                  ] as never,
+                  temperature: 0.3,
+                  max_tokens: 1024,
+                  stream: false,
+                  response_format: { type: "json_object" },
+                });
+                const retryText = retryContent.choices[0]?.message?.content ?? "";
+                if (retryText) {
+                  parsedResponse = JSON.parse(retryText);
+                  parsedResponse._retried = true;
+                  console.log("✅ [Agent] Retry con tono formal corregido");
+                }
+              } catch (retryErr) {
+                console.warn("⚠️ [Agent] Retry fallido, usando respuesta original:", retryErr);
+              }
+            }
           }
 
           // Detect specs that may have been fabricated (not present in original attributes)
