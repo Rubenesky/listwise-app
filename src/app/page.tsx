@@ -157,10 +157,9 @@ export default function HomePage() {
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
         {/* Top announcement bar */}
         <div className="bg-blue-700 text-white text-center py-2.5 text-sm px-4">
-          🚀 Genera descripciones para 10 productos{" "}
-          <strong>gratis</strong> — sin tarjeta de crédito.{" "}
+          🎯 Precios de lanzamiento activos — regístrate ahora y fija tu tarifa.{" "}
           <Link href="/sign-up" className="underline font-semibold ml-1">
-            Empieza ahora →
+            10 productos gratis →
           </Link>
         </div>
 
@@ -474,6 +473,11 @@ export default function HomePage() {
 
           {/* ── Precios en landing ───────────────────────────── */}
           <section className="mb-12">
+            <div className="flex justify-center mb-3">
+              <span className="inline-flex items-center gap-1.5 bg-amber-100 text-amber-700 text-xs font-semibold px-3 py-1.5 rounded-full">
+                🔖 Precio de lanzamiento — puede subir en cualquier momento
+              </span>
+            </div>
             <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-900 mb-3">
               Precios simples, sin sorpresas
             </h2>
@@ -550,6 +554,48 @@ export default function HomePage() {
               <Link href="/pricing" className="text-blue-600 hover:underline">
                 Ahorra un 20% →
               </Link>
+            </p>
+          </section>
+
+          {/* ── Comparativa vs redactor humano ──────────────── */}
+          <section className="mb-12">
+            <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-900 mb-3">
+              ¿Por qué no simplemente contratar un redactor?
+            </h2>
+            <p className="text-center text-gray-500 text-sm mb-8">
+              Una comparativa honesta para que decidas tú mismo
+            </p>
+            <div className="max-w-3xl mx-auto overflow-x-auto">
+              <table className="w-full text-sm rounded-2xl overflow-hidden shadow-md">
+                <thead>
+                  <tr>
+                    <th className="bg-gray-50 px-5 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide w-1/3"></th>
+                    <th className="bg-gray-50 px-5 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wide">Redactor freelance</th>
+                    <th className="bg-blue-600 px-5 py-3 text-center text-xs font-semibold text-white uppercase tracking-wide">ListWise IA</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-50">
+                  {[
+                    { label: "Coste por producto", human: "15 – 50 €", lw: "< 0,02 €", lwWins: true },
+                    { label: "Tiempo por producto", human: "30 – 90 min", lw: "< 60 seg", lwWins: true },
+                    { label: "Disponibilidad", human: "Horario laboral", lw: "24 / 7", lwWins: true },
+                    { label: "Escala a 500 productos", human: "Semanas + coste alto", lw: "Minutos, mismo precio", lwWins: true },
+                    { label: "Consistencia de tono", human: "Variable por redactor", lw: "100% uniforme", lwWins: true },
+                    { label: "Matiz y creatividad humana", human: "✓ Alto", lw: "Bueno con el Agente", lwWins: false },
+                  ].map((row) => (
+                    <tr key={row.label} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-5 py-3 text-xs font-medium text-gray-700">{row.label}</td>
+                      <td className="px-5 py-3 text-center text-xs text-gray-500">{row.human}</td>
+                      <td className={`px-5 py-3 text-center text-xs font-semibold ${row.lwWins ? "text-blue-700 bg-blue-50/60" : "text-gray-600 bg-blue-50/30"}`}>
+                        {row.lw}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="text-center text-xs text-gray-400 mt-3">
+              * Precios de freelance basados en tarifas medias de mercado en España (Fiverr, Workana, 2024)
             </p>
           </section>
 
