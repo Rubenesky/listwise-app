@@ -118,6 +118,15 @@ export default function DashboardPage() {
   const [saving, setSaving] = useState(false);
   const [sharing, setSharing] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
+  const [checklistDismissed, setChecklistDismissed] = useState(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("listwise_checklist_dismissed") === "true";
+    return false;
+  });
+
+  const dismissChecklist = () => {
+    localStorage.setItem("listwise_checklist_dismissed", "true");
+    setChecklistDismissed(true);
+  };
   const aiProvider = "gemini";
   const currentPageRef = useRef(1);
   const [marketplace, setMarketplace] = useState<string>(() => {
@@ -613,6 +622,36 @@ export default function DashboardPage() {
         {/* Gamification strip */}
         <GamificationWidget compact />
 
+        {/* Activation checklist — solo para usuarios sin completados */}
+        {completedCount === 0 && !checklistDismissed && (
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="font-semibold text-blue-900 text-sm">🚀 Primeros pasos — empieza en 3 minutos</p>
+              <button onClick={dismissChecklist} className="text-blue-300 hover:text-blue-500 transition-colors text-lg leading-none">✕</button>
+            </div>
+            <div className="space-y-2">
+              {[
+                { label: "Crear tu cuenta", done: true, href: null },
+                { label: "Subir tu primer CSV y generar un listing", done: currentCount > 0, href: null },
+                { label: "Refinar con el Agente de Copywriting", done: false, href: "/agent" },
+              ].map(({ label, done, href }) => (
+                <div key={label} className="flex items-center gap-2.5">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-xs font-bold transition-colors ${
+                    done ? "bg-green-500 text-white" : "bg-white border-2 border-blue-300 text-blue-500"
+                  }`}>
+                    {done ? "✓" : "→"}
+                  </span>
+                  {href ? (
+                    <a href={href} className={`text-sm ${done ? "line-through text-gray-400" : "text-blue-800 hover:text-blue-600 hover:underline"}`}>{label}</a>
+                  ) : (
+                    <span className={`text-sm ${done ? "line-through text-gray-400" : "text-blue-800"}`}>{label}</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Agent Mode banner */}
         <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-4 flex items-center justify-between gap-4 flex-wrap shadow-sm">
           <div className="flex items-center gap-3">
@@ -942,8 +981,49 @@ export default function DashboardPage() {
               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
             </div>
           ) : listings.length === 0 ? (
-            <div className="py-12 text-center text-gray-500">
-              Todavía no tienes listados. Sube un CSV para empezar.
+            <div className="py-10 px-6 text-center">
+              <div className="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <svg className="w-7 h-7 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+              </div>
+              <h3 className="font-semibold text-gray-900 mb-1.5">Sube tu primer CSV para empezar</h3>
+              <p className="text-sm text-gray-500 mb-5 max-w-xs mx-auto">
+                Añade los nombres de tus productos y la IA genera título, bullets y descripción en menos de 60 segundos.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center mb-6">
+                <a
+                  href="/api/template/csv"
+                  download="plantilla_listwise.csv"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 border border-blue-300 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-50 transition-colors"
+                >
+                  ⬇ Descargar plantilla CSV
+                </a>
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 hover:scale-105 transition-all"
+                >
+                  📤 Subir mi primer CSV
+                </button>
+              </div>
+              <div className="max-w-sm mx-auto text-left bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <p className="text-xs font-semibold text-gray-500 mb-2 uppercase tracking-wide">Ejemplo de resultado generado</p>
+                <p className="text-xs font-bold text-gray-800 mb-2 leading-snug">
+                  Zapatillas Running Pro X200 | Suela Amortiguadora | Transpirable | Hombre y Mujer
+                </p>
+                <ul className="space-y-1 mb-2">
+                  {[
+                    "AMORTIGUACIÓN TOTAL: Tecnología gel que absorbe cada impacto y protege tus articulaciones",
+                    "TRANSPIRABILIDAD: Malla 3D que mantiene el pie fresco incluso en los entrenamientos más duros",
+                    "AGARRE PERFECTO: Suela de goma con taco multidireccional para cualquier superficie",
+                  ].map((b) => (
+                    <li key={b} className="text-xs text-gray-600 flex items-start gap-1">
+                      <span className="text-blue-400 shrink-0">•</span> {b}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-gray-400 italic">&ldquo;Imagina cruzar la línea de meta sintiéndote más ligero que nunca...&rdquo;</p>
+              </div>
             </div>
           ) : (
             <div className="overflow-x-auto">
