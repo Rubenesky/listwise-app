@@ -24,20 +24,15 @@ const schemaOrg = {
         priceCurrency: "EUR",
         description: "Plan gratuito con 10 productos. Sin tarjeta de crédito.",
       },
-      aggregateRating: {
-        "@type": "AggregateRating",
-        ratingValue: "4.8",
-        ratingCount: "142",
-        bestRating: "5",
-      },
       featureList: [
+        "Agente de Copywriting IA conversacional",
         "Generación de títulos SEO con IA",
-        "Bullet points de beneficios",
+        "Bullet points de beneficios estructurados",
         "Descripciones para múltiples marketplaces",
         "Procesamiento masivo por CSV",
-        "Modos: Creativo, Profesional, SEO",
-        "Análisis de competencia",
+        "Análisis de competidores con IA",
         "Exportación CSV",
+        "Voz de marca personalizada por categoría",
       ],
     },
     {
@@ -119,29 +114,6 @@ const faqs = [
   },
 ];
 
-const testimonials = [
-  {
-    name: "María García",
-    role: "Tienda de moda online",
-    avatar: "MG",
-    text: "Pasé de tardar 2 horas por producto a 5 minutos con ListWise. Mi tienda en Shopify nunca ha vendido tan bien.",
-    rating: 5,
-  },
-  {
-    name: "Carlos Ruiz",
-    role: "Vendedor en Amazon España",
-    avatar: "CR",
-    text: "Mis ventas en Amazon subieron un 35% en el primer mes. Las descripciones que genera la IA son increíblemente persuasivas.",
-    rating: 5,
-  },
-  {
-    name: "Ana López",
-    role: "Decoración del hogar",
-    avatar: "AL",
-    text: "Nunca pensé que una IA podría capturar tan bien el tono de mi marca. Mis clientes dicen que los textos parecen escritos por un profesional.",
-    rating: 5,
-  },
-];
 
 export default function HomePage() {
   const { isLoaded, isSignedIn } = useUser();
@@ -223,20 +195,34 @@ export default function HomePage() {
         <div className="max-w-6xl mx-auto px-4">
           {/* ── Hero ─────────────────────────────────────────── */}
           <section className="text-center py-8 md:py-12">
+            <span className="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-full mb-5 tracking-wide uppercase">
+              🤖 Agente IA para vendedores de marketplaces
+            </span>
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight">
-              Genera descripciones de productos{" "}
-              <span className="text-blue-600">que venden</span>
+              Listings que venden más,{" "}
+              <span className="text-blue-600">generados en segundos</span>
             </h1>
-            <p className="text-base md:text-lg text-gray-600 max-w-2xl mx-auto mb-8">
-              Usa IA para crear títulos SEO, bullet points y descripciones
-              optimizadas para Amazon, eBay y Shopify. Procesa tu catálogo
-              entero en minutos.
+            <p className="text-base md:text-lg text-gray-600 max-w-2xl mx-auto mb-5">
+              IA que crea títulos SEO, bullets de conversión y descripciones con la voz de tu marca.
+              Para Amazon, Zalando, Shopify, Etsy y cualquier marketplace.
             </p>
+            <ul className="flex flex-wrap gap-x-6 gap-y-2 justify-center text-sm text-gray-500 mb-8">
+              {[
+                "Agente de copywriting IA conversacional",
+                "Análisis de competidores con IA",
+                "Procesa catálogos enteros por CSV",
+                "Mantiene la voz de tu marca",
+              ].map((b) => (
+                <li key={b} className="flex items-center gap-1.5">
+                  <span className="text-green-500 font-bold">✓</span> {b}
+                </li>
+              ))}
+            </ul>
 
             {/* Email registration form */}
             <form
               onSubmit={handleEmailSubmit}
-              className="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto mb-6"
+              className="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto mb-4"
             >
               <input
                 type="email"
@@ -254,34 +240,104 @@ export default function HomePage() {
                 Empezar gratis →
               </button>
             </form>
-
-            <div className="flex flex-col sm:flex-row gap-3 justify-center mb-12">
-              <Link
-                href="/pricing"
-                className="px-6 py-3 bg-white text-blue-600 rounded-lg font-medium border-2 border-blue-600 hover:bg-blue-50 hover:scale-105 transition-all text-sm"
-              >
-                Ver precios
-              </Link>
-            </div>
-            <p className="text-sm text-gray-500">
+            <p className="text-sm text-gray-500 mb-3">
               Sin tarjeta de crédito · 10 productos gratis · Cancela cuando quieras
             </p>
+            <Link href="/pricing" className="text-sm text-blue-600 hover:underline">
+              Ver planes y precios →
+            </Link>
           </section>
 
           {/* ── Social proof bar ─────────────────────────────── */}
           <div className="bg-white/80 rounded-2xl p-6 shadow-sm mb-12 grid grid-cols-3 gap-4 text-center">
             <div>
-              <p className="text-2xl font-bold text-blue-600">+50.000</p>
-              <p className="text-xs text-gray-500 mt-1">Descripciones generadas</p>
+              <p className="text-2xl font-bold text-blue-600">&lt; 60 seg</p>
+              <p className="text-xs text-gray-500 mt-1">Listing completo por producto</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-blue-600">4.8/5</p>
-              <p className="text-xs text-gray-500 mt-1">Valoración media</p>
+              <p className="text-2xl font-bold text-blue-600">8+</p>
+              <p className="text-xs text-gray-500 mt-1">Marketplaces compatibles</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-blue-600">-80%</p>
-              <p className="text-xs text-gray-500 mt-1">Tiempo de trabajo</p>
+              <p className="text-2xl font-bold text-blue-600">100%</p>
+              <p className="text-xs text-gray-500 mt-1">Contenido único por producto</p>
             </div>
+          </div>
+
+          {/* ── Marketplaces compatibles ─────────────────────── */}
+          <div className="mb-10 text-center">
+            <p className="text-xs text-gray-400 uppercase tracking-widest mb-4 font-medium">Compatible con todos los marketplaces</p>
+            <div className="flex flex-wrap justify-center gap-3">
+              {["Amazon", "Zalando", "Shopify", "Etsy", "Wallapop", "Milanuncios", "eBay", "WooCommerce"].map((mp) => (
+                <span key={mp} className="px-4 py-1.5 bg-white rounded-full text-sm text-gray-600 shadow-sm border border-gray-100 font-medium hover:border-blue-200 transition-colors">
+                  {mp}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Demo: antes y después ─────────────────────────── */}
+          <section className="mb-12">
+            <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-900 mb-3">
+              Ve el resultado antes de registrarte
+            </h2>
+            <p className="text-center text-gray-500 text-sm mb-8">De un nombre de producto a un listing completo y optimizado</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-start max-w-4xl mx-auto">
+              {/* Before */}
+              <div className="bg-gray-50 rounded-xl p-6 border-2 border-dashed border-gray-200">
+                <span className="inline-block text-xs font-semibold text-gray-400 uppercase tracking-wide mb-4">Tu CSV de entrada</span>
+                <div className="space-y-2.5">
+                  {[
+                    { label: "Nombre", value: "Auriculares BT 500" },
+                    { label: "Categoría", value: "Electrónica" },
+                    { label: "Precio", value: "59,99€" },
+                    { label: "Material", value: "Plástico ABS, espuma" },
+                  ].map(({ label, value }) => (
+                    <div key={label} className="flex gap-3 text-sm">
+                      <span className="text-gray-400 w-20 shrink-0">{label}:</span>
+                      <span className="text-gray-700 font-medium">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* After */}
+              <div className="bg-white rounded-xl p-6 border-2 border-blue-200 shadow-lg relative">
+                <span className="absolute -top-3 left-4 bg-blue-600 text-white text-xs px-3 py-1 rounded-full font-semibold">
+                  ListWise genera →
+                </span>
+                <span className="inline-block text-xs font-semibold text-blue-600 uppercase tracking-wide mb-3">Listing optimizado</span>
+                <p className="font-bold text-sm text-gray-900 mb-3 leading-snug">
+                  Auriculares Bluetooth BT 500 Inalámbricos | 40h Batería | Cancelación Activa de Ruido | Sonido Premium
+                </p>
+                <ul className="space-y-1.5 mb-4">
+                  {[
+                    "SONIDO ENVOLVENTE: Drivers 40mm para graves profundos y agudos nítidos en cada nota",
+                    "BATERÍA 40H: Escucha música ininterrumpida todo el día sin buscar el cargador",
+                    "CANCELACIÓN ACTIVA: Elimina hasta el 95% del ruido ambiental para máxima concentración",
+                  ].map((b) => (
+                    <li key={b} className="flex items-start gap-1.5 text-xs text-gray-600">
+                      <span className="text-blue-500 shrink-0 mt-0.5 font-bold">•</span>
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-gray-500 italic leading-relaxed border-t border-gray-100 pt-3">
+                  &ldquo;Imagina cerrar el mundo exterior y entrar en tu propia burbuja de sonido. Con los BT 500, cada nota llega exactamente como fue grabada...&rdquo;
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* ── CTA intermedio post-demo ─────────────────────── */}
+          <div className="text-center mb-12 -mt-4">
+            <Link
+              href="/sign-up"
+              className="inline-block px-8 py-3.5 bg-blue-600 text-white rounded-xl font-semibold text-sm hover:bg-blue-700 hover:scale-105 transition-all shadow-md"
+            >
+              Pruébalo gratis con tu propio producto →
+            </Link>
+            <p className="text-xs text-gray-400 mt-2">Sin tarjeta · 10 productos gratis</p>
           </div>
 
           {/* ── Cómo funciona ─────────────────────────────────── */}
@@ -325,13 +381,13 @@ export default function HomePage() {
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               {[
-                { icon: "🤖", title: "IA Avanzada", desc: "Modelos de última generación para descripciones únicas y persuasivas." },
-                { icon: "⚡", title: "Procesamiento masivo", desc: "Procesa cientos de productos desde un CSV en pocos minutos." },
-                { icon: "📊", title: "SEO + GEO", desc: "Optimizado para Google, Amazon y motores de búsqueda de IA." },
-                { icon: "🎨", title: "3 modos de escritura", desc: "Creativo, Profesional o SEO según el estilo de tu tienda." },
-                { icon: "🔍", title: "Análisis de competencia", desc: "Compara tu listing con competidores y mejora con sugerencias de IA." },
-                { icon: "🏆", title: "Sistema de logros", desc: "Gana puntos, desbloquea niveles y obtén descuentos exclusivos." },
-                { icon: "📁", title: "Exportación CSV", desc: "Descarga el resultado listo para subir a cualquier plataforma." },
+                { icon: "🤖", title: "Agente de Copywriting IA", desc: "Chat conversacional para refinar títulos, bullets y descripciones con instrucciones en lenguaje natural." },
+                { icon: "⚡", title: "Procesamiento masivo CSV", desc: "Sube tu catálogo entero y obtén todos los listings optimizados en minutos." },
+                { icon: "📊", title: "SEO + GEO optimizado", desc: "Estructura y keywords diseñados para rankear en Amazon, Google y motores de búsqueda IA." },
+                { icon: "🎯", title: "Voz de marca por categoría", desc: "Prompts especializados por categoría: Moda, Electrónica, Hogar, Deporte, Alimentación, Belleza." },
+                { icon: "🔍", title: "Análisis de competidores", desc: "Detecta qué keywords usa la competencia, compara scores y recibe sugerencias para superar sus listings." },
+                { icon: "🏆", title: "Sistema de logros", desc: "Gana puntos, desbloquea niveles y obtén descuentos exclusivos al mejorar tus productos." },
+                { icon: "📁", title: "Exportación CSV", desc: "Descarga el resultado listo para subir a cualquier plataforma o feed de datos." },
                 { icon: "🛡️", title: "Seguro y privado", desc: "Tus datos no se comparten ni se usan para entrenar modelos de IA." },
               ].map(({ icon, title, desc }) => (
                 <div key={title} className="bg-white rounded-xl p-6 shadow-md text-center hover:shadow-lg transition-shadow">
@@ -343,43 +399,167 @@ export default function HomePage() {
             </div>
           </section>
 
-          {/* ── Testimonios ──────────────────────────────────── */}
-          <section className="mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-900 mb-12">
-              Lo que dicen nuestros usuarios
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {testimonials.map(({ name, role, avatar, text, rating }) => (
-                <div key={name} className="bg-white rounded-xl p-6 shadow-md hover:shadow-lg transition-shadow">
-                  <div className="flex mb-3">
-                    {Array.from({ length: rating }).map((_, i) => (
-                      <span key={i} className="text-yellow-400 text-sm">★</span>
-                    ))}
-                  </div>
-                  <p className="text-gray-700 text-sm leading-relaxed mb-4">
-                    &ldquo;{text}&rdquo;
-                  </p>
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold text-sm shrink-0">
-                      {avatar}
+          {/* ── Agente de Copywriting ────────────────────────── */}
+          <section className="mb-12 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl p-8 md:p-12 border border-indigo-100">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
+              <div>
+                <span className="inline-block bg-indigo-100 text-indigo-700 text-xs font-semibold px-3 py-1.5 rounded-full mb-4 uppercase tracking-wide">
+                  🤖 Exclusivo: Agente IA
+                </span>
+                <h2 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+                  Refina cada listing en segundos con lenguaje natural
+                </h2>
+                <p className="text-gray-600 mb-5 leading-relaxed">
+                  No solo genera el contenido — puedes perfeccionarlo con instrucciones conversacionales. Como tener un copywriter experto disponible 24/7.
+                </p>
+                <ul className="space-y-2.5">
+                  {[
+                    "\"Cambia el tono a más juvenil y añade urgencia\"",
+                    "\"Añade las keywords SEO más relevantes\"",
+                    "\"Hazlo más corto para Wallapop\"",
+                    "\"Analiza al competidor y mejora mi listing\"",
+                    "\"Auto-optimiza hasta superar 85 puntos\"",
+                  ].map((cmd) => (
+                    <li key={cmd} className="flex items-start gap-2 text-sm text-gray-700">
+                      <span className="text-indigo-500 shrink-0 mt-0.5">→</span>
+                      <span className="italic">{cmd}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Chat mockup */}
+              <div className="bg-white rounded-xl shadow-lg p-5 border border-indigo-100">
+                <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-100">
+                  <div className="w-7 h-7 bg-blue-600 rounded-lg flex items-center justify-center text-white text-xs font-bold">L</div>
+                  <span className="text-sm font-semibold text-gray-800">Agente ListWise</span>
+                  <span className="ml-auto text-xs text-green-500 font-medium">● En línea</span>
+                </div>
+                <div className="space-y-3 mb-4">
+                  <div className="flex justify-end">
+                    <div className="bg-blue-600 text-white text-xs px-3 py-2 rounded-xl rounded-tr-sm max-w-[80%] leading-relaxed">
+                      Cambia el tono a más juvenil y añade urgencia
                     </div>
-                    <div>
-                      <p className="font-semibold text-sm text-gray-900">{name}</p>
-                      <p className="text-xs text-gray-500">{role}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center shrink-0 text-xs">🤖</div>
+                    <div className="bg-gray-50 text-xs px-3 py-2 rounded-xl rounded-tl-sm border border-gray-100 max-w-[80%] leading-relaxed text-gray-700">
+                      ¡Perfecto! Aquí tienes la nueva descripción con tono más dinámico:
+                      <div className="mt-2 bg-indigo-50 rounded-lg p-2 text-indigo-800 italic leading-snug">
+                        &ldquo;¿Buscas el sonido que te lleve al siguiente nivel? Los BT 500 son TU movida. 40h de batería, cero ruido del mundo, 100% tú. 🎧 Stock limitado — hazte con los tuyos →&rdquo;
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex justify-end">
+                    <div className="bg-blue-600 text-white text-xs px-3 py-2 rounded-xl rounded-tr-sm max-w-[80%] leading-relaxed">
+                      Perfecto, ahora analiza al competidor principal
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center shrink-0 text-xs">🤖</div>
+                    <div className="bg-gray-50 text-xs px-3 py-2 rounded-xl rounded-tl-sm border border-gray-100 max-w-[80%] leading-relaxed text-gray-700">
+                      Analizado. Tu competidor usa &ldquo;plegable&rdquo; y &ldquo;gaming&rdquo; — keywords que tú no tienes. ¿Los añado?
                     </div>
                   </div>
                 </div>
+                <div className="flex gap-2 border-t border-gray-100 pt-3">
+                  <div className="flex-1 bg-gray-50 rounded-lg px-3 py-2 text-xs text-gray-400 border border-gray-200">
+                    Escribe una instrucción...
+                  </div>
+                  <button className="bg-blue-600 text-white text-xs px-3 py-2 rounded-lg font-medium">→</button>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* ── Precios en landing ───────────────────────────── */}
+          <section className="mb-12">
+            <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-900 mb-3">
+              Precios simples, sin sorpresas
+            </h2>
+            <p className="text-center text-gray-500 text-sm mb-8">
+              Sin permanencia · Cancela cuando quieras · Créditos sin caducidad
+            </p>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
+              {[
+                {
+                  name: "Gratuito",
+                  price: "0€",
+                  desc: "Para probar sin riesgo",
+                  features: ["10 créditos/mes", "50 productos por CSV", "Agente IA incluido", "Exportación CSV"],
+                  cta: "Empezar gratis",
+                  href: "/sign-up",
+                  highlight: false,
+                },
+                {
+                  name: "Pro",
+                  price: "29€",
+                  desc: "Para tiendas en crecimiento",
+                  features: ["1.500 créditos/mes", "200 productos por CSV", "Agente IA ilimitado", "Análisis competidor ilimitado", "Soporte prioritario"],
+                  cta: "Empezar con Pro",
+                  href: "/pricing",
+                  highlight: true,
+                },
+                {
+                  name: "Enterprise",
+                  price: "99€",
+                  desc: "Para alto volumen",
+                  features: ["7.000 créditos/mes", "Productos ilimitados", "API personalizada", "Account manager 24/7"],
+                  cta: "Ver Enterprise",
+                  href: "/pricing",
+                  highlight: false,
+                },
+              ].map((plan) => (
+                <div
+                  key={plan.name}
+                  className={`bg-white rounded-xl p-6 shadow-md flex flex-col ${plan.highlight ? "ring-2 ring-blue-600 relative" : ""}`}
+                >
+                  {plan.highlight && (
+                    <span className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-600 text-white text-xs px-3 py-1 rounded-full font-semibold whitespace-nowrap">
+                      Más popular
+                    </span>
+                  )}
+                  <h3 className="font-bold text-gray-900 text-base mb-1">{plan.name}</h3>
+                  <div className="flex items-baseline gap-1 mb-1">
+                    <span className="text-3xl font-extrabold text-gray-900">{plan.price}</span>
+                    {plan.price !== "0€" && <span className="text-sm text-gray-400">/mes</span>}
+                  </div>
+                  <p className="text-xs text-gray-500 mb-4">{plan.desc}</p>
+                  <ul className="space-y-1.5 mb-5 flex-1">
+                    {plan.features.map((f) => (
+                      <li key={f} className="flex items-center gap-2 text-xs text-gray-600">
+                        <span className="text-green-500 font-bold shrink-0">✓</span> {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    href={plan.href}
+                    className={`block text-center py-2.5 rounded-lg text-sm font-semibold transition-all hover:scale-105 ${
+                      plan.highlight
+                        ? "bg-blue-600 text-white hover:bg-blue-700"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    }`}
+                  >
+                    {plan.cta}
+                  </Link>
+                </div>
               ))}
             </div>
+            <p className="text-center text-xs text-gray-400 mt-4">
+              ¿Prefieres facturación anual?{" "}
+              <Link href="/pricing" className="text-blue-600 hover:underline">
+                Ahorra un 20% →
+              </Link>
+            </p>
           </section>
 
           {/* ── CTA central ──────────────────────────────────── */}
           <section className="bg-blue-700 rounded-2xl p-10 text-center mb-12">
             <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
-              ¿Listo para vender más?
+              Tu primer listing optimizado en menos de 60 segundos
             </h2>
-            <p className="text-blue-100 mb-6 text-lg">
-              Únete a más de 140 vendedores que ya usan ListWise. 10 productos gratis, sin tarjeta.
+            <p className="text-blue-100 mb-6 text-base">
+              Empieza gratis, sin tarjeta de crédito. Sube tu CSV y ve el resultado ahora mismo.
             </p>
             <Link
               href="/sign-up"
@@ -387,6 +567,7 @@ export default function HomePage() {
             >
               Crear cuenta gratuita →
             </Link>
+            <p className="text-blue-200 text-xs mt-4">Sin tarjeta · 10 productos gratis · Cancela cuando quieras</p>
           </section>
 
           {/* ── FAQ (GEO: para motores de IA) ────────────────── */}
