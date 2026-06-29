@@ -14,7 +14,7 @@ Bullets actuales:
 {currentBullets}
 Descripción actual:
 {currentDescription}
-{marketplaceContext}{voiceProfileContext}{competitorContext}
+{categoryContext}{marketplaceContext}{voiceProfileContext}{competitorContext}
 
 ═══════════════════════════════════════════
 REGLAS DE FORMATO — OBLIGATORIAS

@@ -114,24 +114,55 @@ function AnimatedText({ text }: { text: string }) {
   );
 }
 
+function quickScore(changes: Changes): number | null {
+  if (!changes.title && !changes.bullets && !changes.description) return null;
+  let score = 0;
+  if (changes.title) {
+    const len = changes.title.length;
+    if (len >= 60 && len <= 200) score += 15; else if (len >= 40) score += 8; else score += 5;
+    if (!/[®©™%]/.test(changes.title)) score += 5;
+    if ((changes.title.split(/[|·\-–—]/)[0]?.trim().length ?? 999) <= 45) score += 5;
+  }
+  if (changes.bullets?.length) {
+    const count = changes.bullets.length;
+    if (count >= 4 && count <= 7) score += 15; else score += 5;
+    const formatted = changes.bullets.filter((b) => /^[A-ZÁÉÍÓÚÑ\s]{2,}:\s/.test(b));
+    if (formatted.length === count) score += 20; else if (formatted.length > 0) score += 10;
+  }
+  if (changes.description) {
+    const words = changes.description.trim().split(/\s+/).length;
+    if (words >= 120 && words <= 280) score += 20; else if (words >= 80) score += 8;
+    const isFormal = /^esta |^el diseño|^la composición|^este producto/i.test(changes.description.trim());
+    if (/imagina|piensa en/i.test(changes.description) || isFormal) score += 10;
+    if (/el resultado/i.test(changes.description)) score += 10;
+  }
+  return Math.min(100, score);
+}
+
 function ChangeCard({
   changes,
   listingId,
   onSaved,
   originalContent,
   timestamp,
+  marketplace,
 }: {
   changes: Changes;
   listingId: string;
   onSaved?: () => void;
   originalContent?: OriginalContent;
   timestamp?: number;
+  marketplace?: string;
 }) {
   const [descExpanded, setDescExpanded] = useState(false);
   const [bulletsExpanded, setBulletsExpanded] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [view, setView] = useState<"new" | "original">("new");
+  const [exportOpen, setExportOpen] = useState(false);
+
+  const titleLimit = marketplace === "amazon_es" ? 200 : marketplace === "wallapop" ? 60 : marketplace === "etsy" ? 140 : 200;
+  const score = quickScore(changes);
 
   const hasComparison =
     !changes._fromHistory &&
@@ -211,14 +242,54 @@ function ChangeCard({
           <span className="text-white font-semibold text-xs">
             {isOriginalView ? "Versión original" : changes._fromHistory ? "Versión guardada" : "Cambios listos"}
           </span>
+          {!isOriginalView && score !== null && (
+            <span className={`text-xs font-bold px-1.5 py-0.5 rounded-full ${score >= 85 ? "bg-white/30 text-white" : score >= 65 ? "bg-yellow-300/80 text-yellow-900" : "bg-red-300/80 text-red-900"}`}>
+              {score}/100
+            </span>
+          )}
         </div>
-        {timestamp && (
-          <span className="text-white/70 text-xs flex items-center gap-1">
-            <Clock className="h-2.5 w-2.5" />
-            {formatRelativeTime(timestamp)}
-          </span>
-        )}
+        <div className="flex items-center gap-2">
+          {timestamp && (
+            <span className="text-white/70 text-xs flex items-center gap-1">
+              <Clock className="h-2.5 w-2.5" />
+              {formatRelativeTime(timestamp)}
+            </span>
+          )}
+          {!isOriginalView && !changes._fromHistory && (
+            <button
+              onClick={() => setExportOpen((p) => !p)}
+              className="text-white/80 hover:text-white text-xs underline transition-colors"
+              title="Exportar formato marketplace"
+            >
+              Exportar
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Export panel */}
+      {exportOpen && !isOriginalView && (
+        <div className="bg-gray-900 text-green-300 text-xs p-3 font-mono whitespace-pre-wrap max-h-48 overflow-y-auto">
+          {changes.title && `TÍTULO:\n${changes.title}\n\n`}
+          {changes.bullets?.length && `BULLETS:\n${changes.bullets.map((b, i) => `${i + 1}. ${b}`).join("\n")}\n\n`}
+          {changes.description && `DESCRIPCIÓN:\n${changes.description}`}
+          <div className="mt-2 pt-2 border-t border-green-900">
+            <button
+              onClick={() => {
+                const text = [
+                  changes.title ? `TÍTULO:\n${changes.title}` : "",
+                  changes.bullets?.length ? `BULLETS:\n${changes.bullets.map((b, i) => `${i + 1}. ${b}`).join("\n")}` : "",
+                  changes.description ? `DESCRIPCIÓN:\n${changes.description}` : "",
+                ].filter(Boolean).join("\n\n");
+                navigator.clipboard.writeText(text);
+              }}
+              className="text-green-400 hover:text-white transition-colors"
+            >
+              📋 Copiar todo
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Before/after tabs */}
       {hasComparison && (
@@ -248,7 +319,9 @@ function ChangeCard({
               </button>
             </div>
             <p className={`${textColor} leading-snug bg-white rounded-lg px-2.5 py-1.5 border ${itemBorder}`}>{displayTitle}</p>
-            <span className="text-xs text-gray-400 mt-0.5 block">{displayTitle.length} caracteres</span>
+            <span className={`text-xs mt-0.5 block ${!isOriginalView && displayTitle.length > titleLimit ? "text-red-500 font-medium" : !isOriginalView && displayTitle.length > titleLimit * 0.9 ? "text-amber-500" : "text-gray-400"}`}>
+              {displayTitle.length} caracteres{!isOriginalView && displayTitle.length > titleLimit ? ` ⚠️ supera el límite de ${titleLimit}` : ""}
+            </span>
           </div>
         )}
 
@@ -751,6 +824,7 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
                       listingId={listingId}
                       originalContent={msg.changes?._fromHistory ? null : initialContent}
                       timestamp={undefined}
+                      marketplace={marketplace}
                       onSaved={onApplyChanges ? () => onApplyChanges(msg.changes!) : undefined}
                     />
                   </div>
@@ -776,6 +850,7 @@ export default function AgentChat({ listingId, productName, inline = false, onAp
                     listingId={listingId}
                     originalContent={msg.changes._fromHistory ? null : initialContent}
                     timestamp={msg.timestamp}
+                    marketplace={marketplace}
                     onSaved={onApplyChanges ? () => onApplyChanges(msg.changes!) : undefined}
                   />
                 </div>

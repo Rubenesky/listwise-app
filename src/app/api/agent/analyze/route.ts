@@ -50,7 +50,9 @@ function analyzeDescription(description: string | null): { score: number; notes:
   else if (words < 120) { score += 8; notes.push(`${words} palabras (mín 120)`); }
   else { score += 12; notes.push(`${words} palabras (máx 280)`); }
 
+  const isFormalTone = /^esta |^el diseño|^la composición|^este producto/i.test(description.trim()) && !/imagina|piensa en/i.test(description);
   if (/imagina|piensa en/i.test(description)) { score += 10; notes.push("Future Pacing ✓"); }
+  else if (isFormalTone) { score += 10; notes.push("Estructura formal ✓"); }
   else notes.push("falta Future Pacing");
 
   if (/el resultado/i.test(description)) { score += 10; notes.push("cierre 'El resultado' ✓"); }

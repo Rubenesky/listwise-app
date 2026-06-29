@@ -156,6 +156,30 @@ export async function POST(req: Request) {
       : [];
     messages.push({ role: "user", content: message, timestamp: Math.floor(Date.now() / 1000) });
 
+    // Build category-specific copywriting context
+    const cat = (listing.category ?? "").toLowerCase();
+    const categoryRules: Array<[RegExp, string]> = [
+      [/ropa|moda|fashion|sudadera|camiseta|vestido|pantalón|chaqueta|abrigo|jersey|camisa|blusa|falda|shorts|vaquero|denim|tejido|prenda/i,
+        `\n═══════════════════════════════════════════\nCATEGORÍA: Moda y Ropa\n- El primer bullet debe evocar la silueta o sensación de llevar la prenda\n- Incluye combinaciones de outfits concretas (con qué prendas combina)\n- Menciona cuidado de la prenda si está en los atributos\n- Evita tecnicismos de costura; usa lenguaje de estilo de vida\n- La descripción debe anclar la prenda en un momento de uso real\n═══════════════════════════════════════════\n`],
+      [/electrónica|electrónico|auricular|altavoz|móvil|tablet|portátil|ordenador|cámara|gadget|tech|smart|bluetooth|wireless/i,
+        `\n═══════════════════════════════════════════\nCATEGORÍA: Electrónica y Tecnología\n- El primer bullet debe incluir la especificación técnica más diferenciadora\n- Formato para specs: DATO TÉCNICO: cifra + unidad → beneficio concreto\n- Menciona compatibilidad (iOS/Android, USB-C, etc.) si está en atributos\n- Incluye escenario de uso real (trabajo, viaje, deporte)\n- Evita superlativos sin datos: no "la mejor calidad", sí "batería 30h"\n═══════════════════════════════════════════\n`],
+      [/hogar|cocina|decoración|mueble|sillón|sofá|lámpara|cojín|alfombra|jardín|baño|dormitorio|sala|comedor/i,
+        `\n═══════════════════════════════════════════\nCATEGORÍA: Hogar y Decoración\n- Incluye dimensiones exactas si están en los atributos\n- Menciona el estilo decorativo (nórdico, industrial, mediterráneo, minimalista)\n- Conecta el producto con la sensación del espacio (amplitud, calidez, orden)\n- El primer bullet debe vincular el producto con la habitación o uso específico\n- Menciona material y acabado de forma concreta\n═══════════════════════════════════════════\n`],
+      [/deporte|fitness|running|yoga|gym|entrenamiento|ciclismo|natación|hiking|senderismo|outdoor|deportivo/i,
+        `\n═══════════════════════════════════════════\nCATEGORÍA: Deporte y Fitness\n- El primer bullet debe nombrar la actividad principal y el beneficio de rendimiento\n- Incluye datos de material técnico (transpirabilidad, compresión, protección UV)\n- Menciona condiciones de uso (lluvia, calor, interior/exterior)\n- Usa verbos de acción y logro: "aguanta", "protege", "mejora", "resiste"\n- Evita lenguaje de lifestyle genérico; habla de rendimiento específico\n═══════════════════════════════════════════\n`],
+      [/alimentación|alimento|comida|bebida|snack|suplemento|proteína|vitamina|ecológico|orgánico|gourmet/i,
+        `\n═══════════════════════════════════════════\nCATEGORÍA: Alimentación\n- Menciona alérgenos e ingredientes principales en los bullets\n- Incluye el momento de consumo ideal (desayuno, post-entreno, merienda)\n- Señala certificaciones si existen (ecológico, sin gluten, vegano)\n- La descripción debe evocar sabor, textura y aroma de forma concreta\n- Evita claims de salud sin respaldo en atributos\n═══════════════════════════════════════════\n`],
+      [/belleza|cosmético|skincare|perfume|maquillaje|crema|sérum|champú|acondicionador|higiene|cuidado personal/i,
+        `\n═══════════════════════════════════════════\nCATEGORÍA: Belleza y Cuidado Personal\n- El primer bullet debe nombrar el beneficio principal en la piel/cabello\n- Menciona el tipo de piel/cabello al que está dirigido\n- Incluye modo de aplicación si está en atributos\n- Usa lenguaje sensorial: textura, aroma, absorción, acabado\n- Señala ingredientes activos clave si están disponibles\n═══════════════════════════════════════════\n`],
+    ];
+    let categoryContext = "";
+    for (const [pattern, context] of categoryRules) {
+      if (pattern.test(cat) || pattern.test(listing.productName)) {
+        categoryContext = context;
+        break;
+      }
+    }
+
     // Build marketplace context
     const marketplaceRules: Record<string, string> = {
       amazon_es: `\n═══════════════════════════════════════════\nPLATAFORMA: Amazon España\n- Título: máximo 200 caracteres, keyword principal en las primeras 5 palabras\n- Bullets: máximo 200 caracteres cada uno, sin punto final, empezar con mayúsculas\n- Descripción: sin HTML, sin emojis en bullets, prioriza keywords del algoritmo A9\n- Prioridad: conversión + posicionamiento orgánico Amazon\n═══════════════════════════════════════════\n`,
@@ -210,6 +234,7 @@ export async function POST(req: Request) {
       .replace("{currentTitle}", listing.generatedTitle ?? "")
       .replace("{currentBullets}", bullets.join("\n"))
       .replace("{currentDescription}", listing.generatedDescription ?? "")
+      .replace("{categoryContext}", categoryContext)
       .replace("{marketplaceContext}", marketplaceContext)
       .replace("{voiceProfileContext}", voiceProfileContext)
       .replace("{competitorContext}", competitorContext);
