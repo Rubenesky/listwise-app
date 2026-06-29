@@ -122,10 +122,28 @@ export default function DashboardPage() {
     if (typeof window !== "undefined") return localStorage.getItem("listwise_checklist_dismissed") === "true";
     return false;
   });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"all" | ListingStatus>("all");
+  const [copiedField, setCopiedField] = useState<string | null>(null);
 
   const dismissChecklist = () => {
     localStorage.setItem("listwise_checklist_dismissed", "true");
     setChecklistDismissed(true);
+  };
+
+  const copyToClipboard = async (text: string, fieldId: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const el = document.createElement("textarea");
+      el.value = text;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand("copy");
+      document.body.removeChild(el);
+    }
+    setCopiedField(fieldId);
+    setTimeout(() => setCopiedField(null), 2000);
   };
   const aiProvider = "gemini";
   const currentPageRef = useRef(1);
@@ -144,6 +162,13 @@ export default function DashboardPage() {
     (l) => l.status === "PENDING" || l.status === "PROCESSING"
   ).length;
   const failedCount = listings.filter((l) => l.status === "FAILED").length;
+
+  // Filtered listings for search + status filter
+  const filteredListings = listings.filter((l) => {
+    const matchesSearch = !searchQuery || l.productName.toLowerCase().includes(searchQuery.toLowerCase()) || (l.generatedTitle ?? "").toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = statusFilter === "all" || l.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   // Progress bar
   const processedInBatch = Math.max(0, batchTotal - pendingOrProcessingCount);
@@ -510,7 +535,19 @@ export default function DashboardPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Título A (activo)</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-sm font-medium text-gray-700">Título A (activo)</label>
+                      <button
+                        onClick={() => copyToClipboard(editTitle, "modal-title")}
+                        className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 transition-colors px-2 py-0.5 rounded hover:bg-blue-50"
+                      >
+                        {copiedField === "modal-title" ? (
+                          <><svg className="w-3 h-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg> Copiado</>
+                        ) : (
+                          <><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg> Copiar</>
+                        )}
+                      </button>
+                    </div>
                     <input
                       className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       value={editTitle}
@@ -538,9 +575,19 @@ export default function DashboardPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Bullet points ({editBullets.length})
-                    </label>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-sm font-medium text-gray-700">Bullet points ({editBullets.length})</label>
+                      <button
+                        onClick={() => copyToClipboard(editBullets.map((b, i) => `${i + 1}. ${b}`).join("\n"), "modal-bullets")}
+                        className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 transition-colors px-2 py-0.5 rounded hover:bg-blue-50"
+                      >
+                        {copiedField === "modal-bullets" ? (
+                          <><svg className="w-3 h-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg> Copiado</>
+                        ) : (
+                          <><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg> Copiar todos</>
+                        )}
+                      </button>
+                    </div>
                     <div className="space-y-2">
                       {editBullets.map((bullet, i) => (
                         <div key={i} className="flex items-start gap-2">
@@ -561,7 +608,19 @@ export default function DashboardPage() {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-sm font-medium text-gray-700">Descripción</label>
+                      <button
+                        onClick={() => copyToClipboard(editDescription, "modal-desc")}
+                        className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 transition-colors px-2 py-0.5 rounded hover:bg-blue-50"
+                      >
+                        {copiedField === "modal-desc" ? (
+                          <><svg className="w-3 h-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg> Copiado</>
+                        ) : (
+                          <><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg> Copiar</>
+                        )}
+                      </button>
+                    </div>
                     <textarea
                       className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                       rows={9}
@@ -934,9 +993,11 @@ export default function DashboardPage() {
             <div className="flex justify-between text-sm text-gray-600 mb-2">
               <span className="flex items-center gap-1.5">
                 <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
-                Procesando productos...
+                {processedInBatch < batchTotal
+                  ? `Generando producto ${processedInBatch + 1} de ${batchTotal}...`
+                  : "Finalizando..."}
               </span>
-              <span>{processedInBatch} de {batchTotal}</span>
+              <span className="font-medium text-blue-700">{progressPct}%</span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2.5">
               <div
@@ -944,36 +1005,74 @@ export default function DashboardPage() {
                 style={{ width: `${progressPct}%` }}
               />
             </div>
+            <p className="mt-1.5 text-xs text-gray-400">Recibirás un email cuando todos estén listos.</p>
           </div>
         )}
 
         {/* Listings table */}
         <div className="listings-table border rounded-lg overflow-hidden">
-          <div className="px-4 py-3 border-b bg-gray-50 flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <h2 className="font-semibold text-gray-900">Tus listados</h2>
-              {hasPendingOrProcessing && (
-                <span className="flex items-center gap-1.5 text-xs text-blue-600">
-                  <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
-                  Procesando automáticamente...
+          <div className="px-4 py-3 border-b bg-gray-50">
+            <div className="flex justify-between items-center mb-2.5">
+              <div className="flex items-center gap-3">
+                <h2 className="font-semibold text-gray-900">Tus listados</h2>
+                {hasPendingOrProcessing && (
+                  <span className="flex items-center gap-1.5 text-xs text-blue-600">
+                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-blue-600 animate-pulse" />
+                    Procesando...
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-gray-500">
+                  {filteredListings.length !== listings.length
+                    ? `${filteredListings.length} de ${listings.length}`
+                    : `${listings.length} productos`}
                 </span>
-              )}
+                {completedCount > 0 && (
+                  <a
+                    href="/api/listings/export"
+                    download="listwise_export.csv"
+                    className="text-sm text-green-600 hover:text-green-800 flex items-center gap-1 transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Exportar CSV
+                  </a>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-3">
-              <span className="text-xs text-gray-500">{listings.length} productos</span>
-              {completedCount > 0 && (
-                <a
-                  href="/api/listings/export"
-                  download="listwise_export.csv"
-                  className="text-sm text-green-600 hover:text-green-800 flex items-center gap-1 transition-colors"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+            {listings.length > 0 && (
+              <div className="flex flex-wrap gap-2 items-center">
+                <div className="relative flex-1 min-w-[160px] max-w-xs">
+                  <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
-                  Exportar CSV
-                </a>
-              )}
-            </div>
+                  <input
+                    type="text"
+                    placeholder="Buscar producto..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-8 pr-3 py-1.5 text-xs border rounded-lg bg-white focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none"
+                  />
+                </div>
+                <div className="flex gap-1">
+                  {(["all", "COMPLETED", "FAILED"] as const).map((f) => (
+                    <button
+                      key={f}
+                      onClick={() => setStatusFilter(f)}
+                      className={`px-2.5 py-1.5 text-xs rounded-lg font-medium transition-colors ${
+                        statusFilter === f
+                          ? f === "all" ? "bg-gray-700 text-white" : f === "COMPLETED" ? "bg-green-600 text-white" : "bg-red-500 text-white"
+                          : "bg-white border text-gray-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      {f === "all" ? "Todos" : f === "COMPLETED" ? "Completados" : "Fallidos"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {loading ? (
@@ -1037,11 +1136,15 @@ export default function DashboardPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {listings.map((listing) => (
-                    <tr
-                      key={listing.id}
-                      className="hover:bg-gray-50"
-                    >
+                  {filteredListings.length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-6 py-8 text-center text-sm text-gray-400">
+                        No se encontraron productos con ese filtro.
+                      </td>
+                    </tr>
+                  )}
+                  {filteredListings.map((listing) => (
+                    <tr key={listing.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 max-w-[200px]">
                         <button
                           onClick={(e) => { e.stopPropagation(); openModal(listing); }}
@@ -1062,8 +1165,27 @@ export default function DashboardPage() {
                         {listing.userRating === -1 && <span className="ml-1 text-xs">👎</span>}
                       </td>
                       <td className="px-6 py-4">{getStatusBadge(listing.status)}</td>
-                      <td className="px-6 py-4 text-gray-500 max-w-[300px] truncate">
-                        {listing.generatedTitle || "—"}
+                      <td className="px-6 py-4 text-gray-500 max-w-[300px]">
+                        <div className="flex items-start gap-1.5">
+                          <span className="truncate">{listing.generatedTitle || "—"}</span>
+                          {listing.generatedTitle && (
+                            <button
+                              onClick={(e) => { e.stopPropagation(); copyToClipboard(listing.generatedTitle!, `title-${listing.id}`); }}
+                              className="shrink-0 p-1 rounded text-gray-300 hover:text-blue-500 hover:bg-blue-50 transition-colors"
+                              title="Copiar título"
+                            >
+                              {copiedField === `title-${listing.id}` ? (
+                                <svg className="w-3.5 h-3.5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                              ) : (
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                              )}
+                            </button>
+                          )}
+                        </div>
                       </td>
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1">
