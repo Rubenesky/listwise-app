@@ -2,6 +2,12 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { and, eq, sql } from "drizzle-orm";
+import { addCredits } from "@/lib/credits/use-credits";
+
+const REWARD_CREDITS: Record<string, number> = {
+  free_month_pro: 1500,
+  free_month_enterprise: 7000,
+};
 
 export async function POST(req: Request) {
   try {
@@ -62,8 +68,10 @@ export async function POST(req: Request) {
         .onConflictDoUpdate({ target: schema.users.id, set: { credits: sql`credits + ${claimed.amount}` } });
       console.log(`💰 [Referidos] ${claimed.amount} créditos añadidos a ${userId}`);
     } else if (claimed.type === "free_month_pro" || claimed.type === "free_month_enterprise") {
-      // Extend subscription in a future iteration via Stripe API
-      console.log(`🎁 [Referidos] Recompensa ${claimed.type} registrada para ${userId} — activación pendiente`);
+      const creditsToAdd = REWARD_CREDITS[claimed.type] ?? 1500;
+      const label = claimed.type === "free_month_enterprise" ? "1 mes Enterprise gratis" : "1 mes Pro gratis";
+      await addCredits(userId, creditsToAdd, "bonus", `Recompensa por referido: ${label} (${creditsToAdd} créditos)`);
+      console.log(`🎁 [Referidos] ${creditsToAdd} créditos añadidos a ${userId} por ${claimed.type}`);
     }
 
     return NextResponse.json({ success: true, type: claimed.type });

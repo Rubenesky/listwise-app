@@ -5,6 +5,8 @@ import { eq, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { addCredits } from "@/lib/credits/use-credits";
 import { ensureUser } from "@/lib/user/ensure-user";
+import { sendEmail } from "@/lib/email/send";
+import { referralRegistrationTemplate } from "@/lib/email/templates";
 
 const BADGE_MAP: Record<number, { type: string; name: string; icon: string }> = {
   1: { type: "first_referral", name: "Primer Referido", icon: "🤝" },
@@ -115,6 +117,23 @@ export async function POST(req: Request) {
     }
 
     console.log(`✅ [Referidos] Registrado: referee=${userId} (${refereeEmail}) → referrer=${referrer.id}`);
+
+    // Email al referidor — no bloqueante
+    try {
+      const clerk = await clerkClient();
+      const referrerClerkUser = await clerk.users.getUser(referrer.id);
+      const referrerEmail = referrerClerkUser.emailAddresses[0]?.emailAddress ?? null;
+      if (referrerEmail) {
+        await sendEmail({
+          to: referrerEmail,
+          subject: "🎉 Tu invitación funcionó — alguien se registró con tu enlace",
+          html: referralRegistrationTemplate({ refereeEmail }),
+        });
+      }
+    } catch {
+      // Email no es crítico — no falla el registro si hay error
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("❌ [Referidos] Error en register:", error);

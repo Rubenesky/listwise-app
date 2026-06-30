@@ -26,6 +26,16 @@ interface Referral {
   createdAt: number;
 }
 
+interface Reward {
+  id: string;
+  type: string;
+  amount: number;
+  status: "pending" | "claimed";
+  createdAt: number;
+  claimedAt: number | null;
+
+}
+
 const STATUS_MAP: Record<string, { label: string; color: string }> = {
   pending: { label: "Pendiente", color: "text-yellow-700 bg-yellow-50 border-yellow-200" },
   registered: { label: "Registrado", color: "text-blue-700 bg-blue-50 border-blue-200" },
@@ -40,6 +50,8 @@ export default function ReferralsPage() {
   const [credits, setCredits] = useState(0);
   const [badges, setBadges] = useState<Badge[]>([]);
   const [referrals, setReferrals] = useState<Referral[]>([]);
+  const [rewards, setRewards] = useState<Reward[]>([]);
+  const [claimingId, setClaimingId] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
@@ -50,20 +62,22 @@ export default function ReferralsPage() {
 
   const fetchAll = useCallback(async () => {
     try {
-      const [codeRes, statsRes, creditsRes, badgesRes, listRes] = await Promise.all([
+      const [codeRes, statsRes, creditsRes, badgesRes, listRes, rewardsRes] = await Promise.all([
         fetch("/api/referrals/generate", { method: "POST" }),
         fetch("/api/referrals/stats"),
         fetch("/api/referrals/credits"),
         fetch("/api/referrals/badges"),
         fetch("/api/referrals/list"),
+        fetch("/api/referrals/rewards"),
       ]);
 
-      const [codeData, statsData, creditsData, badgesData, listData] = await Promise.all([
+      const [codeData, statsData, creditsData, badgesData, listData, rewardsData] = await Promise.all([
         codeRes.json(),
         statsRes.json(),
         creditsRes.json(),
         badgesRes.json(),
         listRes.json(),
+        rewardsRes.json(),
       ]);
 
       if (codeData.code) setCode(codeData.code);
@@ -71,6 +85,7 @@ export default function ReferralsPage() {
       setCredits(creditsData.credits ?? 0);
       setBadges(badgesData.badges ?? []);
       setReferrals(listData.referrals ?? []);
+      setRewards(rewardsData.rewards ?? []);
     } catch {
       // silent — UI shows empty states
     } finally {
@@ -82,7 +97,26 @@ export default function ReferralsPage() {
     if (isSignedIn) fetchAll();
   }, [isSignedIn, fetchAll]);
 
-  const appUrl = "https://listwise-app.onrender.com";
+  const appUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://listwise.app";
+
+  const handleClaim = async (rewardId: string) => {
+    setClaimingId(rewardId);
+    try {
+      const res = await fetch("/api/referrals/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rewardId }),
+      });
+      if (res.ok) {
+        setRewards((prev) =>
+          prev.map((r) => (r.id === rewardId ? { ...r, status: "claimed", claimedAt: Math.floor(Date.now() / 1000) } : r))
+        );
+        await fetchAll(); // Refresh credits
+      }
+    } finally {
+      setClaimingId(null);
+    }
+  };
 
   const copyCode = async () => {
     const url = `${appUrl}/sign-up?ref=${code}`;
@@ -240,6 +274,56 @@ export default function ReferralsPage() {
           </div>
         )}
       </div>
+
+      {/* Rewards */}
+      {rewards.length > 0 && (
+        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm space-y-3">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-800">🎁 Recompensas ganadas</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Créditos obtenidos cuando tus invitados contratan un plan</p>
+          </div>
+          {rewards.map((reward) => {
+            const LABEL: Record<string, string> = {
+              free_month_pro: "1 mes Pro gratis",
+              free_month_enterprise: "1 mes Enterprise gratis",
+              credit: `${reward.amount} créditos`,
+            };
+            const CREDITS: Record<string, number> = {
+              free_month_pro: 1500,
+              free_month_enterprise: 7000,
+            };
+            const label = LABEL[reward.type] ?? reward.type;
+            const credits = CREDITS[reward.type] ?? reward.amount;
+            const isPending = reward.status === "pending";
+            return (
+              <div
+                key={reward.id}
+                className={`flex items-center justify-between gap-3 p-3 rounded-lg border ${
+                  isPending ? "border-amber-200 bg-amber-50" : "border-gray-100 bg-gray-50 opacity-60"
+                }`}
+              >
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">{label}</p>
+                  <p className="text-xs text-gray-500">
+                    {isPending ? `→ ${credits} créditos al reclamar` : `Reclamado el ${new Date((reward.claimedAt ?? 0) * 1000).toLocaleDateString("es-ES")}`}
+                  </p>
+                </div>
+                {isPending ? (
+                  <button
+                    onClick={() => handleClaim(reward.id)}
+                    disabled={claimingId === reward.id}
+                    className="px-3 py-1.5 bg-amber-500 text-white text-xs font-semibold rounded-lg hover:bg-amber-600 transition-colors disabled:opacity-50 whitespace-nowrap"
+                  >
+                    {claimingId === reward.id ? "..." : "Reclamar"}
+                  </button>
+                ) : (
+                  <span className="text-xs text-green-600 font-medium">✅ Reclamado</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Badges */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm">

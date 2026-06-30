@@ -104,3 +104,21 @@ export function creditsLowTemplate({ remaining, plan }: { remaining: number; pla
     ${ctaButton(isPaid ? "Comprar cr&#xE9;ditos →" : "Ver planes →", "https://listwise-app.onrender.com/pricing")}
   `);
 }
+
+export function referralRegistrationTemplate({ refereeEmail }: { refereeEmail: string | null }): string {
+  const who = refereeEmail ? `<strong>${refereeEmail}</strong>` : "alguien";
+  return wrap(`
+    <h2 style="margin:0 0 8px;color:#111827;font-size:22px;font-weight:700;">&#x1F389; Tu invitaci&#xF3;n funcion&#xF3;</h2>
+    <p style="margin:0 0 16px;color:#4b5563;font-size:15px;line-height:1.6;">
+      ${who} acaba de registrarse en ListWise usando tu enlace personal. &#xA1;Felicidades!
+    </p>
+    <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:16px;margin-bottom:20px;">
+      <p style="margin:0;color:#15803d;font-size:14px;font-weight:600;">&#x2705; Ambos hab&#xE9;is recibido +10 cr&#xE9;ditos de regalo</p>
+      <p style="margin:6px 0 0;color:#166534;font-size:13px;">Los cr&#xE9;ditos ya est&#xE1;n disponibles en vuestras cuentas.</p>
+    </div>
+    <p style="margin:0 0 4px;color:#4b5563;font-size:14px;line-height:1.6;">
+      Cuando tu invitado contrate un plan de pago, ganar&#xE1;s recompensas adicionales. Sigue compartiendo tu enlace para acumular m&#xE1;s.
+    </p>
+    ${ctaButton("Ver mis referidos &#x2192;", "https://listwise-app.onrender.com/dashboard/referrals")}
+  `);
+}
