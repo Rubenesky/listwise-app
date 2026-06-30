@@ -181,6 +181,53 @@ export function leadMagnetTemplate({
 </div>`.trim();
 }
 
+export function activationNudgeTemplate({ name }: { name?: string }): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise-app.onrender.com";
+  const greeting = name ? `Hola, ${escapeHtml(name)}` : "Hola";
+  return wrap(`
+    <h2 style="margin:0 0 12px;font-size:20px;color:#111827;">${greeting} &#x1F440;</h2>
+    <p style="color:#374151;line-height:1.6;margin-bottom:8px;">
+      Creaste tu cuenta en ListWise hace un par de d&#xED;as pero a&#xFA;n no has generado tu primer listing.
+    </p>
+    <p style="color:#374151;line-height:1.6;margin-bottom:20px;">
+      <strong>Tienes 20 cr&#xE9;ditos esperando.</strong> Aqu&#xED; te explico c&#xF3;mo usarlos en menos de 2 minutos:
+    </p>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:24px;">
+      <tr>
+        <td style="padding:10px 0;vertical-align:top;width:44px;">
+          <div style="width:32px;height:32px;background:#eff6ff;border-radius:8px;text-align:center;line-height:32px;font-size:16px;">&#x1F4E4;</div>
+        </td>
+        <td style="padding:10px 0 10px 12px;vertical-align:top;">
+          <p style="margin:0;font-size:14px;font-weight:600;color:#111827;">1. Sube un CSV con tus productos</p>
+          <p style="margin:2px 0 0;font-size:13px;color:#6b7280;">Nombre, categor&#xED;a, precio — lo que tengas. Hay una plantilla lista para descargar.</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:10px 0;vertical-align:top;width:44px;">
+          <div style="width:32px;height:32px;background:#eff6ff;border-radius:8px;text-align:center;line-height:32px;font-size:16px;">&#x1F916;</div>
+        </td>
+        <td style="padding:10px 0 10px 12px;vertical-align:top;">
+          <p style="margin:0;font-size:14px;font-weight:600;color:#111827;">2. La IA genera t&#xED;tulo + bullets + descripci&#xF3;n</p>
+          <p style="margin:2px 0 0;font-size:13px;color:#6b7280;">Optimizados para Amazon, Etsy, Shopify o donde vendas. En segundos por producto.</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:10px 0;vertical-align:top;width:44px;">
+          <div style="width:32px;height:32px;background:#eff6ff;border-radius:8px;text-align:center;line-height:32px;font-size:16px;">&#x1F4E5;</div>
+        </td>
+        <td style="padding:10px 0 10px 12px;vertical-align:top;">
+          <p style="margin:0;font-size:14px;font-weight:600;color:#111827;">3. Descarga el CSV listo para publicar</p>
+          <p style="margin:2px 0 0;font-size:13px;color:#6b7280;">Edita lo que quieras con el Agente IA y exporta con un clic.</p>
+        </td>
+      </tr>
+    </table>
+    ${ctaButton("Generar mi primer listing &#x2192;", `${appUrl}/dashboard`)}
+    <p style="margin-top:16px;color:#9ca3af;font-size:12px;">
+      Si prefieres no recibir este tipo de emails, responde con el asunto <strong>baja</strong>.
+    </p>
+  `);
+}
+
 export function reEngagementTemplate({ name }: { name?: string }): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise-app.onrender.com";
   const greeting = name ? `Hola, ${escapeHtml(name)}` : "Hola";
