@@ -52,3 +52,11 @@ export const ratelimitSave = new Ratelimit({
   analytics: false,
   prefix: "@upstash/ratelimit/save",
 });
+
+// Lead magnet: 3 submissions per IP per day
+export const ratelimitLeads = new Ratelimit({
+  redis,
+  limiter: Ratelimit.fixedWindow(3, "24 h"),
+  analytics: false,
+  prefix: "@upstash/ratelimit/leads",
+});

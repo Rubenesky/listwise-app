@@ -211,6 +211,23 @@ export const competitorAnalyses = sqliteTable("competitor_analyses", {
   urlCacheIdx: index("idx_competitor_analyses_url").on(table.url, table.cacheExpiresAt),
 }));
 
+export const leads = sqliteTable("leads", {
+  id: text("id").primaryKey(),
+  email: text("email").notNull(),
+  name: text("name"),
+  marketplace: text("marketplace"),
+  pageUrl: text("page_url"),
+  ipHash: text("ip_hash"),
+  utmSource: text("utm_source"),
+  utmMedium: text("utm_medium"),
+  utmCampaign: text("utm_campaign"),
+  unsubscribed: integer("unsubscribed").notNull().default(0),
+  createdAt: integer("created_at").notNull().default(0),
+}, (table) => ({
+  emailIdx: index("idx_leads_email").on(table.email),
+  createdAtIdx: index("idx_leads_created_at").on(table.createdAt),
+}));
+
 export const creditTransactions = sqliteTable("credit_transactions", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull(),

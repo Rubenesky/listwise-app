@@ -32,3 +32,9 @@ services:
         sync: false
       - key: UPSTASH_REDIS_REST_TOKEN
         sync: false
+      - key: LEAD_MAGNET_PDF_URL
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: IP_HASH_SALT
+        sync: false

@@ -117,6 +117,70 @@ export function creditsLowTemplate({ remaining, plan }: { remaining: number; pla
   `);
 }
 
+export function leadMagnetTemplate({
+  name,
+  pdfUrl,
+  unsubscribeUrl,
+}: {
+  name?: string;
+  pdfUrl: string;
+  unsubscribeUrl: string;
+}): string {
+  const greeting = name ? `Hola ${escapeHtml(name)},` : "Hola,";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise-app.onrender.com";
+  return `
+<div style="font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
+  <div style="background:#f97316;padding:24px 32px;">
+    <span style="color:#ffffff;font-size:22px;font-weight:700;letter-spacing:-0.5px;">ListWise</span>
+    <span style="color:#fde68a;font-size:13px;margin-left:8px;">&#x2014; Tu gu&#xED;a de descripciones</span>
+  </div>
+  <div style="padding:32px;">
+    <h2 style="margin:0 0 8px;color:#111827;font-size:22px;font-weight:700;">&#x1F4E9; Aqu&#xED; tienes tu gu&#xED;a</h2>
+    <p style="margin:0 0 20px;color:#4b5563;font-size:15px;line-height:1.6;">${greeting} &#xA1;Gracias por suscribirte! Aqu&#xED; est&#xE1; la gu&#xED;a definitiva de descripciones que pediste:</p>
+
+    <div style="background:#fff7ed;border:2px solid #f97316;border-radius:12px;padding:20px 24px;margin:0 0 24px;text-align:center;">
+      <p style="margin:0 0 4px;color:#9a3412;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;">TU GU&#xCD;A GRATUITA</p>
+      <h3 style="margin:0 0 16px;color:#111827;font-size:17px;font-weight:700;">7 errores que matan tus ventas + la f&#xF3;rmula SEO que Amazon premia</h3>
+      <a href="${pdfUrl}" style="display:inline-block;padding:14px 32px;background:#f97316;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;border-radius:8px;">&#x1F4E5; DESCARGAR PDF</a>
+    </div>
+
+    <h3 style="margin:0 0 12px;color:#111827;font-size:15px;font-weight:600;">&#xBF;Y ahora qu&#xE9;?</h3>
+    <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">
+      <tr>
+        <td style="padding:10px 0;vertical-align:top;width:44px;">
+          <div style="width:32px;height:32px;background:#fff7ed;border-radius:8px;text-align:center;line-height:32px;font-size:16px;">&#x1F381;</div>
+        </td>
+        <td style="padding:10px 0 10px 12px;vertical-align:top;">
+          <p style="margin:0;color:#111827;font-size:14px;font-weight:600;">Prueba ListWise con 20 cr&#xE9;ditos gratis</p>
+          <p style="margin:2px 0 0;color:#6b7280;font-size:13px;">Genera tu primer listing optimizado en menos de 60 segundos. Sin tarjeta de cr&#xE9;dito.</p>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding:10px 0;vertical-align:top;width:44px;">
+          <div style="width:32px;height:32px;background:#fff7ed;border-radius:8px;text-align:center;line-height:32px;font-size:16px;">&#x1F916;</div>
+        </td>
+        <td style="padding:10px 0 10px 12px;vertical-align:top;">
+          <p style="margin:0;color:#111827;font-size:14px;font-weight:600;">Usa el Agente de Copywriting</p>
+          <p style="margin:2px 0 0;color:#6b7280;font-size:13px;">P&#xED;dele que adapte el tono, a&#xF1;ada keywords o traduzca al ingl&#xE9;s &#x2014; con lenguaje natural.</p>
+        </td>
+      </tr>
+    </table>
+
+    <a href="${appUrl}/sign-up" style="display:inline-block;margin:0 0 8px;padding:12px 28px;background:#2563eb;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:8px;">Empezar gratis &#x2192;</a>
+    <p style="margin:4px 0 0;color:#9ca3af;font-size:12px;">&#xBF;Tienes dudas? Responde directamente a este email.</p>
+  </div>
+  <div style="background:#f9fafb;padding:16px 32px;border-top:1px solid #e5e7eb;">
+    <p style="margin:0;color:#9ca3af;font-size:12px;text-align:center;">
+      ListWise &middot; <a href="${appUrl}" style="color:#6b7280;text-decoration:none;">listwise.app</a>
+    </p>
+    <p style="margin:8px 0 0;color:#d1d5db;font-size:11px;text-align:center;">
+      Recibiste este email porque descargaste un recurso gratuito de ListWise.<br>
+      <a href="${unsubscribeUrl}" style="color:#9ca3af;text-decoration:underline;">Cancelar suscripci&#xF3;n</a>
+    </p>
+  </div>
+</div>`.trim();
+}
+
 export function referralRegistrationTemplate({ refereeEmail }: { refereeEmail: string | null }): string {
   const who = refereeEmail ? `<strong>${escapeHtml(refereeEmail)}</strong>` : "alguien";
   return wrap(`
