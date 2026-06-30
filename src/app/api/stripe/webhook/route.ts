@@ -8,6 +8,7 @@ import { convertReferral } from "@/lib/referrals/convert";
 import { clerkClient } from "@clerk/nextjs/server";
 import { addCredits } from "@/lib/credits/use-credits";
 import { ensureUser } from "@/lib/user/ensure-user";
+import { trackGamification } from "@/lib/gamification/track";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-05-27.dahlia",
@@ -163,6 +164,8 @@ export async function POST(req: Request) {
         } catch (creditErr) {
           console.warn("⚠️ [Stripe Webhook] No se pudieron asignar créditos del plan:", creditErr);
         }
+
+        trackGamification(userId, "upgrade_pro").catch(() => {});
 
         break;
       }

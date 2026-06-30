@@ -28,6 +28,14 @@ interface RankingItem {
   badges: string[];
 }
 
+interface Discount {
+  id: string;
+  type: string;
+  code: string;
+  used: number;
+  expiresAt: number | null;
+}
+
 const BADGE_META: Record<string, { icon: string; name: string; category?: string }> = {
   // Gamification badges
   first_product: { icon: "🌟", name: "Primer Producto", category: "logros" },
@@ -50,19 +58,23 @@ export default function GamificationPage() {
   const [status, setStatus] = useState<GamificationStatus | null>(null);
   const [ranking, setRanking] = useState<RankingItem[]>([]);
   const [referralBadgeTypes, setReferralBadgeTypes] = useState<string[]>([]);
+  const [discounts, setDiscounts] = useState<Discount[]>([]);
   const [loading, setLoading] = useState(true);
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
 
   const refresh = () => {
     Promise.all([
       fetch("/api/gamification/status").then((r) => r.json()),
       fetch("/api/gamification/ranking").then((r) => r.json()),
       fetch("/api/referrals/badges").then((r) => r.json()).catch(() => ({ badges: [] })),
+      fetch("/api/gamification/discounts").then((r) => r.json()).catch(() => ({ discounts: [] })),
     ])
-      .then(([s, r, rb]) => {
+      .then(([s, r, rb, d]) => {
         setStatus(s);
         setRanking(r.ranking ?? []);
         const refTypes = (rb.badges ?? []).map((b: { type: string }) => b.type) as string[];
         setReferralBadgeTypes(refTypes);
+        setDiscounts(d.discounts ?? []);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -200,6 +212,50 @@ export default function GamificationPage() {
               );
             })()}
           </div>
+
+          {/* Discount codes */}
+          {discounts.length > 0 && (
+            <div className="bg-white rounded-xl border p-5">
+              <h2 className="text-base font-semibold text-gray-900 mb-4">🎁 Códigos de descuento desbloqueados</h2>
+              <div className="space-y-3">
+                {discounts.map((d) => {
+                  const label = d.type === "level_6" ? "Leyenda — 15% desc. (3 meses)" : "Maestro — 15% desc. (3 meses)";
+                  const expired = d.expiresAt ? d.expiresAt < Math.floor(Date.now() / 1000) : false;
+                  const used = d.used === 1;
+                  return (
+                    <div key={d.id} className={`flex items-center gap-3 p-3 rounded-lg border ${used || expired ? "border-gray-200 bg-gray-50 opacity-60" : "border-amber-200 bg-amber-50"}`}>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium text-gray-700">{label}</p>
+                        <p className="text-sm font-mono font-bold text-amber-700 tracking-wider mt-0.5">{d.code}</p>
+                        {d.expiresAt && (
+                          <p className="text-xs text-gray-400 mt-0.5">
+                            {expired ? "Expirado" : `Válido hasta ${new Date(d.expiresAt * 1000).toLocaleDateString("es-ES")}`}
+                          </p>
+                        )}
+                      </div>
+                      {used ? (
+                        <span className="text-xs text-gray-400 shrink-0">Usado</span>
+                      ) : expired ? (
+                        <span className="text-xs text-gray-400 shrink-0">Expirado</span>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            navigator.clipboard.writeText(d.code);
+                            setCopiedCode(d.id);
+                            setTimeout(() => setCopiedCode(null), 2000);
+                          }}
+                          className="text-xs px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-medium shrink-0 transition-colors"
+                        >
+                          {copiedCode === d.id ? "¡Copiado!" : "Copiar"}
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-gray-400 mt-3">Aplica este código al contratar o renovar cualquier plan Pro o Enterprise.</p>
+            </div>
+          )}
 
           {/* How it works */}
           <div className="bg-white rounded-xl border p-5">

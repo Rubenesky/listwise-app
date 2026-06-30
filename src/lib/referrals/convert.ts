@@ -1,6 +1,7 @@
 import { db, schema } from "@/db";
 import { and, eq, or, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
+import { trackGamification } from "@/lib/gamification/track";
 
 // Conversion badges — separate from registration badges (first_referral etc.)
 const BADGE_MAP: Record<number, { type: string; name: string; icon: string }> = {
@@ -117,6 +118,7 @@ export async function convertReferral(
       }
     }
 
+    trackGamification(referrerId, "referral_converted").catch(() => {});
     console.log(`✅ [Referidos] Proceso de conversión completado para usuario ${refereeUserId}`);
     return true;
   } catch (error) {
