@@ -5,8 +5,6 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
-const ADMIN_USER_IDS = ["user_3FKeQMYvlFqlnt1QqG8pURl1ARl"];
-
 interface SummaryData {
   activeUsers: number;
   totalPoints: number;
@@ -20,7 +18,7 @@ interface ActionsData {
 }
 
 export default function AdminInsightsPage() {
-  const { isLoaded, isSignedIn, user } = useUser();
+  const { isLoaded, isSignedIn } = useUser();
   const router = useRouter();
   const [summary, setSummary] = useState<SummaryData | null>(null);
   const [actionsData, setActionsData] = useState<ActionsData | null>(null);
@@ -29,19 +27,20 @@ export default function AdminInsightsPage() {
   useEffect(() => {
     if (!isLoaded) return;
     if (!isSignedIn) { router.push("/sign-in"); return; }
-    if (user?.id && !ADMIN_USER_IDS.includes(user.id)) { router.push("/dashboard"); return; }
-  }, [isLoaded, isSignedIn, user, router]);
 
-  useEffect(() => {
-    if (!isSignedIn || !user?.id || !ADMIN_USER_IDS.includes(user.id)) return;
     Promise.all([
-      fetch("/api/admin/insights/summary").then((r) => r.json()),
-      fetch("/api/admin/insights/actions").then((r) => r.json()),
+      fetch("/api/admin/insights/summary"),
+      fetch("/api/admin/insights/actions"),
     ])
-      .then(([s, a]) => { setSummary(s); setActionsData(a); })
+      .then(async ([sr, ar]) => {
+        if (sr.status === 403) { router.push("/dashboard"); return; }
+        const [s, a] = await Promise.all([sr.json(), ar.json()]);
+        setSummary(s);
+        setActionsData(a);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [isSignedIn, user]);
+  }, [isLoaded, isSignedIn, router]);
 
   if (!isLoaded || loading) {
     return (

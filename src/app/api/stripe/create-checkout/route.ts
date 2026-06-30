@@ -11,6 +11,9 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 const PRICE_IDS: Record<string, string> = {
   pro: "price_1Tl68X1uySlskct3CuBf7pjw",
   enterprise: "price_1Tl69t1uySlskct3TIl1qBqc",
+  // Annual plans passed as literal Stripe price IDs from the pricing page
+  "price_1TncET1uySlskct3tPbtAzJA": "price_1TncET1uySlskct3tPbtAzJA",
+  "price_1TncFM1uySlskct3Lin2vkKE": "price_1TncFM1uySlskct3Lin2vkKE",
   agent_pack_s: "price_1Tm1Ki1uySlskct3jd7NLdA3",
   agent_pack_m: "price_1Tm1M41uySlskct3fECTVMZp",
   agent_pack_l: "price_1Tm1Mk1uySlskct3eKYmbioP",

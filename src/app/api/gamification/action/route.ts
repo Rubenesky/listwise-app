@@ -135,6 +135,31 @@ export async function POST(req: Request) {
       }
     }
 
+    // Auto-award daily_streak bonus on first action of the day
+    if (lastActivityStr !== todayStr) {
+      const streakPoints = ACTION_POINTS["daily_streak"] ?? 3;
+      const streakLimit = DAILY_LIMITS["daily_streak"]?.pro ?? 1;
+      const [streakCount] = await db
+        .select({ n: count() })
+        .from(schema.gamificationHistory)
+        .where(
+          and(
+            eq(schema.gamificationHistory.userId, userId),
+            eq(schema.gamificationHistory.action, "daily_streak"),
+            sql`${schema.gamificationHistory.createdAt} > ${dayAgo}`
+          )
+        );
+      if ((streakCount?.n ?? 0) < streakLimit) {
+        await db.update(schema.gamification)
+          .set({ points: newPoints + streakPoints })
+          .where(eq(schema.gamification.userId, userId));
+        await db.insert(schema.gamificationHistory).values({
+          id: uuidv4(), userId, action: "daily_streak", points: streakPoints, createdAt: now,
+        });
+        console.log(`🔥 [Gamification] ${userId} +${streakPoints}pts daily_streak`);
+      }
+    }
+
     console.log(`🎮 [Gamification] ${userId} +${pointsToAdd}pts (${action}) → total: ${newPoints}`);
 
     return NextResponse.json({

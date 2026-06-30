@@ -19,6 +19,8 @@ const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 const PRICE_TO_PLAN: Record<string, string> = {
   "price_1Tl68X1uySlskct3CuBf7pjw": "pro",
   "price_1Tl69t1uySlskct3TIl1qBqc": "enterprise",
+  "price_1TncET1uySlskct3tPbtAzJA": "pro",
+  "price_1TncFM1uySlskct3Lin2vkKE": "enterprise",
 };
 
 export async function POST(req: Request) {

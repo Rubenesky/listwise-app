@@ -4,8 +4,6 @@ import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-const ADMIN_USER_IDS = ["user_3FKeQMYvlFqlnt1QqG8pURl1ARl"];
-
 interface AnalyticsData {
   total: number;
   accepted: number;
@@ -17,31 +15,24 @@ interface AnalyticsData {
 }
 
 export default function AdminAnalyticsPage() {
-  const { isLoaded, isSignedIn, user } = useUser();
+  const { isLoaded, isSignedIn } = useUser();
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<AnalyticsData | null>(null);
 
   useEffect(() => {
     if (!isLoaded) return;
-    if (!isSignedIn) {
-      router.push("/sign-in");
-      return;
-    }
-    if (user?.id && !ADMIN_USER_IDS.includes(user.id)) {
-      router.push("/dashboard");
-    }
-  }, [isLoaded, isSignedIn, user, router]);
-
-  useEffect(() => {
-    if (!isSignedIn || !user?.id || !ADMIN_USER_IDS.includes(user.id)) return;
+    if (!isSignedIn) { router.push("/sign-in"); return; }
 
     fetch("/api/admin/agent-analytics")
-      .then((r) => r.json())
-      .then(setData)
+      .then((r) => {
+        if (r.status === 403) { router.push("/dashboard"); return null; }
+        return r.json();
+      })
+      .then((d) => { if (d) setData(d); })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [isSignedIn, user]);
+  }, [isLoaded, isSignedIn, router]);
 
   if (!isLoaded || loading) {
     return (

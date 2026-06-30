@@ -4,12 +4,11 @@ import { db, schema } from "@/db";
 import { count, sum, sql } from "drizzle-orm";
 import { LEVELS } from "@/lib/gamification/constants";
 
-const ADMIN_USER_IDS = ["user_3FKeQMYvlFqlnt1QqG8pURl1ARl"];
-
 export async function GET() {
   try {
     const { userId } = await auth();
-    if (!userId || !ADMIN_USER_IDS.includes(userId)) {
+    const adminId = process.env.ADMIN_USER_ID ?? "";
+    if (!userId || !adminId || userId !== adminId) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
