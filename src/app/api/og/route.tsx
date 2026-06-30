@@ -19,9 +19,12 @@ const PAGES: Record<string, { title: string; sub: string }> = {
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
+  const customTitle = searchParams.get("title");
+  const customSub = searchParams.get("sub");
   const pageKey = searchParams.get("page") ?? "home";
   const config = PAGES[pageKey] ?? PAGES.home;
-  const { title, sub } = config;
+  const title = customTitle ? decodeURIComponent(customTitle).slice(0, 100) : config.title;
+  const sub = customSub ? decodeURIComponent(customSub).slice(0, 120) : config.sub;
 
   const img = new ImageResponse(
     (

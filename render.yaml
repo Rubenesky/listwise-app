@@ -38,3 +38,5 @@ services:
         sync: false
       - key: IP_HASH_SALT
         sync: false
+      - key: CRON_SECRET
+        sync: false

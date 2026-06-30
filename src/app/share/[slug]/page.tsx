@@ -47,11 +47,17 @@ export async function generateMetadata({
       description,
       url: shareUrl,
       siteName: "ListWise",
-      images: [{ url: `${process.env.NEXT_PUBLIC_APP_URL}/logo.png`, width: 400, height: 400 }],
+      images: [
+        {
+          url: `${process.env.NEXT_PUBLIC_APP_URL}/api/og?title=${encodeURIComponent(title.slice(0, 80))}&sub=${encodeURIComponent(`Listing IA · ListWise${listing.marketplace ? ` · ${listing.marketplace}` : ""}`)}`,
+          width: 1200,
+          height: 630,
+        },
+      ],
       type: "website",
     },
     twitter: {
-      card: "summary",
+      card: "summary_large_image",
       title,
       description,
     },

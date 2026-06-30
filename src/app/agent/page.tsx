@@ -84,6 +84,13 @@ export default function AgentPage() {
     }
   };
 
+  // Persist selected listing across navigations within the same session
+  useEffect(() => {
+    if (selectedListing) {
+      try { sessionStorage.setItem("lw_agent_listing_id", selectedListing.id); } catch { /* ignore */ }
+    }
+  }, [selectedListing]);
+
   useEffect(() => {
     fetch("/api/listings/dashboard?page=1&limit=100")
       .then((r) => r.json())
@@ -91,7 +98,7 @@ export default function AgentPage() {
         const completed = (d.listings ?? []).filter((l: Listing) => l.status === "COMPLETED");
         setListings(completed);
 
-        // Read competitor prefill from localStorage
+        // Competitor prefill takes priority over session restore
         try {
           const raw = localStorage.getItem("agent_prefill");
           if (raw) {
@@ -103,12 +110,25 @@ export default function AgentPage() {
               if (target) {
                 setSelectedListing(target);
                 setMobileView("chat");
+                return;
               }
             }
           }
         } catch {
           // ignore malformed localStorage
         }
+
+        // Restore last selected listing from this session
+        try {
+          const savedId = sessionStorage.getItem("lw_agent_listing_id");
+          if (savedId) {
+            const saved = completed.find((l: Listing) => l.id === savedId);
+            if (saved) {
+              setSelectedListing(saved);
+              setMobileView("chat");
+            }
+          }
+        } catch { /* ignore */ }
       })
       .catch(() => {})
       .finally(() => setLoadingListings(false));

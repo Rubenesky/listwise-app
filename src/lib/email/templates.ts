@@ -181,6 +181,30 @@ export function leadMagnetTemplate({
 </div>`.trim();
 }
 
+export function reEngagementTemplate({ name }: { name?: string }): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise-app.onrender.com";
+  const greeting = name ? `Hola, ${escapeHtml(name)}` : "Hola";
+  return wrap(`
+    <h2 style="margin:0 0 12px;font-size:20px;color:#111827;">${greeting} &#x1F44B;</h2>
+    <p style="color:#374151;line-height:1.6;margin-bottom:16px;">
+      Llevas unos d&#xED;as sin optimizar listings y quer&#xED;a asegurarme de que todo va bien.
+    </p>
+    <p style="color:#374151;line-height:1.6;margin-bottom:24px;">
+      &#xBF;Tienes productos nuevos para a&#xF1;adir? La IA puede generarte t&#xED;tulo, bullets y descripci&#xF3;n completa en segundos.
+    </p>
+    <div style="background:#f0f9ff;border-left:4px solid #2563eb;border-radius:0 8px 8px 0;padding:16px;margin-bottom:24px;">
+      <p style="margin:0 0 6px;font-size:13px;font-weight:600;color:#1e40af;">&#x1F4A1; Idea r&#xE1;pida</p>
+      <p style="margin:0;font-size:13px;color:#1e3a8a;line-height:1.5;">
+        Sube un CSV con tus productos y deja que ListWise optimice cada descripci&#xF3;n para Amazon, Etsy o tu tienda. Tarda menos de 2 minutos.
+      </p>
+    </div>
+    ${ctaButton("Volver al Dashboard &#x2192;", `${appUrl}/dashboard`)}
+    <p style="margin-top:20px;color:#9ca3af;font-size:12px;">
+      Si prefieres no recibir este tipo de emails, responde con el asunto <strong>baja</strong>.
+    </p>
+  `);
+}
+
 export function referralRegistrationTemplate({ refereeEmail }: { refereeEmail: string | null }): string {
   const who = refereeEmail ? `<strong>${escapeHtml(refereeEmail)}</strong>` : "alguien";
   return wrap(`
