@@ -17,6 +17,15 @@ interface NextSuggestion {
   listing: Listing;
 }
 
+const PROMPT_TEMPLATES = [
+  { emoji: "🎯", label: "Keywords SEO", prompt: "Añade las keywords SEO más relevantes al título y bullets de este producto." },
+  { emoji: "✂️", label: "Acortar", prompt: "Acorta la descripción a 3 frases directas sin perder los beneficios clave." },
+  { emoji: "⚡", label: "Tono juvenil", prompt: "Reescribe el copy en un tono juvenil, dinámico y cercano." },
+  { emoji: "💼", label: "Tono formal", prompt: "Adapta el copy a un tono profesional y formal para empresas." },
+  { emoji: "💡", label: "5 bullets", prompt: "Genera exactamente 5 bullet points con los beneficios principales del producto." },
+  { emoji: "🌍", label: "Versión inglés", prompt: "Traduce y adapta el título y descripción al inglés optimizado para Amazon US." },
+];
+
 export default function AgentPage() {
   const [listings, setListings] = useState<Listing[]>([]);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
@@ -26,6 +35,7 @@ export default function AgentPage() {
   const [mobileView, setMobileView] = useState<"list" | "chat">("list");
   const [nextSuggestion, setNextSuggestion] = useState<NextSuggestion | null>(null);
   const [prefillMessage, setPrefillMessage] = useState<string | undefined>(undefined);
+  const [templateKey, setTemplateKey] = useState(0);
 
   const filtered = listings.filter((l) =>
     l.productName.toLowerCase().includes(search.toLowerCase())
@@ -35,6 +45,16 @@ export default function AgentPage() {
     setSelectedListing(listing);
     setMobileView("chat");
     setNextSuggestion(null);
+  };
+
+  const applyTemplate = (prompt: string) => {
+    setPrefillMessage(prompt);
+    setTemplateKey((k) => k + 1);
+    if (!selectedListing) {
+      // No listing yet — message will be applied when listing is selected
+      return;
+    }
+    setMobileView("chat");
   };
 
   const handleApplyChanges = (_changes?: {
@@ -245,14 +265,28 @@ export default function AgentPage() {
           )}
 
           {selectedListing ? (
-            <AgentChat
-              key={selectedListing.id}
-              listingId={selectedListing.id}
-              productName={selectedListing.productName}
-              inline
-              initialMessage={prefillMessage}
-              onApplyChanges={handleApplyChanges}
-            />
+            <>
+              <div className="flex items-center gap-2 flex-wrap shrink-0 mb-2">
+                <span className="text-xs text-gray-400 shrink-0">Plantillas:</span>
+                {PROMPT_TEMPLATES.map((t) => (
+                  <button
+                    key={t.label}
+                    onClick={() => applyTemplate(t.prompt)}
+                    className="flex items-center gap-1 text-xs px-2.5 py-1 bg-white border border-gray-200 rounded-full text-gray-600 hover:border-blue-300 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                  >
+                    {t.emoji} {t.label}
+                  </button>
+                ))}
+              </div>
+              <AgentChat
+                key={`${selectedListing.id}-${templateKey}`}
+                listingId={selectedListing.id}
+                productName={selectedListing.productName}
+                inline
+                initialMessage={prefillMessage}
+                onApplyChanges={handleApplyChanges}
+              />
+            </>
           ) : (
             <div className="h-full flex flex-col items-center justify-center bg-white border border-gray-200 rounded-xl text-center p-8">
               <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mb-4">
@@ -260,13 +294,25 @@ export default function AgentPage() {
               </div>
               <h2 className="text-base font-semibold text-gray-800 mb-1">Selecciona un producto</h2>
               <p className="text-sm text-gray-500 max-w-xs">
-                Elige uno de tus productos completados de la lista para empezar a mejorar su descripción con IA.
+                Elige uno de tus productos y usa una plantilla para empezar al instante.
               </p>
-              <div className="mt-5 grid grid-cols-2 gap-2 max-w-xs text-xs text-gray-500">
-                {["✂️ Acortar descripción", "🎯 Añadir keywords SEO", "⚡ Tono juvenil", "💼 Estilo formal"].map((ex) => (
-                  <div key={ex} className="bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">{ex}</div>
+              <div className="mt-5 grid grid-cols-2 gap-2 max-w-sm">
+                {PROMPT_TEMPLATES.map((t) => (
+                  <button
+                    key={t.label}
+                    onClick={() => applyTemplate(t.prompt)}
+                    className="flex items-center gap-2 bg-gray-50 hover:bg-blue-50 hover:border-blue-200 rounded-lg px-3 py-2 border border-gray-100 text-xs text-gray-700 text-left transition-colors"
+                  >
+                    <span className="text-base shrink-0">{t.emoji}</span>
+                    <span className="font-medium">{t.label}</span>
+                  </button>
                 ))}
               </div>
+              {prefillMessage && (
+                <p className="mt-4 text-xs text-blue-600 bg-blue-50 px-3 py-1.5 rounded-full">
+                  Plantilla lista — selecciona un producto para aplicarla
+                </p>
+              )}
             </div>
           )}
         </div>
