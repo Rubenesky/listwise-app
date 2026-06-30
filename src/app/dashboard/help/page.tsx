@@ -43,7 +43,7 @@ const FAQ_SECTIONS: FAQSection[] = [
       },
       {
         q: "¿Cómo consigo créditos?",
-        a: "De varias formas: (1) Al registrarte recibes créditos de bienvenida, (2) Con un plan Pro (1.500 créditos) o Enterprise (7.000 créditos), (3) Invitando a otros usuarios — tú y tu invitado recibís 10 créditos cada uno al registrarse, y 25 créditos más cuando convierten a un plan de pago.",
+        a: "De varias formas: (1) Al registrarte recibes créditos de bienvenida, (2) Con un plan Pro (1.500 créditos) o Enterprise (7.000 créditos), (3) Invitando a otros usuarios — tú y tu invitado recibís 10 créditos al registrarse, y 1 mes gratis de tu plan actual cuando convierten a uno de pago.",
       },
       {
         q: "¿Dónde veo mi historial de créditos?",
@@ -123,11 +123,11 @@ const FAQ_SECTIONS: FAQSection[] = [
     items: [
       {
         q: "¿Cómo funciona el programa de referidos?",
-        a: "Comparte tu enlace personal desde la sección 'Invitar'. Cuando alguien se registra con tu enlace, ambos recibís 10 créditos. Cuando esa persona contrata un plan de pago, ambos recibís 25 créditos adicionales.",
+        a: "Comparte tu enlace personal desde la sección 'Invitar'. Cuando alguien se registra con tu enlace, ambos recibís 10 créditos. Cuando esa persona contrata un plan de pago, tú ganas 1 mes gratis de tu plan actual (Pro o Enterprise).",
       },
       {
         q: "¿Cuándo se dan los créditos del referido?",
-        a: "Los 10 créditos de registro se dan en el momento en que la persona se registra. Los 25 créditos de conversión llegan cuando esa persona compra un plan Pro o Enterprise.",
+        a: "Los 10 créditos de registro se dan en el momento en que la persona se registra. La recompensa de 1 mes gratis aparece en tu sección 'Invitar' para reclamarla cuando quieras — si ya tienes suscripción activa se aplica como descuento en tu próxima factura.",
       },
       {
         q: "¿Cómo consigo el enlace para invitar?",
@@ -153,7 +153,7 @@ const FAQ_SECTIONS: FAQSection[] = [
       },
       {
         q: "¿Cuántos niveles hay?",
-        a: "6 niveles: Novato → Aprendiz → Experto → Maestro → Élite → Leyenda. Cada nivel requiere más puntos que el anterior.",
+        a: "6 niveles: 🌱 Principiante → 📚 Aprendiz → ✍️ Escritor → 💡 Copywriter → 🏆 Maestro → ⭐ Leyenda. Cada nivel requiere más puntos que el anterior.",
       },
       {
         q: "¿Las insignias son permanentes?",
@@ -294,8 +294,25 @@ export default function HelpPage() {
         </div>
       )}
 
+      {/* Blog resources */}
+      <div className="mt-8 p-5 bg-blue-50 rounded-xl border border-blue-100">
+        <p className="text-sm font-semibold text-blue-900 mb-3">📖 Guías en el blog</p>
+        <div className="space-y-2">
+          {[
+            { title: "Cómo optimizar tus listings para Amazon en 2025", href: "/blog/como-optimizar-listings-amazon-2025" },
+            { title: "Guía completa de descripción de productos para Etsy", href: "/blog/guia-descripcion-productos-etsy" },
+            { title: "SEO para Wallapop: cómo vender más con mejores títulos", href: "/blog/seo-wallapop-titulos-descripciones" },
+          ].map(({ title, href }) => (
+            <Link key={href} href={href} className="flex items-center gap-2 text-sm text-blue-700 hover:text-blue-900 hover:underline">
+              <span className="text-blue-400">→</span>
+              {title}
+            </Link>
+          ))}
+        </div>
+      </div>
+
       {/* Contact footer */}
-      <div className="mt-10 p-5 bg-purple-50 rounded-xl border border-purple-100 text-center">
+      <div className="mt-6 p-5 bg-purple-50 rounded-xl border border-purple-100 text-center">
         <p className="text-sm font-medium text-purple-800 mb-1">¿No encontraste lo que buscabas?</p>
         <p className="text-xs text-purple-600 mb-3">
           Escríbenos y te ayudamos en menos de 24h.
