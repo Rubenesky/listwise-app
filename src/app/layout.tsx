@@ -60,6 +60,27 @@ export const metadata: Metadata = {
   category: "technology",
 };
 
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "@id": `${BASE_URL}/#organization`,
+  name: "ListWise",
+  url: BASE_URL,
+  logo: {
+    "@type": "ImageObject",
+    url: `${BASE_URL}/logo-transparent.png`,
+    width: 280,
+    height: 92,
+  },
+  contactPoint: {
+    "@type": "ContactPoint",
+    email: "contacto@listwise.app",
+    contactType: "customer support",
+    availableLanguage: "Spanish",
+  },
+  sameAs: [],
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -69,6 +90,12 @@ export default function RootLayout({
     <ClerkProvider>
       <html lang="es" suppressHydrationWarning>
         <body className={inter.className} suppressHydrationWarning>
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{
+              __html: JSON.stringify(organizationJsonLd).replace(/</g, "\\u003c"),
+            }}
+          />
           {children}
         </body>
       </html>

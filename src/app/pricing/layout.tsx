@@ -14,7 +14,7 @@ export const metadata: Metadata = {
     url: `${BASE_URL}/pricing`,
     images: [
       {
-        url: `/api/og?title=Planes%20y%20Precios&sub=Gratis%20%C2%B7%20Pro%2023%E2%82%AC%2Fmes%20%C2%B7%20Enterprise%2079%E2%82%AC%2Fmes`,
+        url: `/api/og?page=pricing`,
         width: 1200,
         height: 630,
         alt: "Planes y precios de ListWise",
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Planes y Precios — ListWise",
     description: "Gratis para empezar. Pro desde 23€/mes. Enterprise desde 79€/mes.",
-    images: [`/api/og?title=Planes%20y%20Precios&sub=Gratis%20para%20empezar%20%C2%B7%20Pro%2023%E2%82%AC%2Fmes`],
+    images: [`/api/og?page=pricing`],
   },
   alternates: {
     canonical: `${BASE_URL}/pricing`,
@@ -92,12 +92,66 @@ const pricingJsonLd = {
   },
 };
 
+const pricingExtrasJsonLd = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Inicio", item: BASE_URL },
+        { "@type": "ListItem", position: 2, name: "Precios", item: `${BASE_URL}/pricing` },
+      ],
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: [
+        {
+          "@type": "Question",
+          name: "¿Cuánto cuesta ListWise?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "ListWise tiene un plan gratuito con 10 productos sin tarjeta de crédito. El plan Pro cuesta 29€/mes (o 276€/año) e incluye 1.500 créditos mensuales y todas las funciones avanzadas. El plan Enterprise cuesta 99€/mes para equipos y alto volumen.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "¿Hay contrato de permanencia?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "No. ListWise funciona mes a mes sin permanencia. Puedes cancelar en cualquier momento desde tu panel de usuario y no se te cobrará el siguiente mes.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "¿Los créditos caducan?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "No. Los créditos de ListWise no tienen fecha de caducidad. Se acumulan mes a mes si no los usas todos.",
+          },
+        },
+        {
+          "@type": "Question",
+          name: "¿Puedo cambiar de plan en cualquier momento?",
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: "Sí. Puedes actualizar o degradar tu plan en cualquier momento. El cambio se aplica en el siguiente ciclo de facturación.",
+          },
+        },
+      ],
+    },
+  ],
+};
+
 export default function PricingLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(pricingJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(pricingJsonLd).replace(/</g, "\\u003c") }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(pricingExtrasJsonLd).replace(/</g, "\\u003c") }}
       />
       {children}
     </>

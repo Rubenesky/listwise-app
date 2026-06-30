@@ -2,12 +2,28 @@ import { ImageResponse } from "next/og";
 
 export const runtime = "nodejs";
 
+const PAGES: Record<string, { title: string; sub: string }> = {
+  home: {
+    title: "Listings que venden más,\ngenerados en segundos",
+    sub: "IA para ecommerce · Amazon · Shopify · Etsy · Wallapop",
+  },
+  pricing: {
+    title: "Planes y Precios",
+    sub: "Gratis · Pro 23€/mes · Enterprise 79€/mes",
+  },
+  blog: {
+    title: "Blog — ListWise",
+    sub: "Guías y recursos para vendedores de ecommerce",
+  },
+};
+
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const title = searchParams.get("title") ?? "Listings que venden más,\ngenerados en segundos";
-  const sub = searchParams.get("sub") ?? "IA para ecommerce · Amazon · Shopify · Etsy · Wallapop";
+  const pageKey = searchParams.get("page") ?? "home";
+  const config = PAGES[pageKey] ?? PAGES.home;
+  const { title, sub } = config;
 
-  return new ImageResponse(
+  const img = new ImageResponse(
     (
       <div
         style={{
@@ -100,4 +116,6 @@ export async function GET(req: Request) {
     ),
     { width: 1200, height: 630 }
   );
+  img.headers.set("Cache-Control", "public, max-age=86400, s-maxage=86400, stale-while-revalidate=604800");
+  return img;
 }

@@ -1,21 +1,37 @@
-"use client";
-
-import { useUser } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { AuthRedirect } from "@/components/AuthRedirect";
+import { HeroEmailForm } from "@/components/HeroEmailForm";
 
-// Schema.org JSON-LD for GEO (AI search engine optimization)
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://listwise.app";
+
 const schemaOrg = {
   "@context": "https://schema.org",
   "@graph": [
     {
+      "@type": "Organization",
+      "@id": `${BASE_URL}/#organization`,
+      name: "ListWise",
+      url: BASE_URL,
+      logo: {
+        "@type": "ImageObject",
+        url: `${BASE_URL}/logo-transparent.png`,
+      },
+      contactPoint: {
+        "@type": "ContactPoint",
+        email: "contacto@listwise.app",
+        contactType: "customer support",
+        availableLanguage: "Spanish",
+      },
+    },
+    {
       "@type": "SoftwareApplication",
+      "@id": `${BASE_URL}/#app`,
       name: "ListWise",
       applicationCategory: "BusinessApplication",
       operatingSystem: "Web",
-      url: "https://listwise.app",
+      url: BASE_URL,
+      author: { "@id": `${BASE_URL}/#organization` },
       description:
         "Generador de descripciones de productos con inteligencia artificial para ecommerce. Genera títulos SEO optimizados, bullet points y descripciones emocionales para marketplaces como Amazon, eBay y Shopify.",
       offers: {
@@ -33,6 +49,34 @@ const schemaOrg = {
         "Análisis de competidores con IA",
         "Exportación CSV",
         "Voz de marca personalizada por categoría",
+      ],
+    },
+    {
+      "@type": "HowTo",
+      name: "Cómo generar descripciones de productos con ListWise",
+      description:
+        "Genera títulos SEO, bullet points y descripciones para tus productos de ecommerce en 3 pasos con inteligencia artificial.",
+      totalTime: "PT2M",
+      estimatedCost: { "@type": "MonetaryAmount", currency: "EUR", value: "0" },
+      step: [
+        {
+          "@type": "HowToStep",
+          position: 1,
+          name: "Descarga la plantilla CSV",
+          text: "Descarga la plantilla CSV de ListWise y añade los nombres de tus productos, categoría y atributos básicos.",
+        },
+        {
+          "@type": "HowToStep",
+          position: 2,
+          name: "Sube tu catálogo",
+          text: "Sube el archivo CSV a ListWise. La IA procesa cada producto automáticamente en menos de 60 segundos.",
+        },
+        {
+          "@type": "HowToStep",
+          position: 3,
+          name: "Edita y exporta",
+          text: "Revisa los títulos SEO, bullet points y descripciones generadas. Edita lo que necesites y exporta el resultado listo para subir a tu marketplace.",
+        },
       ],
     },
     {
@@ -102,7 +146,7 @@ const faqs = [
   },
   {
     q: "¿En qué plataformas puedo usar las descripciones?",
-    a: "En cualquiera: Amazon, eBay, Shopify, WooCommerce, Etsy, Wix, Woocommerce, Milanuncios y cualquier tienda online.",
+    a: "En cualquiera: Amazon, eBay, Shopify, WooCommerce, Etsy, Wix, Milanuncios y cualquier tienda online.",
   },
   {
     q: "¿Las descripciones son únicas?",
@@ -114,39 +158,13 @@ const faqs = [
   },
 ];
 
-
 export default function HomePage() {
-  const { isLoaded, isSignedIn } = useUser();
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [openFaq, setOpenFaq] = useState<number | null>(null);
-
-  useEffect(() => {
-    if (isLoaded && isSignedIn) {
-      router.push("/dashboard");
-    }
-  }, [isLoaded, isSignedIn, router]);
-
-  const handleEmailSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmed = email.trim();
-    // Basic email validation before redirecting to Clerk sign-up
-    if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return;
-    router.push(`/sign-up?emailAddress=${encodeURIComponent(trimmed)}`);
-  };
-
-  if (!isLoaded) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
-      </div>
-    );
-  }
-
   return (
     <>
-      {/* Schema.org JSON-LD for SEO and GEO.
-          JSON.stringify output is escaped: < → < to prevent </script> injection. */}
+      {/* Auth redirect (client island — only JS that runs) */}
+      <AuthRedirect />
+
+      {/* Schema.org JSON-LD — server-rendered, visible to all crawlers */}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -195,7 +213,7 @@ export default function HomePage() {
           {/* ── Hero ─────────────────────────────────────────── */}
           <section className="text-center py-8 md:py-12">
             <span className="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1.5 rounded-full mb-5 tracking-wide uppercase">
-              🤖 Agente IA para vendedores de marketplaces
+              🚀 IA para ecommerce
             </span>
             <h1 className="text-4xl md:text-5xl font-bold text-gray-900 mb-4 leading-tight">
               Listings que venden más,{" "}
@@ -218,27 +236,9 @@ export default function HomePage() {
               ))}
             </ul>
 
-            {/* Email registration form */}
-            <form
-              onSubmit={handleEmailSubmit}
-              className="flex flex-col sm:flex-row gap-3 justify-center max-w-md mx-auto mb-4"
-            >
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="tu@email.com"
-                aria-label="Tu correo electrónico"
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-                maxLength={254}
-              />
-              <button
-                type="submit"
-                className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 hover:scale-105 transition-all whitespace-nowrap"
-              >
-                Empezar gratis →
-              </button>
-            </form>
+            {/* Email form — client island */}
+            <HeroEmailForm />
+
             <p className="text-sm text-gray-500 mb-3">
               Sin tarjeta de crédito · 10 productos gratis · Cancela cuando quieras
             </p>
@@ -616,30 +616,21 @@ export default function HomePage() {
             <p className="text-blue-200 text-xs mt-4">Sin tarjeta · 10 productos gratis · Cancela cuando quieras</p>
           </section>
 
-          {/* ── FAQ (GEO: para motores de IA) ────────────────── */}
+          {/* ── FAQ — server-rendered, no JS needed ──────────── */}
           <section className="mb-16">
             <h2 className="text-2xl md:text-3xl font-bold text-center text-gray-900 mb-12">
               Preguntas frecuentes
             </h2>
             <div className="max-w-3xl mx-auto space-y-3">
-              {faqs.map(({ q, a }, i) => (
-                <div key={i} className="bg-white rounded-xl shadow-sm overflow-hidden">
-                  <button
-                    className="w-full px-6 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50 transition-colors"
-                    onClick={() => setOpenFaq(openFaq === i ? null : i)}
-                    aria-expanded={openFaq === i}
-                  >
+              {faqs.map(({ q, a }) => (
+                <details key={q} className="bg-white rounded-xl shadow-sm overflow-hidden group">
+                  <summary className="w-full px-6 py-4 text-left flex items-center justify-between gap-4 hover:bg-gray-50 transition-colors cursor-pointer list-none">
                     <span className="font-medium text-gray-900">{q}</span>
-                    <span className="text-gray-400 text-xl shrink-0">
-                      {openFaq === i ? "−" : "+"}
-                    </span>
-                  </button>
-                  {openFaq === i && (
-                    <div className="px-6 pb-4 text-gray-600 text-sm leading-relaxed">
-                      {a}
-                    </div>
-                  )}
-                </div>
+                    <span className="text-gray-400 text-xl shrink-0 group-open:hidden">+</span>
+                    <span className="text-gray-400 text-xl shrink-0 hidden group-open:block">−</span>
+                  </summary>
+                  <div className="px-6 pb-4 text-gray-600 text-sm leading-relaxed">{a}</div>
+                </details>
               ))}
             </div>
           </section>
@@ -651,6 +642,7 @@ export default function HomePage() {
             <p className="mb-3">© 2026 ListWise. Todos los derechos reservados.</p>
             <div className="flex justify-center gap-6">
               <Link href="/pricing" className="hover:text-blue-600 transition-colors">Precios</Link>
+              <Link href="/blog" className="hover:text-blue-600 transition-colors">Blog</Link>
               <Link href="/sign-up" className="hover:text-blue-600 transition-colors">Registrarse</Link>
               <a href="mailto:contacto@listwise.app" className="hover:text-blue-600 transition-colors">Contacto</a>
             </div>
