@@ -4,6 +4,7 @@ import Image from "next/image";
 import { Eye } from "lucide-react";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
+import { auth } from "@clerk/nextjs/server";
 import ShareButtons from "@/components/ShareButtons";
 import ViewTracker from "@/components/ViewTracker";
 
@@ -63,6 +64,7 @@ export default async function SharePage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const { userId } = await auth();
   const listing = await getListing(slug);
 
   if (!listing) {
@@ -158,12 +160,21 @@ export default async function SharePage({
               Contenido generado con IA por{" "}
               <span className="font-semibold text-gray-700">ListWise</span>
             </p>
-            <a
-              href={`${process.env.NEXT_PUBLIC_APP_URL}/pricing`}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
-            >
-              Crear mi cuenta gratis →
-            </a>
+            {userId ? (
+              <a
+                href={`${process.env.NEXT_PUBLIC_APP_URL}/dashboard`}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gray-800 text-white rounded-xl font-medium hover:bg-gray-900 transition-colors"
+              >
+                Ir a mi Dashboard →
+              </a>
+            ) : (
+              <a
+                href={`${process.env.NEXT_PUBLIC_APP_URL}/pricing`}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl font-medium hover:bg-blue-700 transition-colors"
+              >
+                Optimiza tus listings gratis con IA →
+              </a>
+            )}
           </div>
         </main>
       </div>

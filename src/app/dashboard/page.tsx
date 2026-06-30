@@ -130,6 +130,7 @@ export default function DashboardPage() {
   const [dragActive, setDragActive] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [bulkWorking, setBulkWorking] = useState(false);
+  const [credits, setCredits] = useState<number | null>(null);
 
   const dismissChecklist = () => {
     localStorage.setItem("listwise_checklist_dismissed", "true");
@@ -287,8 +288,20 @@ export default function DashboardPage() {
   }, [startPolling]);
 
   useEffect(() => {
-    if (isSignedIn) fetchListings();
+    if (isSignedIn) {
+      fetchListings();
+      fetch("/api/user/credits").then((r) => r.json()).then((d) => setCredits(d.credits ?? null)).catch(() => {});
+    }
   }, [isSignedIn, fetchListings]);
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<{ credits: number }>).detail;
+      if (typeof detail?.credits === "number") setCredits(detail.credits);
+    };
+    window.addEventListener("credits-update", handler);
+    return () => window.removeEventListener("credits-update", handler);
+  }, []);
 
   useEffect(() => {
     return () => stopPolling();
@@ -742,6 +755,34 @@ export default function DashboardPage() {
 
         {/* Gamification strip */}
         <GamificationWidget compact />
+
+        {/* Low credits banner */}
+        {credits !== null && credits < 50 && (
+          <div className={`flex items-center justify-between gap-3 px-4 py-3 rounded-xl border text-sm ${
+            credits === 0
+              ? "bg-red-50 border-red-200 text-red-800"
+              : "bg-amber-50 border-amber-200 text-amber-800"
+          }`}>
+            <div className="flex items-center gap-2">
+              <span>{credits === 0 ? "🚫" : "⚠️"}</span>
+              <span>
+                {credits === 0
+                  ? "Sin créditos — no puedes generar nuevos listings ni usar el Agente."
+                  : `Te quedan solo ${credits} crédito${credits === 1 ? "" : "s"}.`}
+              </span>
+            </div>
+            <a
+              href="/pricing"
+              className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+                credits === 0
+                  ? "bg-red-600 text-white hover:bg-red-700"
+                  : "bg-amber-600 text-white hover:bg-amber-700"
+              }`}
+            >
+              {plan === "free" ? "Mejorar plan →" : "Comprar créditos →"}
+            </a>
+          </div>
+        )}
 
         {/* Activation checklist — solo para usuarios sin completados */}
         {completedCount === 0 && !checklistDismissed && (
