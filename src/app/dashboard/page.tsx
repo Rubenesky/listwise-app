@@ -1447,14 +1447,47 @@ export default function DashboardPage() {
                         {isExpanded && listing.generatedBullets && (
                           <tr key={`${listing.id}-expanded`} className="bg-blue-50/40 border-t-0">
                             <td colSpan={6} className="px-10 py-3">
-                              <ul className="space-y-1">
+                              <ul className="space-y-1 mb-3">
                                 {listing.generatedBullets.map((b, i) => (
-                                  <li key={i} className="text-xs text-gray-600 flex items-start gap-2">
+                                  <li key={i} className="text-xs text-gray-600 flex items-start gap-2 group">
                                     <span className="text-blue-400 shrink-0 mt-0.5">•</span>
-                                    <span>{b}</span>
+                                    <span className="flex-1">{b}</span>
+                                    <button
+                                      onClick={() => copyToClipboard(b, `bullet-${listing.id}-${i}`)}
+                                      className="opacity-0 group-hover:opacity-100 shrink-0 p-0.5 rounded text-gray-300 hover:text-blue-500 transition-all"
+                                      title="Copiar bullet"
+                                    >
+                                      {copiedField === `bullet-${listing.id}-${i}` ? (
+                                        <svg className="w-3 h-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg>
+                                      ) : (
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                                      )}
+                                    </button>
                                   </li>
                                 ))}
                               </ul>
+                              <div className="flex gap-2 flex-wrap">
+                                <button
+                                  onClick={() => copyToClipboard(
+                                    listing.generatedBullets!.map((b, i) => `${i + 1}. ${b}`).join("\n"),
+                                    `bullets-all-${listing.id}`
+                                  )}
+                                  className="text-xs px-2.5 py-1 border border-blue-200 text-blue-600 rounded-lg hover:bg-blue-50 transition-colors"
+                                >
+                                  {copiedField === `bullets-all-${listing.id}` ? "✓ Copiado" : "📋 Copiar bullets"}
+                                </button>
+                                {listing.generatedTitle && listing.generatedDescription && (
+                                  <button
+                                    onClick={() => copyToClipboard(
+                                      `TÍTULO:\n${listing.generatedTitle}\n\nBULLETS:\n${listing.generatedBullets!.map((b, i) => `${i + 1}. ${b}`).join("\n")}\n\nDESCRIPCIÓN:\n${listing.generatedDescription}`,
+                                      `all-${listing.id}`
+                                    )}
+                                    className="text-xs px-2.5 py-1 border border-gray-200 text-gray-600 rounded-lg hover:bg-gray-50 transition-colors"
+                                  >
+                                    {copiedField === `all-${listing.id}` ? "✓ Copiado" : "📄 Copiar listing completo"}
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         )}

@@ -11,6 +11,11 @@ export function HeroEmailForm() {
     e.preventDefault();
     const trimmed = email.trim();
     if (!trimmed || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) return;
+    fetch("/api/leads", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: trimmed }),
+    }).catch(() => {});
     router.push(`/sign-up?emailAddress=${encodeURIComponent(trimmed)}`);
   };
 

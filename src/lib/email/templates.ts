@@ -9,7 +9,10 @@ const BASE = `
     </div>
     <div style="background:#f9fafb;padding:16px 32px;border-top:1px solid #e5e7eb;">
       <p style="margin:0;color:#9ca3af;font-size:12px;text-align:center;">
-        ListWise &middot; <a href="https://listwise-app.onrender.com/dashboard" style="color:#6b7280;text-decoration:none;">dashboard</a> &middot; <a href="https://listwise-app.onrender.com/pricing" style="color:#6b7280;text-decoration:none;">planes</a>
+        ListWise &middot; <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise-app.onrender.com"}/dashboard" style="color:#6b7280;text-decoration:none;">dashboard</a> &middot; <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise-app.onrender.com"}/pricing" style="color:#6b7280;text-decoration:none;">planes</a>
+      </p>
+      <p style="margin:8px 0 0;color:#d1d5db;font-size:11px;text-align:center;">
+        Para cancelar la suscripci&#xF3;n a estos correos, responde a este email con el asunto <strong>baja</strong>.
       </p>
     </div>
   </div>

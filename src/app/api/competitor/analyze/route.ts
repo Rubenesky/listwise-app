@@ -6,6 +6,7 @@ import { z } from "zod";
 import { v4 as uuidv4 } from "uuid";
 import { promises as dns, LookupAddress } from "dns";
 import { useCredits } from "@/lib/credits/use-credits";
+import { ratelimitCompetitor } from "@/lib/rate-limit";
 
 // ─── SSRF Protection — DNS-based validation ─────────────────────────────────
 
@@ -122,6 +123,11 @@ export async function POST(req: Request) {
   try {
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+
+    const { success: rlOk } = await ratelimitCompetitor.limit(userId);
+    if (!rlOk) {
+      return NextResponse.json({ error: "Límite diario de análisis alcanzado (5/día). Inténtalo mañana." }, { status: 429 });
+    }
 
     if (!checkOrigin(req)) {
       console.warn(`⚠️ [Competitor] Origin mismatch from userId=${userId}`);

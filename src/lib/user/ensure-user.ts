@@ -6,6 +6,6 @@ import { db, schema } from "@/db";
  */
 export async function ensureUser(userId: string): Promise<void> {
   await db.insert(schema.users)
-    .values({ id: userId, agentCredits: 10, agentPlan: "free", credits: 0 })
+    .values({ id: userId, agentCredits: 20, agentPlan: "free", credits: 0 })
     .onConflictDoNothing();
 }

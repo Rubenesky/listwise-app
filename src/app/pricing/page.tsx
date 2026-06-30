@@ -17,10 +17,10 @@ const plans = [
   {
     name: "Gratuito",
     price: "0€",
-    credits: "10 créditos/mes",
+    credits: "20 créditos/mes",
     description: "Perfecto para probar la herramienta",
     features: [
-      "10 créditos de uso al mes",
+      "20 créditos de uso al mes",
       "Generación básica con IA",
       "Análisis de competidor (2 créditos)",
       "Soporte por email",
