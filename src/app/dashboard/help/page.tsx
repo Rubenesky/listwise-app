@@ -87,7 +87,7 @@ const FAQ_SECTIONS: FAQSection[] = [
       },
       {
         q: "¿Cuántos créditos gasta el Agente?",
-        a: "Los créditos del Agente son independientes de los créditos de generación. El plan Free incluye 10 créditos de agente. Los planes Pro y Enterprise incluyen más créditos de agente.",
+        a: "Los créditos del Agente son independientes de los créditos de generación. El plan Free incluye 20 créditos de agente. Los planes Pro y Enterprise incluyen más créditos de agente.",
       },
       {
         q: "¿Qué diferencia hay entre el generador CSV y el Agente?",

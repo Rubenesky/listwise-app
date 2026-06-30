@@ -61,7 +61,7 @@ export const posts: BlogPost[] = [
 <p>Para catálogos estándar, sí. Para productos premium o de nicho donde la voz de marca es crítica, la IA hace el 80% del trabajo y el copywriter humano perfecciona el 20% restante — a una fracción del coste y tiempo actuales.</p>
 <p>Con el Agente de Copywriting de ListWise puedes usar lenguaje natural para ajustar tono, añadir keywords, cambiar el enfoque del público o analizar a la competencia. Es la forma más rápida de obtener listings que convierten sin depender de un freelance para cada cambio.</p>
 
-<p><strong>¿Listo para probarlo?</strong> ListWise incluye 10 productos gratis sin tarjeta de crédito. Sube tu primer CSV y ve el resultado en menos de 2 minutos.</p>
+<p><strong>¿Listo para probarlo?</strong> ListWise incluye 20 créditos gratis sin tarjeta de crédito. Sube tu primer CSV y ve el resultado en menos de 2 minutos.</p>
     `.trim(),
   },
   {

@@ -38,7 +38,7 @@ const schemaOrg = {
         "@type": "Offer",
         price: "0",
         priceCurrency: "EUR",
-        description: "Plan gratuito con 10 productos. Sin tarjeta de crédito.",
+        description: "Plan gratuito con 20 créditos. Sin tarjeta de crédito.",
       },
       featureList: [
         "Agente de Copywriting IA conversacional",
@@ -119,7 +119,7 @@ const schemaOrg = {
           name: "¿Cuántos productos puedo procesar?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "El plan gratuito incluye hasta 10 productos sin necesidad de tarjeta de crédito. El plan Pro ofrece productos ilimitados y acceso a todas las funcionalidades avanzadas.",
+            text: "El plan gratuito incluye 20 créditos sin necesidad de tarjeta de crédito. El plan Pro ofrece productos ilimitados y acceso a todas las funcionalidades avanzadas.",
           },
         },
         {
@@ -154,7 +154,7 @@ const faqs = [
   },
   {
     q: "¿Cuántos productos incluye el plan gratuito?",
-    a: "10 productos sin tarjeta de crédito. El plan Pro tiene productos ilimitados.",
+    a: "20 créditos sin tarjeta de crédito. El plan Pro tiene productos ilimitados.",
   },
 ];
 
@@ -240,7 +240,7 @@ export default function HomePage() {
             <HeroEmailForm />
 
             <p className="text-sm text-gray-500 mb-3">
-              Sin tarjeta de crédito · 10 productos gratis · Cancela cuando quieras
+              Sin tarjeta de crédito · 20 créditos gratis · Cancela cuando quieras
             </p>
             <Link href="/pricing" className="text-sm text-blue-600 hover:underline">
               Ver planes y precios →
@@ -490,7 +490,7 @@ export default function HomePage() {
                   name: "Gratuito",
                   price: "0€",
                   desc: "Para probar sin riesgo",
-                  features: ["10 créditos/mes", "50 productos por CSV", "Agente IA incluido", "Exportación CSV"],
+                  features: ["20 créditos/mes", "50 productos por CSV", "Agente IA incluido", "Exportación CSV"],
                   cta: "Empezar gratis",
                   href: "/sign-up",
                   highlight: false,

@@ -94,7 +94,7 @@ export default function BlogPage() {
           {/* CTA */}
           <div className="mt-12 bg-blue-700 rounded-2xl p-8 text-center">
             <h2 className="text-xl font-bold text-white mb-2">¿Listo para optimizar tu catálogo?</h2>
-            <p className="text-blue-100 text-sm mb-5">10 productos gratis, sin tarjeta de crédito.</p>
+            <p className="text-blue-100 text-sm mb-5">20 créditos gratis, sin tarjeta de crédito.</p>
             <Link
               href="/sign-up"
               className="inline-block px-6 py-3 bg-white text-blue-700 rounded-lg font-semibold text-sm hover:bg-blue-50 transition-colors"

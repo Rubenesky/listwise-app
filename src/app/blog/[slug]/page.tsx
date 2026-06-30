@@ -153,7 +153,7 @@ export default async function BlogPostPage({
               Genera tus listings con IA ahora mismo
             </h2>
             <p className="text-blue-100 text-sm mb-5">
-              10 productos gratis, sin tarjeta de crédito. Resultado en menos de 2 minutos.
+              20 créditos gratis, sin tarjeta de crédito. Resultado en menos de 2 minutos.
             </p>
             <Link
               href="/sign-up"

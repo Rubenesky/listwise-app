@@ -51,7 +51,7 @@ const pricingJsonLd = {
         price: "0",
         priceCurrency: "EUR",
         availability: "https://schema.org/InStock",
-        description: "10 productos gratuitos. Sin tarjeta de crédito.",
+        description: "20 créditos gratuitos. Sin tarjeta de crédito.",
         url: `${BASE_URL}/sign-up`,
       },
       {
@@ -110,7 +110,7 @@ const pricingExtrasJsonLd = {
           name: "¿Cuánto cuesta ListWise?",
           acceptedAnswer: {
             "@type": "Answer",
-            text: "ListWise tiene un plan gratuito con 10 productos sin tarjeta de crédito. El plan Pro cuesta 29€/mes (o 276€/año) e incluye 1.500 créditos mensuales y todas las funciones avanzadas. El plan Enterprise cuesta 99€/mes para equipos y alto volumen.",
+            text: "ListWise tiene un plan gratuito con 20 créditos sin tarjeta de crédito. El plan Pro cuesta 29€/mes (o 276€/año) e incluye 1.500 créditos mensuales y todas las funciones avanzadas. El plan Enterprise cuesta 99€/mes para equipos y alto volumen.",
           },
         },
         {

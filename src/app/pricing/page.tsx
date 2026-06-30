@@ -583,9 +583,9 @@ export default function PricingPage() {
               </thead>
               <tbody className="divide-y divide-gray-50 bg-white">
                 {([
-                  { label: "Créditos / mes", free: "10", pro: "1.500", ent: "7.000", tip: "Los créditos no caducan y se acumulan mes a mes" },
+                  { label: "Créditos / mes", free: "20", pro: "1.500", ent: "7.000", tip: "Los créditos no caducan y se acumulan mes a mes" },
                   { label: "Productos por subida CSV", free: "50", pro: "200", ent: "Ilimitado", tip: "Número máximo de productos por archivo CSV subido" },
-                  { label: "Agente de Copywriting", free: "10 créditos", pro: "✓ Ilimitado", ent: "✓ Ilimitado", tip: "Chat IA conversacional para refinar el copy de cada producto con instrucciones específicas" },
+                  { label: "Agente de Copywriting", free: "20 créditos", pro: "✓ Ilimitado", ent: "✓ Ilimitado", tip: "Chat IA conversacional para refinar el copy de cada producto con instrucciones específicas" },
                   { label: "Análisis de competidor", free: "2 créd./análisis", pro: "✓ Ilimitado", ent: "✓ Ilimitado", tip: "Analiza el listing de un competidor con IA y obtén sugerencias concretas para mejorar el tuyo" },
                   { label: "Exportar resultados", free: "✓", pro: "✓", ent: "✓", tip: undefined },
                   { label: "API personalizada", free: "—", pro: "—", ent: "✓", tip: "Integra ListWise directamente en tu sistema de gestión de catálogo o ERP" },
