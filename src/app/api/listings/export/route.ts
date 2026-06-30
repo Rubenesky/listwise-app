@@ -23,25 +23,29 @@ export async function GET() {
       );
     }
 
-    const csvHeader = "productName,generatedTitle,generatedBullets,generatedDescription\n";
+    const q = (s: string) => `"${(s || "").replace(/"/g, '""')}"`;
+
+    const csvHeader = "product_name,generated_title,bullet_point_1,bullet_point_2,bullet_point_3,bullet_point_4,bullet_point_5,description\n";
     const rows = completed
       .map((l) => {
-        const bullets = Array.isArray(l.generatedBullets)
-          ? l.generatedBullets.join(" | ")
-          : "";
-        const title = (l.generatedTitle || "").replace(/"/g, '""');
-        const desc = (l.generatedDescription || "").replace(/"/g, '""');
-        const name = (l.productName || "").replace(/"/g, '""');
-        return `"${name}","${title}","${bullets}","${desc}"`;
+        const raw = Array.isArray(l.generatedBullets) ? l.generatedBullets : [];
+        const b = Array.from({ length: 5 }, (_, i) => q(raw[i] ?? ""));
+        return [
+          q(l.productName ?? ""),
+          q(l.generatedTitle ?? ""),
+          ...b,
+          q(l.generatedDescription ?? ""),
+        ].join(",");
       })
       .join("\n");
 
     const csvContent = csvHeader + rows;
+    const date = new Date().toISOString().slice(0, 10);
 
     return new NextResponse(csvContent, {
       headers: {
-        "Content-Type": "text/csv",
-        "Content-Disposition": 'attachment; filename="listwise_export.csv"',
+        "Content-Type": "text/csv; charset=utf-8",
+        "Content-Disposition": `attachment; filename="listwise_export_${date}.csv"`,
       },
     });
   } catch {

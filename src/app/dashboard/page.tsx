@@ -9,6 +9,7 @@ import VoiceProfileManager from "@/components/VoiceProfileManager";
 import InfoTooltip from "@/components/InfoTooltip";
 import GamificationWidget from "@/components/GamificationWidget";
 import CreditsPopover from "@/components/CreditsPopover";
+import OnboardingModal from "@/components/OnboardingModal";
 
 type ListingStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
 type GenerationMode = "creative" | "professional" | "seo";
@@ -131,6 +132,11 @@ export default function DashboardPage() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [bulkWorking, setBulkWorking] = useState(false);
   const [credits, setCredits] = useState<number | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !localStorage.getItem("lw_onboarding_v1_done");
+  });
+  const [demoLoading, setDemoLoading] = useState(false);
 
   const dismissChecklist = () => {
     localStorage.setItem("listwise_checklist_dismissed", "true");
@@ -425,6 +431,35 @@ export default function DashboardPage() {
     } else {
       alert("Por favor, selecciona un archivo CSV válido.");
       if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const handleDemoUpload = async () => {
+    setDemoLoading(true);
+    setUploadErrors([]);
+    try {
+      const res = await fetch("/demo.csv");
+      const blob = await res.blob();
+      const demoFile = new File([blob], "demo.csv", { type: "text/csv" });
+      const formData = new FormData();
+      formData.append("file", demoFile);
+      formData.append("mode", selectedMode);
+      formData.append("provider", aiProvider);
+      formData.append("marketplace", marketplace);
+      const uploadRes = await fetch("/api/upload", { method: "POST", body: formData });
+      const data = await uploadRes.json();
+      if (!uploadRes.ok) {
+        setUploadErrors([data.error || "Error al cargar el demo"]);
+        return;
+      }
+      setBatchTotal(data.count || 0);
+      setIsProcessing(true);
+      startPolling();
+      window.dispatchEvent(new Event("gamification-update"));
+    } catch {
+      setUploadErrors(["Error al cargar el demo. Inténtalo de nuevo."]);
+    } finally {
+      setDemoLoading(false);
     }
   };
 
@@ -727,6 +762,8 @@ export default function DashboardPage() {
           </div>
         </div>
       )}
+
+      {showOnboarding && <OnboardingModal onDismiss={() => setShowOnboarding(false)} />}
 
       <div className="space-y-4">
         {/* Header */}
@@ -1225,6 +1262,22 @@ export default function DashboardPage() {
               <p className="text-sm text-gray-500 mb-5 max-w-xs mx-auto">
                 Añade los nombres de tus productos y la IA genera título, bullets y descripción en menos de 60 segundos.
               </p>
+              <div className="flex flex-col sm:flex-row gap-2 justify-center mb-4">
+                <button
+                  onClick={handleDemoUpload}
+                  disabled={demoLoading}
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700 hover:scale-105 transition-all disabled:bg-blue-400 disabled:scale-100"
+                >
+                  {demoLoading ? (
+                    <>
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      Cargando demo...
+                    </>
+                  ) : (
+                    "⚡ Probar con CSV de demo (1 clic)"
+                  )}
+                </button>
+              </div>
               <div className="flex flex-col sm:flex-row gap-2 justify-center mb-6">
                 <a
                   href="/api/template/csv"
@@ -1235,9 +1288,9 @@ export default function DashboardPage() {
                 </a>
                 <button
                   onClick={() => fileInputRef.current?.click()}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 hover:scale-105 transition-all"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 border border-gray-200 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
                 >
-                  📤 Subir mi primer CSV
+                  📤 Subir mi propio CSV
                 </button>
               </div>
               <div className="max-w-sm mx-auto text-left bg-gray-50 rounded-xl p-4 border border-gray-100">

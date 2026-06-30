@@ -69,7 +69,7 @@ export function welcomeEmailTemplate({ firstName }: { firstName: string }): stri
       </tr>
     </table>
 
-    ${ctaButton("Ir al dashboard →", "https://listwise-app.onrender.com/dashboard")}
+    ${ctaButton("Ir al dashboard →", `${process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise-app.onrender.com"}/dashboard`)}
     <p style="margin:4px 0 0;color:#9ca3af;font-size:12px;">&#xBF;Tienes dudas? Responde directamente a este email.</p>
   `);
 }
