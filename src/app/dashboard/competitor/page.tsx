@@ -63,13 +63,25 @@ export default function CompetitorPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
 
   function useInAgent(suggestion: string) {
-    if (selectedListingId) {
-      localStorage.setItem("agent_prefill", JSON.stringify({ listingId: selectedListingId, message: suggestion }));
-    }
+    localStorage.setItem("agent_prefill", JSON.stringify({
+      listingId: selectedListingId || undefined,
+      message: `Aplica esta sugerencia del análisis de competencia a mi listing: "${suggestion}"`,
+    }));
     router.push("/agent");
+  }
+
+  async function copySuggestion(suggestion: string, index: number) {
+    try {
+      await navigator.clipboard.writeText(suggestion);
+      setCopiedIndex(index);
+      setTimeout(() => setCopiedIndex(null), 2000);
+    } catch {
+      // clipboard not available
+    }
   }
 
   useEffect(() => {
@@ -434,18 +446,25 @@ export default function CompetitorPage() {
                   </div>
                   <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-5">
                     <h3 className="font-semibold text-yellow-800 mb-3">💡 Sugerencias para tu listing</h3>
-                    <ol className="space-y-3">
+                    <ol className="space-y-4">
                       {result.analysis.suggestions.map((s, i) => (
-                        <li key={i} className="text-sm text-yellow-800 flex items-start gap-2">
-                          <span className="font-bold text-yellow-600 shrink-0">{i + 1}.</span>
-                          <div className="flex-1 min-w-0">
-                            <p>{s}</p>
+                        <li key={i} className="text-sm text-yellow-800">
+                          <div className="flex items-start gap-2 mb-2">
+                            <span className="font-bold text-yellow-600 shrink-0 mt-0.5">{i + 1}.</span>
+                            <p className="leading-relaxed">{s}</p>
+                          </div>
+                          <div className="flex items-center gap-2 ml-4">
+                            <button
+                              onClick={() => copySuggestion(s, i)}
+                              className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-white border border-yellow-300 text-yellow-700 rounded-lg hover:bg-yellow-100 transition-colors font-medium"
+                            >
+                              {copiedIndex === i ? "✓ Copiado" : "📋 Copiar"}
+                            </button>
                             <button
                               onClick={() => useInAgent(s)}
-                              title={selectedListingId ? "Enviar al Agente de copywriting" : "Selecciona primero tu listing en el selector de arriba"}
-                              className={`mt-1.5 text-xs px-2.5 py-1 rounded-full border transition-colors ${selectedListingId ? "bg-white border-yellow-400 text-yellow-700 hover:bg-yellow-100" : "bg-white border-gray-200 text-gray-400 cursor-not-allowed"}`}
+                              className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors font-medium"
                             >
-                              → Usar en Agent
+                              🤖 Aplicar con Agent
                             </button>
                           </div>
                         </li>
