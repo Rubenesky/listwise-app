@@ -15,6 +15,15 @@ const BASE = `
   </div>
 `;
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#x27;");
+}
+
 function wrap(body: string): string {
   return BASE.replace("{{BODY}}", body);
 }
@@ -24,7 +33,7 @@ function ctaButton(label: string, href: string): string {
 }
 
 export function welcomeEmailTemplate({ firstName }: { firstName: string }): string {
-  const name = firstName ? ` ${firstName}` : "";
+  const name = firstName ? ` ${escapeHtml(firstName)}` : "";
   return wrap(`
     <h2 style="margin:0 0 8px;color:#111827;font-size:22px;font-weight:700;">&#x1F389; &#xA1;Bienvenido/a${name} a ListWise!</h2>
     <p style="margin:0 0 20px;color:#4b5563;font-size:15px;line-height:1.6;">Tu cuenta est&#xE1; lista. En menos de 60 segundos puedes tener tu primer listing optimizado con IA.</p>
@@ -70,7 +79,7 @@ export function listingReadyTemplate({ count, productNames }: { count: number; p
   const preview = productNames && productNames.length > 0
     ? `<p style="margin:16px 0 4px;color:#374151;font-size:13px;font-weight:600;">Productos generados:</p>
        <ul style="margin:0 0 16px;padding-left:20px;color:#6b7280;font-size:13px;">
-         ${productNames.slice(0, 5).map(n => `<li style="margin-bottom:4px;">${n.replace(/</g, "&lt;").replace(/>/g, "&gt;")}</li>`).join("")}
+         ${productNames.slice(0, 5).map(n => `<li style="margin-bottom:4px;">${escapeHtml(n)}</li>`).join("")}
          ${productNames.length > 5 ? `<li style="color:#9ca3af;">...y ${productNames.length - 5} m&#xE1;s</li>` : ""}
        </ul>`
     : "";
@@ -98,7 +107,7 @@ export function creditsLowTemplate({ remaining, plan }: { remaining: number; pla
       Te quedan <strong>${remaining} cr&#xE9;ditos</strong>. Cuando se agoten no podr&#xE1;s usar el Agente ni generar nuevos listings.
     </p>
     ${isPaid
-      ? `<p style="color:#6b7280;font-size:14px;">Como usuario ${plan}, puedes comprar packs de cr&#xE9;ditos adicionales desde tu dashboard.</p>`
+      ? `<p style="color:#6b7280;font-size:14px;">Como usuario ${escapeHtml(plan)}, puedes comprar packs de cr&#xE9;ditos adicionales desde tu dashboard.</p>`
       : `<p style="color:#6b7280;font-size:14px;">Con el plan Pro o Enterprise obtienes cr&#xE9;ditos adicionales y acceso ilimitado al Agente.</p>`
     }
     ${ctaButton(isPaid ? "Comprar cr&#xE9;ditos →" : "Ver planes →", "https://listwise-app.onrender.com/pricing")}
@@ -106,7 +115,7 @@ export function creditsLowTemplate({ remaining, plan }: { remaining: number; pla
 }
 
 export function referralRegistrationTemplate({ refereeEmail }: { refereeEmail: string | null }): string {
-  const who = refereeEmail ? `<strong>${refereeEmail}</strong>` : "alguien";
+  const who = refereeEmail ? `<strong>${escapeHtml(refereeEmail)}</strong>` : "alguien";
   return wrap(`
     <h2 style="margin:0 0 8px;color:#111827;font-size:22px;font-weight:700;">&#x1F389; Tu invitaci&#xF3;n funcion&#xF3;</h2>
     <p style="margin:0 0 16px;color:#4b5563;font-size:15px;line-height:1.6;">
