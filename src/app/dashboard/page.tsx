@@ -4,7 +4,6 @@ import { useUser } from "@clerk/nextjs";
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useUserPlan } from "@/lib/hooks/useUserPlan";
 import { PLAN_LIMITS } from "@/lib/constants";
-import OnboardingTour from "@/components/OnboardingTour";
 import VoiceProfileManager from "@/components/VoiceProfileManager";
 import InfoTooltip from "@/components/InfoTooltip";
 import GamificationWidget from "@/components/GamificationWidget";
@@ -545,7 +544,6 @@ export default function DashboardPage() {
 
   return (
     <>
-      <OnboardingTour />
 
       {/* Detail / Edit Modal */}
       {selectedListing && (

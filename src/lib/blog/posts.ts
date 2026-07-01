@@ -48,6 +48,11 @@ export const posts: BlogPost[] = [
   <li><strong>Exporta el resultado.</strong> Descarga un CSV con todos los listings listos para subir a tu cuenta de Seller Central.</li>
 </ol>
 
+<figure style="margin:32px 0;text-align:center;">
+  <img src="/blog/dashboard-listwise.png" alt="Dashboard de ListWise con listings generados por IA" style="max-width:100%;border-radius:12px;border:1px solid #e5e7eb;box-shadow:0 4px 16px rgba(0,0,0,0.08);" loading="lazy" />
+  <figcaption style="margin-top:10px;font-size:13px;color:#6b7280;font-style:italic;">El dashboard de ListWise muestra título, bullets y descripción optimizados por IA para cada producto, con su Health Score de calidad</figcaption>
+</figure>
+
 <h2>Tips para optimizar el resultado de la IA</h2>
 <p>La calidad del output depende directamente de la calidad del input. Estos ajustes marcan la diferencia:</p>
 <ul>
@@ -117,6 +122,11 @@ export const posts: BlogPost[] = [
 <p>Herramientas como ListWise generan los 5 puntos siguiendo estas reglas automáticamente. El modelo conoce las convenciones de Amazon por categoría (Electrónica, Moda, Hogar, Deporte...) y adapta el tono, la longitud y el énfasis en beneficios según el tipo de producto.</p>
 <p>El proceso es simple: introduces el nombre del producto, la categoría y los atributos principales en el CSV, y en menos de 60 segundos tienes 5 bullet points listos para usar. Si el tono no es exactamente el que buscas, el Agente de Copywriting permite refinarlo con instrucciones como "hazlos más formales" o "añade urgencia y escasez".</p>
 
+<figure style="margin:32px 0;text-align:center;">
+  <img src="/blog/agent-mode.png" alt="Agente de Copywriting de ListWise refinando bullet points" style="max-width:100%;border-radius:12px;border:1px solid #e5e7eb;box-shadow:0 4px 16px rgba(0,0,0,0.08);" loading="lazy" />
+  <figcaption style="margin-top:10px;font-size:13px;color:#6b7280;font-style:italic;">El Agente de Copywriting de ListWise permite ajustar tono, añadir keywords y refinar los bullets con instrucciones en lenguaje natural</figcaption>
+</figure>
+
 <h2>Lo que no puede hacer la IA (todavía)</h2>
 <p>La IA no conoce tus datos de reviews — no sabe que el 80% de tus compradores mencionan la facilidad de montaje como la razón principal de satisfacción. Esa información deberías añadirla tú al CSV o usar el Agente para incorporarla.</p>
 <p>También es recomendable revisar que las claims técnicas (potencia, batería, dimensiones) sean correctas — la IA puede inferirlas incorrectamente si no están en el input.</p>
@@ -179,6 +189,11 @@ export const posts: BlogPost[] = [
   <li>Generar metadescripciones optimizadas para CTR.</li>
 </ul>
 <p>Donde todavía necesitas revisión humana: datos técnicos precisos (dimensiones, materiales, certificaciones) y voz de marca muy específica.</p>
+
+<figure style="margin:32px 0;text-align:center;">
+  <img src="/blog/analisis-competencia.png" alt="Análisis de competencia en ListWise" style="max-width:100%;border-radius:12px;border:1px solid #e5e7eb;box-shadow:0 4px 16px rgba(0,0,0,0.08);" loading="lazy" />
+  <figcaption style="margin-top:10px;font-size:13px;color:#6b7280;font-style:italic;">ListWise analiza los listings de la competencia e identifica las keywords y estrategias de contenido que usan para posicionarse</figcaption>
+</figure>
 
 <h2>Schema.org para fichas de producto en tu tienda propia</h2>
 <p>Si vendes en tu propia tienda WooCommerce, Shopify o Prestashop, implementar Schema.org de tipo <code>Product</code> con <code>Offer</code>, precio, disponibilidad y valoraciones permite que Google muestre rich snippets con precio y estrellas directamente en los resultados — aumentando el CTR entre un 15 y un 25%.</p>
