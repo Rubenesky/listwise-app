@@ -42,5 +42,7 @@ services:
         sync: false
       - key: NEXT_PUBLIC_SENTRY_DSN
         sync: false
-      - key: NEXT_PUBLIC_PLAUSIBLE_DOMAIN
+      - key: NEXT_PUBLIC_POSTHOG_KEY
         sync: false
+      - key: NEXT_PUBLIC_POSTHOG_HOST
+        value: https://eu.i.posthog.com

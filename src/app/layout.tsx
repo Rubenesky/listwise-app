@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
-import Script from "next/script";
+import { Suspense } from "react";
+import PostHogProvider from "@/components/PostHogProvider";
+import PostHogPageView from "@/components/PostHogPageView";
 import LeadMagnetPopup from "@/components/LeadMagnetPopup";
 import GamificationToast from "@/components/GamificationToast";
 import "./globals.css";
@@ -92,15 +94,6 @@ export default function RootLayout({
   return (
     <ClerkProvider>
       <html lang="es" suppressHydrationWarning>
-        <head>
-          {process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN && (
-            <Script
-              defer
-              data-domain={process.env.NEXT_PUBLIC_PLAUSIBLE_DOMAIN}
-              src="https://plausible.io/js/script.js"
-            />
-          )}
-        </head>
         <body className={inter.className} suppressHydrationWarning>
           <script
             type="application/ld+json"
@@ -108,9 +101,14 @@ export default function RootLayout({
               __html: JSON.stringify(organizationJsonLd).replace(/</g, "\\u003c"),
             }}
           />
-          {children}
-          <LeadMagnetPopup />
-          <GamificationToast />
+          <PostHogProvider>
+            <Suspense fallback={null}>
+              <PostHogPageView />
+            </Suspense>
+            {children}
+            <LeadMagnetPopup />
+            <GamificationToast />
+          </PostHogProvider>
         </body>
       </html>
     </ClerkProvider>
