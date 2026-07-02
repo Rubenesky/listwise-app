@@ -209,7 +209,7 @@ export async function POST(req: Request) {
     const buffer = Buffer.from(await file.arrayBuffer());
     const content = buffer.toString("utf-8");
 
-    let records: any[];
+    let records: Record<string, string>[];
     try {
       records = parse(content, {
         columns: true,
@@ -225,9 +225,7 @@ export async function POST(req: Request) {
     }
 
     // 4. Validar filas (errores bloquean; warnings se incluyen en la respuesta)
-    const { errors: rowErrors, warnings } = validateRows(
-      records as Record<string, string>[]
-    );
+    const { errors: rowErrors, warnings } = validateRows(records);
     if (rowErrors.length > 0) {
       return NextResponse.json(
         {

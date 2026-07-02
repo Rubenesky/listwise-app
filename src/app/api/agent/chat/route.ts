@@ -128,28 +128,37 @@ export async function POST(req: Request) {
       }, { status: 403 });
     }
 
-    // Verify listing ownership
-    const [listing] = await db
-      .select()
-      .from(schema.listings)
-      .where(and(eq(schema.listings.id, listingId), eq(schema.listings.userId, userId)))
-      .limit(1);
+    // Run all independent DB reads in parallel — 4 roundtrips → 1
+    const [listingRows, convRows, voiceProfileRows, competitorRows] = await Promise.all([
+      db.select()
+        .from(schema.listings)
+        .where(and(eq(schema.listings.id, listingId), eq(schema.listings.userId, userId)))
+        .limit(1),
+      conversationId
+        ? db.select()
+            .from(schema.agentConversations)
+            .where(and(eq(schema.agentConversations.id, conversationId), eq(schema.agentConversations.userId, userId)))
+            .limit(1)
+        : Promise.resolve([]),
+      db.select({ profile: schema.voiceProfiles.profile, name: schema.voiceProfiles.name })
+        .from(schema.voiceProfiles)
+        .where(and(eq(schema.voiceProfiles.userId, userId), eq(schema.voiceProfiles.isActive, 1)))
+        .limit(1),
+      db.select({ scrapedTitle: schema.competitorAnalyses.scrapedTitle, scrapedKeywords: schema.competitorAnalyses.scrapedKeywords })
+        .from(schema.competitorAnalyses)
+        .where(and(eq(schema.competitorAnalyses.listingId, listingId), eq(schema.competitorAnalyses.status, "COMPLETED")))
+        .limit(3),
+    ]);
 
+    const [listing] = listingRows;
     if (!listing) {
       console.log(`❌ [Agent] Producto ${listingId} no encontrado`);
       return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
     }
 
-    // Load conversation history
-    let conversation: { id: string; messages: unknown } | null = null;
-    if (conversationId) {
-      const [conv] = await db
-        .select()
-        .from(schema.agentConversations)
-        .where(and(eq(schema.agentConversations.id, conversationId), eq(schema.agentConversations.userId, userId)))
-        .limit(1);
-      if (conv) conversation = conv;
-    }
+    const conversation: { id: string; messages: unknown } | null = convRows.length > 0 ? (convRows[0] as { id: string; messages: unknown }) : null;
+    const [voiceProfile] = voiceProfileRows as { profile: unknown; name: string }[];
+    const competitors = competitorRows as { scrapedTitle: string | null; scrapedKeywords: unknown }[];
 
     const messages: { role: string; content: string; timestamp?: number }[] = Array.isArray(conversation?.messages)
       ? (conversation.messages as { role: string; content: string; timestamp?: number }[])
@@ -189,25 +198,11 @@ export async function POST(req: Request) {
     };
     const marketplaceContext = marketplaceRules[marketplace ?? "generico"] ?? "";
 
-    // Fetch active voice profile for this user
-    const [voiceProfile] = await db
-      .select({ profile: schema.voiceProfiles.profile, name: schema.voiceProfiles.name })
-      .from(schema.voiceProfiles)
-      .where(and(eq(schema.voiceProfiles.userId, userId), eq(schema.voiceProfiles.isActive, 1)))
-      .limit(1);
-
     let voiceProfileContext = "";
     if (voiceProfile?.profile) {
       const vp = voiceProfile.profile as { tone?: string; vocabulary?: string; sentenceStructure?: string; keyWords?: string[]; brandPersonality?: string };
       voiceProfileContext = `\n═══════════════════════════════════════════\nVOZ DE MARCA ACTIVA: "${voiceProfile.name}"\n- Tono: ${vp.tone ?? "no definido"}\n- Vocabulario: ${vp.vocabulary ?? "no definido"}\n- Estructura de frases: ${vp.sentenceStructure ?? "no definido"}\n- Palabras clave de marca: ${(vp.keyWords ?? []).join(", ") || "ninguna"}\n- Personalidad: ${vp.brandPersonality ?? "no definida"}\nAdapta el copy respetando esta voz cuando no contradiga la instrucción del usuario.\n═══════════════════════════════════════════\n`;
     }
-
-    // Fetch competitor keywords for this listing (Sprint C)
-    const competitors = await db
-      .select({ scrapedTitle: schema.competitorAnalyses.scrapedTitle, scrapedKeywords: schema.competitorAnalyses.scrapedKeywords })
-      .from(schema.competitorAnalyses)
-      .where(and(eq(schema.competitorAnalyses.listingId, listingId), eq(schema.competitorAnalyses.status, "COMPLETED")))
-      .limit(3);
 
     let competitorContext = "";
     if (competitors.length > 0) {

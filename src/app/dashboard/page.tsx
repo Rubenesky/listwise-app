@@ -9,6 +9,7 @@ import InfoTooltip from "@/components/InfoTooltip";
 import GamificationWidget from "@/components/GamificationWidget";
 import CreditsPopover from "@/components/CreditsPopover";
 import OnboardingModal from "@/components/OnboardingModal";
+import PhotoUploader from "@/components/PhotoUploader";
 
 type ListingStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
 type GenerationMode = "creative" | "professional" | "seo";
@@ -1040,6 +1041,12 @@ export default function DashboardPage() {
               )}
             </div>
           </div>
+        </div>
+
+        {/* Photo upload alternative */}
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-gray-400 shrink-0">o sube una foto</span>
+          <PhotoUploader onListingCreated={fetchListings} />
         </div>
 
         {/* Mode selector */}
