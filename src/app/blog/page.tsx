@@ -1,8 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { posts } from "@/lib/blog/posts";
-
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://listwise.app";
+import { BASE_URL } from "@/lib/config";
 
 const blogListJsonLd = {
   "@context": "https://schema.org",

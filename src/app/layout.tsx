@@ -6,11 +6,10 @@ import { Suspense } from "react";
 import PostHogProvider from "@/components/PostHogProvider";
 import PostHogPageView from "@/components/PostHogPageView";
 import LeadMagnetPopup from "@/components/LeadMagnetPopup";
+import { BASE_URL } from "@/lib/config";
 import "./globals.css";
 
 const inter = Inter({ subsets: ["latin"] });
-
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://listwise.app";
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),

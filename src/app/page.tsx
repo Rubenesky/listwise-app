@@ -2,8 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { AuthRedirect } from "@/components/AuthRedirect";
 import { HeroEmailForm } from "@/components/HeroEmailForm";
-
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://listwise.app";
+import { BASE_URL } from "@/lib/config";
 
 const schemaOrg = {
   "@context": "https://schema.org",

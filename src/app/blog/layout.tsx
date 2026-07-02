@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://listwise.app";
+import { BASE_URL } from "@/lib/config";
 
 export const metadata: Metadata = {
   title: "Blog — ListWise",

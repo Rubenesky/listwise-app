@@ -1,8 +1,7 @@
 import { MetadataRoute } from 'next';
+import { BASE_URL } from "@/lib/config";
 
 export const revalidate = 86400; // Regenerar sitemap cada 24h
-
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL ?? "https://listwise.app";
 
 export default function sitemap(): MetadataRoute.Sitemap {
   // Solo páginas públicas — sin dashboard, admin, sign-in, sign-up ni páginas con auth

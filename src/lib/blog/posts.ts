@@ -210,8 +210,6 @@ export const posts: BlogPost[] = [
 <p><strong>¿Tienes un catálogo que optimizar?</strong> ListWise genera fichas de producto SEO-optimizadas para cualquier plataforma. Prueba gratis con 10 productos — sin tarjeta de crédito.</p>
     `.trim(),
   },
-];
-
   {
     slug: "bullet-points-amazon-que-convierten",
     title: "Cómo escribir bullet points para Amazon que convierten",
