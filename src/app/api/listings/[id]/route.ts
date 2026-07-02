@@ -2,9 +2,16 @@ import { auth } from "@clerk/nextjs/server";
 import { eq, and, desc } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { validate as validateUuid } from "uuid";
+import { z } from "zod";
 import { db, schema } from "@/db";
 import { ratelimit } from "@/lib/rate-limit";
 import type { ListingRow } from "@/types";
+
+const patchSchema = z.object({
+  generatedTitle: z.string().max(300).optional(),
+  generatedBullets: z.array(z.string().max(500)).max(10).optional(),
+  generatedDescription: z.string().max(5000).optional(),
+});
 
 // id="dashboard" returns the last 100 listings for the authenticated user.
 // id=<uuid> returns that specific listing (must belong to the same user).
@@ -108,9 +115,11 @@ export async function PATCH(
     return NextResponse.json({ error: "ID inválido" }, { status: 400 });
   }
 
-  const body = (await request.json()) as Partial<
-    Pick<ListingRow, "generatedTitle" | "generatedBullets" | "generatedDescription">
-  >;
+  const parsed = patchSchema.safeParse(await request.json());
+  if (!parsed.success) {
+    return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
+  }
+  const body = parsed.data;
 
   const [existing] = await db
     .select({ id: schema.listings.id })

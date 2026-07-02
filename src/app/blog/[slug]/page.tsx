@@ -27,13 +27,13 @@ export async function generateMetadata({
       url: `${BASE_URL}/blog/${post.slug}`,
       type: "article",
       publishedTime: post.publishedAt,
-      images: [{ url: `/api/og?page=blog`, width: 1200, height: 630 }],
+      images: [{ url: `${BASE_URL}/api/og?title=${encodeURIComponent(post.title.slice(0, 80))}&sub=${encodeURIComponent(`${post.category} · ListWise Blog`)}`, width: 1200, height: 630 }],
     },
     twitter: {
       card: "summary_large_image",
       title: post.title,
       description: post.description,
-      images: [`/api/og?page=blog`],
+      images: [`${BASE_URL}/api/og?title=${encodeURIComponent(post.title.slice(0, 80))}&sub=${encodeURIComponent(`${post.category} · ListWise Blog`)}`],
     },
     alternates: {
       canonical: `${BASE_URL}/blog/${post.slug}`,

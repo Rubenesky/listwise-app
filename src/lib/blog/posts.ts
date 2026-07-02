@@ -49,7 +49,7 @@ export const posts: BlogPost[] = [
 </ol>
 
 <figure style="margin:32px 0;text-align:center;">
-  <img src="/blog/dashboard-listwise.png" alt="Dashboard de ListWise con listings generados por IA" style="max-width:100%;border-radius:12px;border:1px solid #e5e7eb;box-shadow:0 4px 16px rgba(0,0,0,0.08);" loading="lazy" />
+  <img src="/blog/dashboard-listwise.png" alt="Dashboard de ListWise con listings generados por IA" width="1200" height="675" style="max-width:100%;border-radius:12px;border:1px solid #e5e7eb;box-shadow:0 4px 16px rgba(0,0,0,0.08);" loading="lazy" />
   <figcaption style="margin-top:10px;font-size:13px;color:#6b7280;font-style:italic;">El dashboard de ListWise muestra título, bullets y descripción optimizados por IA para cada producto, con su Health Score de calidad</figcaption>
 </figure>
 
@@ -123,7 +123,7 @@ export const posts: BlogPost[] = [
 <p>El proceso es simple: introduces el nombre del producto, la categoría y los atributos principales en el CSV, y en menos de 60 segundos tienes 5 bullet points listos para usar. Si el tono no es exactamente el que buscas, el Agente de Copywriting permite refinarlo con instrucciones como "hazlos más formales" o "añade urgencia y escasez".</p>
 
 <figure style="margin:32px 0;text-align:center;">
-  <img src="/blog/agent-mode.png" alt="Agente de Copywriting de ListWise refinando bullet points" style="max-width:100%;border-radius:12px;border:1px solid #e5e7eb;box-shadow:0 4px 16px rgba(0,0,0,0.08);" loading="lazy" />
+  <img src="/blog/agent-mode.png" alt="Agente de Copywriting de ListWise refinando bullet points" width="1200" height="675" style="max-width:100%;border-radius:12px;border:1px solid #e5e7eb;box-shadow:0 4px 16px rgba(0,0,0,0.08);" loading="lazy" />
   <figcaption style="margin-top:10px;font-size:13px;color:#6b7280;font-style:italic;">El Agente de Copywriting de ListWise permite ajustar tono, añadir keywords y refinar los bullets con instrucciones en lenguaje natural</figcaption>
 </figure>
 
@@ -191,7 +191,7 @@ export const posts: BlogPost[] = [
 <p>Donde todavía necesitas revisión humana: datos técnicos precisos (dimensiones, materiales, certificaciones) y voz de marca muy específica.</p>
 
 <figure style="margin:32px 0;text-align:center;">
-  <img src="/blog/analisis-competencia.png" alt="Análisis de competencia en ListWise" style="max-width:100%;border-radius:12px;border:1px solid #e5e7eb;box-shadow:0 4px 16px rgba(0,0,0,0.08);" loading="lazy" />
+  <img src="/blog/analisis-competencia.png" alt="Análisis de competencia en ListWise" width="1200" height="675" style="max-width:100%;border-radius:12px;border:1px solid #e5e7eb;box-shadow:0 4px 16px rgba(0,0,0,0.08);" loading="lazy" />
   <figcaption style="margin-top:10px;font-size:13px;color:#6b7280;font-style:italic;">ListWise analiza los listings de la competencia e identifica las keywords y estrategias de contenido que usan para posicionarse</figcaption>
 </figure>
 

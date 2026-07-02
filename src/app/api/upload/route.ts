@@ -253,7 +253,6 @@ export async function POST(req: Request) {
     }
 
     // 5b. Credit check: require 1 credit per product before generating
-    await ensureUser(userId);
     const creditResult = await useCredits(
       userId,
       newProductsCount,
