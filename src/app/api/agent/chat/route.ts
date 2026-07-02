@@ -267,7 +267,7 @@ export async function POST(req: Request) {
       max_tokens: 1024,
       stream: true,
       response_format: { type: "json_object" },
-    });
+    }, { signal: req.signal } as never);
 
     const encoder = new TextEncoder();
     const readable = new ReadableStream({

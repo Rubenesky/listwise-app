@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Send, Sparkles, Loader2, Zap, CheckCircle2, Copy, ChevronDown, ChevronUp, History, Save, Clock } from "lucide-react";
+import UpgradeModal from "@/components/UpgradeModal";
 
 interface AgentChatProps {
   listingId: string;
@@ -437,6 +438,7 @@ export default function AgentChat({ listingId, productName, inline = false, init
   const [historicalCount, setHistoricalCount] = useState(0);
   const [credits, setCredits] = useState<number>(0);
   const [plan, setPlan] = useState("free");
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [conversationId, setConversationId] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [initialContent, setInitialContent] = useState<OriginalContent>(null);
@@ -604,15 +606,16 @@ export default function AgentChat({ listingId, productName, inline = false, init
 
       if (response.status === 403) {
         const data = await response.json();
-        setMessages((prev) => [
-          ...prev.slice(0, -1),
-          {
-            role: "assistant",
-            content: data.upsell
-              ? "Has agotado tus consultas gratuitas.\n\n📦 Paquetes:\n• 20 consultas – 0,99 €\n• 50 consultas – 1,99 €\n• 100 consultas – 2,99 €\n• Plan Pro – 29 €/mes"
-              : data.error ?? "Sin créditos disponibles.",
-          },
-        ]);
+        if (data.upsell) {
+          setCredits(0);
+          setMessages((prev) => prev.slice(0, -1));
+          setShowUpgradeModal(true);
+        } else {
+          setMessages((prev) => [
+            ...prev.slice(0, -1),
+            { role: "assistant", content: data.error ?? "Sin créditos disponibles." },
+          ]);
+        }
         return;
       }
 
@@ -774,6 +777,7 @@ export default function AgentChat({ listingId, productName, inline = false, init
   const displayMessages = showHistoryOnly ? messages.filter((m) => m.role === "changes") : messages;
 
   return (
+    <>
     <div className={inline
       ? "flex flex-col h-full bg-white rounded-2xl border border-gray-200"
       : "fixed bottom-6 right-6 w-[380px] h-[520px] bg-white rounded-2xl shadow-2xl border border-gray-200 z-50 flex flex-col"
@@ -985,14 +989,32 @@ export default function AgentChat({ listingId, productName, inline = false, init
         </div>
       )}
 
+      {/* Low-credit proactive banner */}
+      {plan === "free" && credits >= 1 && credits <= 3 && (
+        <div className="px-3 py-2 bg-orange-50 border-t border-orange-200 shrink-0 flex items-center justify-between gap-2">
+          <span className="text-xs text-orange-800">
+            ⚠️ Solo te quedan <strong>{credits}</strong> consulta{credits !== 1 ? "s" : ""}
+          </span>
+          <button
+            onClick={() => setShowUpgradeModal(true)}
+            className="text-xs font-semibold text-orange-700 hover:text-orange-900 underline shrink-0 transition-colors"
+          >
+            Comprar más →
+          </button>
+        </div>
+      )}
+
       {/* Upsell panel */}
       {isFreeWithNoCredits && (
         <div className="px-3 py-2 bg-amber-50 border-t border-amber-200 shrink-0">
-          <p className="text-xs text-amber-800 font-medium mb-1.5">Sin consultas disponibles</p>
-          <div className="flex gap-1.5 flex-wrap">
-            <button onClick={() => buyCredits("pack_s")} className="text-xs bg-amber-600 text-white px-2.5 py-1 rounded-full hover:bg-amber-700 transition-colors">20 consultas – 0,99 €</button>
-            <button onClick={() => buyCredits("pack_m")} className="text-xs bg-amber-600 text-white px-2.5 py-1 rounded-full hover:bg-amber-700 transition-colors">50 consultas – 1,99 €</button>
-            <a href="/pricing" className="text-xs bg-blue-600 text-white px-2.5 py-1 rounded-full hover:bg-blue-700 transition-colors">Plan Pro</a>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-amber-800 font-medium">Sin consultas disponibles</p>
+            <button
+              onClick={() => setShowUpgradeModal(true)}
+              className="text-xs font-semibold text-blue-600 hover:text-blue-800 underline transition-colors"
+            >
+              Ver opciones →
+            </button>
           </div>
         </div>
       )}
@@ -1132,5 +1154,14 @@ export default function AgentChat({ listingId, productName, inline = false, init
         </div>
       )}
     </div>
+
+    {showUpgradeModal && (
+      <UpgradeModal
+        credits={credits}
+        onClose={() => setShowUpgradeModal(false)}
+        onBuy={(packId) => { setShowUpgradeModal(false); buyCredits(packId); }}
+      />
+    )}
+  </>
   );
 }

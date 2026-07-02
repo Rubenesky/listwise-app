@@ -1377,9 +1377,19 @@ export default function DashboardPage() {
                           <td className="px-4 py-4">{getStatusBadge(listing.status)}</td>
                           <td className="px-4 py-4">
                             {listing.status === "COMPLETED" && (
-                              <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${color}`}>
-                                {score} · {label}
-                              </span>
+                              score < 80 ? (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleOpenInAgent(listing); }}
+                                  title="Mejorar con el Agente IA"
+                                  className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium ${color} hover:ring-1 hover:ring-indigo-400 transition-all`}
+                                >
+                                  {score} · {label} ✨
+                                </button>
+                              ) : (
+                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium ${color}`}>
+                                  {score} · {label}
+                                </span>
+                              )
                             )}
                           </td>
                           <td className="px-4 py-4 text-gray-500 max-w-[260px]">

@@ -212,6 +212,240 @@ export const posts: BlogPost[] = [
   },
 ];
 
+  {
+    slug: "bullet-points-amazon-que-convierten",
+    title: "Cómo escribir bullet points para Amazon que convierten",
+    description: "Guía con ejemplos reales para escribir los 5 puntos clave de tus listings de Amazon: estructura, longitud, formato y errores que cuestan ventas.",
+    publishedAt: "2026-07-01",
+    readMinutes: 6,
+    category: "Guías",
+    content: `
+<h2>Por qué los bullet points son la parte más importante de tu listing</h2>
+<p>El 80% de los compradores en Amazon decide si hace clic en "Añadir al carrito" después de leer los bullet points — antes que la descripción, antes que las fotos secundarias. Son el resumen ejecutivo de tu producto, y la mayoría de sellers los escribe mal.</p>
+
+<h2>La estructura que convierte: Beneficio en mayúsculas + Feature</h2>
+<p>Amazon permite hasta 5 bullet points de máximo 200 caracteres cada uno. La fórmula que funciona en todas las categorías es:</p>
+<p><strong>BENEFICIO EN MAYÚSCULAS:</strong> la característica técnica que lo respalda, con datos concretos cuando sea posible.</p>
+<p>Ejemplo real para una botella termos:</p>
+<ul>
+  <li>❌ Mal: "Mantiene la temperatura durante muchas horas"</li>
+  <li>✅ Bien: "FRÍO 24H / CALOR 12H: doble pared de acero inoxidable 304 con vacío aislante — confirmado en pruebas a -20°C y 80°C"</li>
+</ul>
+
+<h2>Los 5 errores más comunes</h2>
+<ol>
+  <li><strong>Repetir el título:</strong> el primer bullet no debe duplicar información del título. Empieza donde el título termina.</li>
+  <li><strong>Sin datos concretos:</strong> "alta calidad", "resistente" y "duradero" no significan nada. Medidas, materiales y certificaciones sí.</li>
+  <li><strong>Superar los 200 caracteres:</strong> Amazon trunca o descarta bullets largos. Cuenta siempre antes de publicar.</li>
+  <li><strong>Ignorar las objeciones del comprador:</strong> ¿Qué temen preguntarse antes de comprar? Responde en los bullets.</li>
+  <li><strong>Formato de párrafo:</strong> los bullets deben empezar con mayúsculas o un identificador claro, no con "Este producto..."</li>
+</ol>
+
+<h2>Estructura recomendada para los 5 bullets</h2>
+<ol>
+  <li><strong>Bullet 1:</strong> propuesta de valor principal + dato técnico más diferenciador</li>
+  <li><strong>Bullet 2:</strong> material, durabilidad o compatibilidad (según categoría)</li>
+  <li><strong>Bullet 3:</strong> escenario de uso o público objetivo concreto</li>
+  <li><strong>Bullet 4:</strong> facilidad de uso, limpieza o mantenimiento</li>
+  <li><strong>Bullet 5:</strong> garantía, certificaciones o valor del pack</li>
+</ol>
+
+<h2>Cómo la IA genera bullets optimizados en segundos</h2>
+<p>ListWise analiza el nombre, categoría y atributos de tu producto para generar 5 bullet points con la estructura correcta, dentro del límite de caracteres y con datos reales de tu ficha. El resultado se puede editar directamente y refinar con el Agente de Copywriting usando instrucciones en lenguaje natural.</p>
+<p>Prueba gratis con 10 productos — sin tarjeta de crédito. El proceso completo tarda menos de 2 minutos.</p>
+    `.trim(),
+  },
+  {
+    slug: "errores-listings-amazon-como-evitarlos",
+    title: "Los 7 errores más comunes en listings de Amazon (y cómo evitarlos)",
+    description: "Análisis de los fallos que más afectan al ranking y la conversión en Amazon Seller Central, con ejemplos reales y cómo corregirlos con IA.",
+    publishedAt: "2026-07-03",
+    readMinutes: 8,
+    category: "Amazon",
+    content: `
+<h2>El coste real de un listing mal optimizado</h2>
+<p>Un listing con errores básicos puede costar entre un 30% y un 60% de ventas potenciales según estudios de marketplace optimization. En Amazon, donde miles de productos compiten por los mismos términos de búsqueda, los detalles marcan la diferencia entre la primera página y la quinta.</p>
+
+<h2>Error 1: Título sin keyword principal en las primeras palabras</h2>
+<p>El algoritmo A9 de Amazon pondera más las keywords que aparecen al principio del título. Si tu keyword principal ("auriculares bluetooth deportivos") está en posición 8 del título, pierdes ranking frente a competidores que la tienen en posición 1-3.</p>
+<p><strong>Solución:</strong> estructura tu título como Marca + Keyword Principal + Modelo/Variante + Beneficio clave.</p>
+
+<h2>Error 2: Bullets sin datos concretos</h2>
+<p>Los bullets llenos de adjetivos ("increíble calidad", "diseño premium") no indexan keywords adicionales ni convencen al comprador. Amazon usa los bullets para indexación secundaria — cada bullet debería contener al menos un término de búsqueda relevante.</p>
+
+<h2>Error 3: Descripción de menos de 1.000 caracteres</h2>
+<p>Amazon penaliza fichas con contenido escaso. Una descripción de 200 palabras transmite autoridad y da margen para incluir variaciones de keywords que no caben en el título ni los bullets.</p>
+
+<h2>Error 4: Backend keywords con duplicados</h2>
+<p>Muchos sellers repiten en los search terms palabras que ya están en el título. Amazon ya las indexa — el espacio de 250 bytes de backend keywords debe usarse para sinónimos, errores ortográficos comunes y términos alternativos.</p>
+
+<h2>Error 5: Imágenes sin texto alternativo SEO</h2>
+<p>Amazon no indexa el texto de las imágenes, pero sí usa las palabras clave del título y bullets para decidir qué fichas mostrar en búsquedas visuales. Una ficha con fotos deficientes tiene mayor tasa de rebote, lo que penaliza el ranking.</p>
+
+<h2>Error 6: No actualizar listings estacionales</h2>
+<p>Un listing de árbol de Navidad con el mismo título en julio pierde oportunidades de búsqueda estacional. Amazon favorece fichas activamente actualizadas.</p>
+
+<h2>Error 7: Ignorar el A+ Content en favor del tiempo</h2>
+<p>Si tienes registro de marca, el A+ Content (enhanced brand content) aumenta la conversión un 5-10% de media. Muchos sellers lo dejan para después — "después" muchas veces nunca llega.</p>
+
+<h2>Cómo corregir todos estos errores en minutos</h2>
+<p>ListWise analiza tu catálogo al completo e identifica automáticamente fichas con títulos cortos, bullets sin datos o descripciones escasas. El Agente de Copywriting corrige cada punto con instrucciones en lenguaje natural: "hazlo más formal", "añade la keyword auriculares bluetooth", "acorta la descripción". Sin conocimientos técnicos de SEO necesarios.</p>
+    `.trim(),
+  },
+  {
+    slug: "herramientas-ia-ecommerce-2026",
+    title: "Las mejores herramientas de IA para ecommerce en 2026",
+    description: "Comparativa de las herramientas de inteligencia artificial para tiendas online en 2026: generación de contenido, atención al cliente, personalización y análisis de competencia.",
+    publishedAt: "2026-07-06",
+    readMinutes: 9,
+    category: "IA & Tendencias",
+    content: `
+<h2>El ecommerce cambió para siempre en 2024-2025</h2>
+<p>Los modelos de lenguaje de gran tamaño (LLMs) pasaron de ser una curiosidad tecnológica a convertirse en infraestructura crítica para las tiendas online más eficientes. En 2026, la pregunta ya no es "¿debería usar IA?" sino "¿qué herramientas están realmente funcionando y cuáles son ruido?"</p>
+
+<h2>Categoría 1: Generación de contenido de producto</h2>
+<p>Esta es la aplicación con mayor ROI inmediato para la mayoría de sellers. Escribir títulos SEO, bullet points y descripciones optimizadas para cientos de productos manualmente es inviable — la IA lo hace en minutos.</p>
+<ul>
+  <li><strong>ListWise:</strong> especializado en marketplace listings (Amazon, Etsy, Shopify). Procesa CSVs completos y genera título + bullets + descripción optimizados por categoría. Agente de copywriting para refinamiento iterativo.</li>
+  <li><strong>Jasper / Copy.ai:</strong> generalistas. Buenos para texto de marketing pero sin conocimiento específico de marketplaces ni formatos de listing.</li>
+  <li><strong>ChatGPT (GPT-4o):</strong> versátil pero requiere prompts muy elaborados para llegar a la calidad de herramientas especializadas. Sin integración con CSVs ni exportación masiva.</li>
+</ul>
+
+<h2>Categoría 2: Atención al cliente automatizada</h2>
+<p>Los chatbots de nueva generación (Intercom Fin, Zendesk AI, Tidio) resuelven entre el 40% y el 70% de consultas sin intervención humana. El ROI es claro: reducción de costes de soporte con mejora de tiempos de respuesta.</p>
+
+<h2>Categoría 3: Personalización de la experiencia</h2>
+<p>Herramientas como Dynamic Yield o Nosto analizan el comportamiento del usuario para personalizar la página de inicio, los correos de carrito abandonado y las recomendaciones de producto. El incremento medio en conversión es del 15-25%.</p>
+
+<h2>Categoría 4: Análisis de competencia</h2>
+<p>La IA permite monitorizar cambios de precios, nuevos listings y tendencias de búsqueda de competidores en tiempo real. ListWise incluye un módulo de análisis de competencia que identifica las keywords que usan los productos mejor posicionados en tu categoría.</p>
+
+<h2>Categoría 5: Forecasting de inventario</h2>
+<p>Modelos predictivos basados en ventas históricas, estacionalidad y tendencias de Google permiten optimizar el stock y reducir tanto el exceso como las roturas. Herramientas: Inventory Planner, Skubana.</p>
+
+<h2>Conclusión: especialización vs. plataformas todo-en-uno</h2>
+<p>Las herramientas especializadas superan a las generalistas en cada categoría específica. Un stack de 3-4 herramientas especializadas (contenido de producto, atención al cliente, personalización, inventario) tiene mejor ROI que una plataforma todo-en-uno que hace todo regular.</p>
+<p>Empieza por donde el impacto es mayor: si tienes más de 50 productos sin optimizar, el contenido de listing es el primer paso. <a href="/sign-up">Prueba ListWise gratis</a> — 10 productos sin tarjeta.</p>
+    `.trim(),
+  },
+  {
+    slug: "palabras-clave-ecommerce-guia-completa",
+    title: "Palabras clave para ecommerce: cómo encontrarlas y usarlas",
+    description: "Guía completa de keyword research para tiendas online: herramientas, tipos de keywords, dónde colocarlas en tus fichas de producto y cómo medirlo.",
+    publishedAt: "2026-07-09",
+    readMinutes: 10,
+    category: "SEO",
+    content: `
+<h2>Por qué el keyword research de ecommerce es diferente</h2>
+<p>El keyword research para una tienda online no funciona igual que para un blog. Los compradores usan términos con intención de compra clara: "comprar auriculares bluetooth baratos", "zapatillas running mujer talla 38", "jarron ceramica azul decoracion". Capturar esas búsquedas transaccionales es lo que genera ventas, no las búsquedas informacionales.</p>
+
+<h2>Los 3 tipos de keywords para producto</h2>
+<ol>
+  <li><strong>Head terms:</strong> términos genéricos de alta competencia ("auriculares bluetooth"). Alto volumen, baja conversión. Difíciles de rankear para tiendas pequeñas.</li>
+  <li><strong>Long-tail transaccional:</strong> "auriculares bluetooth deportivos resistentes agua bajo 30 euros". Menor volumen, conversión muy alta. Ideal para fichas de producto específicas.</li>
+  <li><strong>Long-tail de marca:</strong> "auriculares Sony WH-1000XM5 precio españa". Baja competencia, alta intención de compra.</li>
+</ol>
+
+<h2>Herramientas para encontrar keywords de producto</h2>
+<ul>
+  <li><strong>Google Keyword Planner:</strong> gratuito, datos directos de Google. Ideal para tiendas con web propia o Shopify.</li>
+  <li><strong>Helium 10 / Jungle Scout:</strong> especializados en Amazon. Muestran volumen de búsqueda en Amazon, no en Google.</li>
+  <li><strong>Ahrefs / SEMrush:</strong> los más completos para análisis competitivo. De pago, pero imprescindibles para tiendas con tráfico orgánico serio.</li>
+  <li><strong>Amazon Autocompletar:</strong> gratis y muy revelador. Escribe tu keyword en la barra de búsqueda y analiza las sugerencias — representan búsquedas reales de compradores.</li>
+  <li><strong>AnswerThePublic:</strong> útil para descubrir preguntas frecuentes de compradores que se pueden responder en la descripción del producto.</li>
+</ul>
+
+<h2>Dónde colocar las keywords en tu listing</h2>
+<ol>
+  <li><strong>Título:</strong> keyword principal en las primeras 5 palabras. En Amazon, máximo 200 caracteres.</li>
+  <li><strong>Bullet points:</strong> 1-2 keywords secundarias por bullet, en contexto natural.</li>
+  <li><strong>Descripción:</strong> densidad de keyword del 1-2%. No fuerces — el texto debe leerse bien.</li>
+  <li><strong>Backend keywords (Amazon):</strong> sinónimos, errores ortográficos comunes, términos alternativos.</li>
+  <li><strong>Nombre del archivo de imagen:</strong> "auriculares-bluetooth-deportivos-negro.jpg" en lugar de "IMG_1234.jpg". Impacta en Google Images.</li>
+</ol>
+
+<h2>Cómo ListWise gestiona las keywords automáticamente</h2>
+<p>Al generar un listing, ListWise extrae la keyword principal del nombre del producto, la categoría y los atributos disponibles. La coloca automáticamente en la posición correcta del título y la distribuye naturalmente en bullets y descripción. El campo "Keyword principal" que aparece en el dashboard es la keyword que el sistema ha identificado como más relevante para ese producto.</p>
+<p>Si quieres insertar una keyword específica, el Agente de Copywriting lo hace con una instrucción como "Optimiza para SEO: inserta 'auriculares bluetooth deportivos' como keyword principal".</p>
+    `.trim(),
+  },
+  {
+    slug: "optimizar-listings-etsy-ia",
+    title: "Cómo optimizar tus listings de Etsy con IA en 2026",
+    description: "Guía específica para vendedores de Etsy: cómo usar la inteligencia artificial para mejorar títulos, tags y descripciones y aumentar la visibilidad en búsquedas de Etsy.",
+    publishedAt: "2026-07-12",
+    readMinutes: 7,
+    category: "Guías",
+    content: `
+<h2>El algoritmo de búsqueda de Etsy vs. Amazon</h2>
+<p>Etsy y Amazon comparten la mecánica básica del marketplace: el algoritmo recompensa fichas con keywords relevantes, buenas imágenes y ventas consistentes. Pero hay diferencias clave que cambian cómo debes escribir tus listings.</p>
+<p>En Etsy, el buyer espera un tono personal, artesanal y emocional. Un título de listing en Etsy que suene corporativo convierte peor, aunque posicione igual de bien. La historia del producto y del creador forma parte de la propuesta de valor.</p>
+
+<h2>Estructura del título de Etsy</h2>
+<p>Etsy permite hasta 140 caracteres de título. El algoritmo de Etsy es especialmente sensible a las keywords del título para búsquedas. La estructura recomendada:</p>
+<p><strong>[Keyword principal], [keyword secundaria], [material o técnica], [uso o destinatario]</strong></p>
+<p>Ejemplo: "Taza cerámica hecha a mano, cerámica artesanal azul, regalo para ella, vajilla boho"</p>
+<p>Fíjate en que las keywords están separadas por comas — Etsy trata cada segmento como un término de búsqueda independiente.</p>
+
+<h2>Los tags: el factor más subestimado</h2>
+<p>Etsy permite 13 tags por listing de hasta 20 caracteres cada uno. Los tags son prácticamente keywords de búsqueda directas. Muchos vendedores los rellenan con palabras genéricas ("regalo", "hecho a mano") en lugar de frases long-tail específicas.</p>
+<p>Mejor práctica: usa los 13 tags para frases de 2-4 palabras que describen el producto desde diferentes ángulos: el uso, el destinatario, el estilo, el material, la ocasión, el tamaño.</p>
+
+<h2>La descripción en Etsy: más larga que en Amazon</h2>
+<p>En Etsy, una descripción de 300-500 palabras funciona mejor que una corta. Etsy indexa el contenido de la descripción para búsquedas long-tail, y los compradores de Etsy leen más antes de comprar — quieren conocer la historia del producto.</p>
+<p>Estructura recomendada para la descripción de Etsy:</p>
+<ol>
+  <li>Párrafo 1: describe el producto y su propuesta de valor emocional (2-3 frases)</li>
+  <li>Párrafo 2: materiales, proceso de fabricación y detalles técnicos</li>
+  <li>Párrafo 3: usos, ocasiones y a quién va dirigido</li>
+  <li>Párrafo 4: información práctica (dimensiones, variantes disponibles, tiempo de fabricación)</li>
+  <li>Párrafo 5: política de la tienda y contact information</li>
+</ol>
+
+<h2>Cómo ListWise genera listings optimizados para Etsy</h2>
+<p>ListWise tiene un modo específico para Etsy que adapta el tono, la estructura del título (con comas entre keywords), la longitud de la descripción y el estilo narrativo. Al seleccionar "Etsy" en el selector de plataforma, el sistema genera automáticamente contenido con el tono artesanal y personal que espera el comprador de Etsy.</p>
+<p>El Agente de Copywriting también permite ajustes finos: "hazlo más emocional", "añade la keyword cerámica artesanal al título", "escribe desde la perspectiva del creador".</p>
+    `.trim(),
+  },
+  {
+    slug: "plantilla-csv-listings-productos-descarga",
+    title: "Plantilla CSV para listings de productos: guía y descarga gratuita",
+    description: "Descarga gratis la plantilla CSV para subir tus productos a ListWise y generar títulos, bullet points y descripciones optimizadas con IA. Explica cada columna con ejemplos.",
+    publishedAt: "2026-07-15",
+    readMinutes: 5,
+    category: "Recursos",
+    content: `
+<h2>Por qué un CSV bien rellenado marca la diferencia</h2>
+<p>La calidad del listing generado por IA depende directamente de la información que le das. Un producto con solo nombre y categoría generará un listing genérico. El mismo producto con materiales, medidas, público objetivo y atributos específicos generará contenido que puede competir con el mejor copywriter humano.</p>
+<p>El CSV de ListWise está diseñado para capturar exactamente la información que la IA necesita para cada categoría de producto.</p>
+
+<h2>Columnas de la plantilla CSV de ListWise</h2>
+<ul>
+  <li><strong>productName (obligatorio):</strong> nombre del producto tal como aparecerá en el listing. Cuanto más específico, mejor. "Auriculares bluetooth" es peor que "Auriculares Bluetooth 5.3 deportivos IPX7".</li>
+  <li><strong>category (obligatorio):</strong> categoría del producto. Ejemplos: Electrónica, Moda, Hogar, Belleza, Deporte. Activa reglas de copywriting específicas para cada categoría.</li>
+  <li><strong>price (opcional):</strong> precio del producto. Permite al sistema calibrar el tono (premium vs. económico).</li>
+  <li><strong>material (opcional):</strong> materiales principales. Ejemplo: "Acero inoxidable 304, silicona alimentaria". Fundamental para productos de hogar, moda y alimentación.</li>
+  <li><strong>attributes (opcional):</strong> características adicionales separadas por punto y coma. Ejemplo: "Capacidad: 500ml; Color: Negro mate; Garantía: 2 años; Certificación: CE".</li>
+  <li><strong>targetAudience (opcional):</strong> a quién va dirigido. Ejemplo: "Deportistas, runners, ciclistas".</li>
+  <li><strong>keywords (opcional):</strong> keywords específicas que quieres incluir obligatoriamente en el título o bullets.</li>
+</ul>
+
+<h2>Cómo descargar la plantilla</h2>
+<p>Puedes descargar la plantilla CSV directamente desde ListWise una vez que inicias sesión, en el dashboard principal usando el botón "Plantilla CSV" del menú de navegación. El archivo incluye una fila de ejemplo con todos los campos rellenados para que sirva de referencia.</p>
+
+<h2>Consejos para rellenar el CSV eficientemente</h2>
+<ol>
+  <li><strong>Exporta desde tu sistema de gestión:</strong> si usas Odoo, WooCommerce o un ERP, exporta el catálogo directamente y adapta las columnas. No hace falta rellenarlo a mano.</li>
+  <li><strong>El campo attributes es tu mejor aliado:</strong> cuantos más atributos específicos incluyas, mejor será el resultado. Copia la ficha técnica del fabricante.</li>
+  <li><strong>Agrupa por categoría:</strong> procesa productos de la misma categoría juntos — la IA aplica las reglas de copywriting más relevantes por lote.</li>
+  <li><strong>Prueba con 5-10 productos primero:</strong> antes de subir un catálogo de 500 productos, valida la calidad del resultado con una muestra pequeña y ajusta los atributos.</li>
+</ol>
+
+<p>¿Listo para generar tus listings? <a href="/sign-up">Regístrate gratis</a> y obtén 10 generaciones gratuitas sin tarjeta de crédito.</p>
+    `.trim(),
+  },
+];
+
 export function getPost(slug: string): BlogPost | undefined {
   return posts.find((p) => p.slug === slug);
 }
