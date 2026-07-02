@@ -1,20 +1,27 @@
 import { MetadataRoute } from 'next';
 import { BASE_URL } from "@/lib/config";
+import { tools } from "@/lib/alternativas/tools";
 
-export const revalidate = 86400; // Regenerar sitemap cada 24h
+export const revalidate = 86400;
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  // Solo páginas públicas — sin dashboard, admin, sign-in, sign-up ni páginas con auth
+  const alternativasEntries: MetadataRoute.Sitemap = tools.map((t) => ({
+    url: `${BASE_URL}/alternativas/${t.slug}`,
+    lastModified: new Date("2026-07-03"),
+    changeFrequency: "monthly",
+    priority: 0.8,
+  }));
+
   return [
     {
       url: BASE_URL,
-      lastModified: new Date("2026-06-29"),
+      lastModified: new Date("2026-07-03"),
       changeFrequency: "weekly",
       priority: 1.0,
     },
     {
       url: `${BASE_URL}/pricing`,
-      lastModified: new Date("2026-06-29"),
+      lastModified: new Date("2026-07-03"),
       changeFrequency: "monthly",
       priority: 0.9,
     },
@@ -42,5 +49,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.7,
     },
+    ...alternativasEntries,
   ];
 }
