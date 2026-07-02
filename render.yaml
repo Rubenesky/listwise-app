@@ -46,3 +46,7 @@ services:
         sync: false
       - key: NEXT_PUBLIC_POSTHOG_HOST
         value: https://eu.i.posthog.com
+      - key: ADMIN_USER_ID
+        sync: false
+      - key: CLERK_WEBHOOK_SECRET
+        sync: false

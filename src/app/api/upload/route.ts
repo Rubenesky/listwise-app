@@ -7,8 +7,9 @@ import { v4 as uuidv4 } from "uuid";
 import { PLAN_LIMITS } from "@/lib/constants";
 import { ratelimit } from "@/lib/rate-limit";
 import { trackGamification } from "@/lib/gamification/track";
-import { useCredits } from "@/lib/credits/use-credits";
+import { useCredits, addCredits } from "@/lib/credits/use-credits";
 import { ensureUser } from "@/lib/user/ensure-user";
+import { inArray } from "drizzle-orm";
 
 // ─── Validation ───────────────────────────────────────────────────────────────
 
@@ -292,8 +293,20 @@ export async function POST(req: Request) {
 
     // 7. Disparar el worker de Trigger.dev
     const batchId = uuidv4();
+    const insertedIds = listings.map((l) => l.id);
     console.log(`📤 [Upload] Batch ID: ${batchId}`);
-    await sendTriggerEvent(userId, batchId, mode, provider, userEmail);
+    try {
+      await sendTriggerEvent(userId, batchId, mode, provider, userEmail);
+    } catch (triggerError) {
+      // Revert credits and mark the just-inserted listings as FAILED
+      await addCredits(userId, newProductsCount, "refund", "Reembolso por error de procesamiento");
+      if (insertedIds.length > 0) {
+        await db.update(schema.listings)
+          .set({ status: "FAILED", errorMessage: "Error al iniciar procesamiento. Puedes reintentar desde el dashboard." })
+          .where(inArray(schema.listings.id, insertedIds));
+      }
+      throw triggerError;
+    }
 
     trackGamification(userId, "upload_csv").catch(() => {});
     return NextResponse.json({

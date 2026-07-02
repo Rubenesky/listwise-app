@@ -1,5 +1,5 @@
 import { auth, currentUser } from "@clerk/nextjs/server";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { db, schema } from "@/db";
@@ -15,11 +15,10 @@ export async function DELETE(): Promise<NextResponse<{ deleted: number } | { err
 
   if (failed.length === 0) return NextResponse.json({ deleted: 0 });
 
-  for (const { id } of failed) {
-    await db.delete(schema.listings).where(eq(schema.listings.id, id));
-  }
+  const failedIds = failed.map((r) => r.id);
+  await db.delete(schema.listings).where(inArray(schema.listings.id, failedIds));
 
-  return NextResponse.json({ deleted: failed.length });
+  return NextResponse.json({ deleted: failedIds.length });
 }
 
 export async function POST(): Promise<NextResponse<{ retrying: number } | { error: string }>> {

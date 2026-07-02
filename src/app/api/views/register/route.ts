@@ -40,7 +40,7 @@ export async function POST(req: Request) {
       id: uuidv4(),
       listingId: listing.id,
       userId: listing.userId,
-      visitorIp: ip,
+      visitorIp: null,
       visitorUserAgent: req.headers.get("user-agent") ?? null,
       referrer: referrer ?? "direct",
       device: device ?? "desktop",

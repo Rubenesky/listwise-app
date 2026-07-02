@@ -172,6 +172,37 @@ export async function POST(req: Request) {
         break;
       }
 
+      case "invoice.payment_succeeded": {
+        const invoice = event.data.object as Stripe.Invoice;
+        // Skip the first payment — checkout.session.completed already handled it
+        if (invoice.billing_reason === "subscription_create") break;
+
+        const customerId = invoice.customer as string;
+        const [sub] = await db
+          .select()
+          .from(schema.subscriptions)
+          .where(eq(schema.subscriptions.stripeCustomerId, customerId))
+          .limit(1);
+
+        if (!sub) break;
+
+        const newPeriodEnd = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
+        const newPeriodStart = Math.floor(Date.now() / 1000);
+
+        await db.update(schema.subscriptions)
+          .set({ status: "active", currentPeriodStart: newPeriodStart, currentPeriodEnd: newPeriodEnd })
+          .where(eq(schema.subscriptions.stripeCustomerId, customerId));
+
+        const planCredits: Record<string, number> = { pro: 1500, enterprise: 7000 };
+        const credits = planCredits[sub.plan] ?? 0;
+        if (credits > 0) {
+          await ensureUser(sub.userId);
+          await addCredits(sub.userId, credits, "bonus", `Créditos renovación ${sub.plan}`, invoice.id ?? undefined);
+          console.log(`✅ [Stripe Webhook] +${credits} créditos renovación ${sub.plan} para ${sub.userId}`);
+        }
+        break;
+      }
+
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
         const customerId = subscription.customer as string;
