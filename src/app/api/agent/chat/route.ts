@@ -368,9 +368,9 @@ export async function POST(req: Request) {
             });
           }
 
-          // Atomic credit decrement (all plans tracked; free users were already gated above)
+          // Atomic credit decrement — MAX(0,...) prevents negative values under concurrent requests
           await db.update(schema.users)
-            .set({ agentCredits: sql`agent_credits - 1` })
+            .set({ agentCredits: sql`MAX(0, agent_credits - 1)` })
             .where(eq(schema.users.id, userId));
           await db.insert(schema.creditTransactions).values({
             id: uuidv4(), userId, amount: -1, type: "usage",

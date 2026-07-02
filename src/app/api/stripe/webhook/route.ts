@@ -9,6 +9,8 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { addCredits } from "@/lib/credits/use-credits";
 import { ensureUser } from "@/lib/user/ensure-user";
 import { trackGamification } from "@/lib/gamification/track";
+import { sendEmail } from "@/lib/email/send";
+import { churnPreventionTemplate } from "@/lib/email/templates";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-05-27.dahlia",
@@ -112,6 +114,19 @@ export async function POST(req: Request) {
           .where(eq(schema.subscriptions.userId, userId))
           .limit(1);
 
+        // Fetch actual period dates from Stripe (handles monthly AND annual correctly)
+        let periodStart = Math.floor(Date.now() / 1000);
+        let periodEnd = periodStart + 30 * 24 * 60 * 60;
+        if (session.subscription) {
+          try {
+            const stripeSub = await stripe.subscriptions.retrieve(session.subscription as string);
+            periodStart = stripeSub.current_period_start;
+            periodEnd = stripeSub.current_period_end;
+          } catch (e) {
+            console.warn("⚠️ [Stripe Webhook] No se pudo obtener periodo de suscripción:", e);
+          }
+        }
+
         if (existing.length > 0) {
           await db
             .update(schema.subscriptions)
@@ -120,8 +135,8 @@ export async function POST(req: Request) {
               status: "active",
               stripeCustomerId: session.customer as string,
               stripeSubscriptionId: session.subscription as string,
-              currentPeriodStart: Math.floor(Date.now() / 1000),
-              currentPeriodEnd: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
+              currentPeriodStart: periodStart,
+              currentPeriodEnd: periodEnd,
             })
             .where(eq(schema.subscriptions.userId, userId));
           console.log(`✅ Suscripción actualizada para usuario ${userId} a plan ${plan}`);
@@ -133,8 +148,8 @@ export async function POST(req: Request) {
             status: "active",
             stripeCustomerId: session.customer as string,
             stripeSubscriptionId: session.subscription as string,
-            currentPeriodStart: Math.floor(Date.now() / 1000),
-            currentPeriodEnd: Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60,
+            currentPeriodStart: periodStart,
+            currentPeriodEnd: periodEnd,
           });
           console.log(`✅ Nueva suscripción creada para usuario ${userId} a plan ${plan}`);
         }
@@ -186,8 +201,9 @@ export async function POST(req: Request) {
 
         if (!sub) break;
 
-        const newPeriodEnd = Math.floor(Date.now() / 1000) + 30 * 24 * 60 * 60;
-        const newPeriodStart = Math.floor(Date.now() / 1000);
+        // Use Stripe's actual period dates — covers both monthly and annual renewals
+        const newPeriodStart = invoice.period_start ?? Math.floor(Date.now() / 1000);
+        const newPeriodEnd = invoice.period_end ?? (newPeriodStart + 30 * 24 * 60 * 60);
 
         await db.update(schema.subscriptions)
           .set({ status: "active", currentPeriodStart: newPeriodStart, currentPeriodEnd: newPeriodEnd })
@@ -214,11 +230,28 @@ export async function POST(req: Request) {
           .limit(1);
 
         if (user.length > 0) {
+          const canceledPlan = user[0].plan;
           await db
             .update(schema.subscriptions)
             .set({ status: "canceled" })
             .where(eq(schema.subscriptions.id, user[0].id));
           console.log(`❌ Suscripción cancelada para usuario ${user[0].userId}`);
+
+          // Churn prevention email
+          try {
+            const clerk = await clerkClient();
+            const clerkUser = await clerk.users.getUser(user[0].userId);
+            const email = clerkUser.emailAddresses[0]?.emailAddress;
+            if (email) {
+              await sendEmail({
+                to: email,
+                subject: "Sentimos verte ir — una oferta para que vuelvas",
+                html: churnPreventionTemplate({ name: clerkUser.firstName ?? undefined, plan: canceledPlan }),
+              });
+            }
+          } catch (e) {
+            console.warn("⚠️ [Stripe Webhook] No se pudo enviar email de churn:", e);
+          }
         }
         break;
       }

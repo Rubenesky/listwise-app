@@ -49,6 +49,42 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "monthly",
       priority: 0.7,
     },
+    {
+      url: `${BASE_URL}/blog/bullet-points-amazon-que-convierten`,
+      lastModified: new Date("2026-07-03"),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${BASE_URL}/blog/errores-listings-amazon-como-evitarlos`,
+      lastModified: new Date("2026-07-03"),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${BASE_URL}/blog/herramientas-ia-ecommerce-2026`,
+      lastModified: new Date("2026-07-03"),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${BASE_URL}/blog/palabras-clave-ecommerce-guia-completa`,
+      lastModified: new Date("2026-07-03"),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${BASE_URL}/blog/optimizar-listings-etsy-ia`,
+      lastModified: new Date("2026-07-03"),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${BASE_URL}/blog/plantilla-csv-listings-productos-descarga`,
+      lastModified: new Date("2026-07-03"),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
     ...alternativasEntries,
   ];
 }
