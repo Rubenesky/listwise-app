@@ -188,7 +188,7 @@ export default function PhotoUploader({ onListingCreated }: Props) {
 
           <ConfidenceDot value={analysis.confidence} />
 
-          {state === "error" && error && (
+          {error && (
             <p className="text-sm text-red-600">{error}</p>
           )}
 

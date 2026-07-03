@@ -1,15 +1,19 @@
 services:
+  # ─── Producción ──────────────────────────────────────────────────────────────
   - type: web
     name: listwise-app
     runtime: node
     plan: free
+    branch: main
     buildCommand: npm install && npm run build
     startCommand: next start -p $PORT
     envVars:
       - key: NODE_VERSION
         value: 20.12.0
       - key: NEXT_PUBLIC_APP_URL
-        value: https://listwise-app.onrender.com
+        value: https://listwise.app
+      - key: NEXT_PUBLIC_BASE_URL
+        value: https://listwise.app
       - key: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
         sync: false
       - key: CLERK_SECRET_KEY
@@ -27,6 +31,12 @@ services:
       - key: TRIGGER_SECRET_KEY
         sync: false
       - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
         sync: false
       - key: UPSTASH_REDIS_REST_URL
         sync: false
@@ -48,5 +58,61 @@ services:
         value: https://eu.i.posthog.com
       - key: ADMIN_USER_ID
         sync: false
+      - key: CLERK_WEBHOOK_SECRET
+        sync: false
+
+  # ─── Staging (rama staging → credenciales de test) ────────────────────────
+  - type: web
+    name: listwise-app-staging
+    runtime: node
+    plan: free
+    branch: staging
+    buildCommand: npm install && npm run build
+    startCommand: next start -p $PORT
+    envVars:
+      - key: NODE_VERSION
+        value: 20.12.0
+      - key: NEXT_PUBLIC_APP_URL
+        value: https://listwise-app-staging.onrender.com
+      - key: NEXT_PUBLIC_BASE_URL
+        value: https://listwise-app-staging.onrender.com
+      - key: NODE_ENV
+        value: staging
+      - key: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+        sync: false
+      - key: CLERK_SECRET_KEY
+        sync: false
+      - key: TURSO_DATABASE_URL
+        sync: false
+      - key: TURSO_AUTH_TOKEN
+        sync: false
+      - key: NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: TRIGGER_SECRET_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: UPSTASH_REDIS_REST_URL
+        sync: false
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: IP_HASH_SALT
+        sync: false
+      - key: CRON_SECRET
+        sync: false
+      - key: NEXT_PUBLIC_POSTHOG_HOST
+        value: https://eu.i.posthog.com
       - key: CLERK_WEBHOOK_SECRET
         sync: false

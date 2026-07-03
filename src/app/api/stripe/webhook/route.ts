@@ -119,7 +119,7 @@ export async function POST(req: Request) {
         let periodEnd = periodStart + 30 * 24 * 60 * 60;
         if (session.subscription) {
           try {
-            const stripeSub = await stripe.subscriptions.retrieve(session.subscription as string);
+            const stripeSub = await stripe.subscriptions.retrieve(session.subscription as string) as unknown as { current_period_start: number; current_period_end: number };
             periodStart = stripeSub.current_period_start;
             periodEnd = stripeSub.current_period_end;
           } catch (e) {

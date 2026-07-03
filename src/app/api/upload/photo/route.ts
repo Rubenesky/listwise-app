@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { ratelimit } from "@/lib/rate-limit";
+import { useCredits } from "@/lib/credits/use-credits";
+import { ensureUser } from "@/lib/user/ensure-user";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -23,6 +25,16 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { error: "Demasiadas peticiones. Espera un momento." },
         { status: 429 }
+      );
+    }
+
+    // Credit gate — prevent cost abuse on this expensive Vision API call
+    await ensureUser(userId);
+    const creditResult = await useCredits(userId, 1, "Análisis de foto con IA");
+    if (!creditResult.success) {
+      return NextResponse.json(
+        { error: "Sin créditos suficientes para analizar la foto. Necesitas 1 crédito." },
+        { status: 402 }
       );
     }
 
