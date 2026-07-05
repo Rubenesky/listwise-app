@@ -5,6 +5,7 @@ import { eq, and } from "drizzle-orm";
 import { z } from "zod";
 import { getAIResponse } from "@/lib/ai/providers";
 import { useCredits } from "@/lib/credits/use-credits";
+import { sanitize } from "@/lib/sanitize";
 
 const bodySchema = z.object({
   listingId: z.string().min(1),
@@ -65,10 +66,6 @@ export async function POST(req: Request) {
         { status: 402 }
       );
     }
-
-    // Sanitize scraped content — prevents prompt injection from competitor listing text
-    const sanitize = (s: unknown, maxLen = 600) =>
-      String(s ?? "").replace(/[\x00-\x1f<>{}\\]/g, " ").trim().slice(0, maxLen);
 
     const prompt = `Eres un experto en copywriting de ecommerce y análisis competitivo.
 

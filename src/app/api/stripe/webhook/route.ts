@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 import { convertReferral } from "@/lib/referrals/convert";
 import { clerkClient } from "@clerk/nextjs/server";
 import { addCredits } from "@/lib/credits/use-credits";
+import { planFromPriceId, parseAgentCredits } from "@/lib/stripe/price-plan";
 import { ensureUser } from "@/lib/user/ensure-user";
 import { trackGamification } from "@/lib/gamification/track";
 import { sendEmail } from "@/lib/email/send";
@@ -18,12 +19,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
-const PRICE_TO_PLAN: Record<string, string> = {
-  "price_1Tl68X1uySlskct3CuBf7pjw": "pro",
-  "price_1Tl69t1uySlskct3TIl1qBqc": "enterprise",
-  "price_1TncET1uySlskct3tPbtAzJA": "pro",
-  "price_1TncFM1uySlskct3Lin2vkKE": "enterprise",
-};
 
 export async function POST(req: Request) {
   try {
@@ -53,19 +48,17 @@ export async function POST(req: Request) {
         }
 
         // Handle agent credit pack purchases
-        if (session.metadata?.type === "agent_credits") {
-          const creditsToAdd = parseInt(session.metadata.credits ?? "0", 10);
-          if (creditsToAdd > 0) {
-            console.log(`💰 [Stripe Webhook] +${creditsToAdd} créditos de agente para ${userId}`);
-            await addCredits(
-              userId,
-              creditsToAdd,
-              "purchase",
-              `Pack ${creditsToAdd} créditos`,
-              session.id
-            );
-            console.log(`✅ [Stripe Webhook] Créditos de agente actualizados para ${userId}`);
-          }
+        const creditsToAdd = parseAgentCredits(session.metadata as Record<string, string | undefined> ?? {});
+        if (creditsToAdd > 0) {
+          console.log(`💰 [Stripe Webhook] +${creditsToAdd} créditos de agente para ${userId}`);
+          await addCredits(
+            userId,
+            creditsToAdd,
+            "purchase",
+            `Pack ${creditsToAdd} créditos`,
+            session.id
+          );
+          console.log(`✅ [Stripe Webhook] Créditos de agente actualizados para ${userId}`);
           break;
         }
 
@@ -76,7 +69,7 @@ export async function POST(req: Request) {
           break;
         }
 
-        const plan = PRICE_TO_PLAN[priceId];
+        const plan = planFromPriceId(priceId);
         if (!plan) {
           console.error(`❌ Price ID desconocido: ${priceId}`);
           break;
