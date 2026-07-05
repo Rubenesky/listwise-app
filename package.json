@@ -9,6 +9,8 @@
     "test": "jest",
     "test:types": "tsc --noEmit",
     "test:coverage": "jest --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
     "trigger:dev": "npx trigger.dev@latest dev",
     "trigger:deploy": "npx --yes trigger.dev@4.4.6 deploy",
     "dev:all": "concurrently \"npm run dev\" \"npm run trigger:dev\""
@@ -58,6 +60,7 @@
     "@libsql/linux-x64-gnu": "0.4.7"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.13.4",
     "@types/react": "^19.0.8",
