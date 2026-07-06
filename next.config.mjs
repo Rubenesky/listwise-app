@@ -52,6 +52,8 @@ const analyzedConfig = withBundleAnalyzer({
 export default withSentryConfig(analyzedConfig, {
   silent: true,
   hideSourceMaps: true,
-  disableLogger: true,
-  automaticVercelMonitors: false,
+  webpack: {
+    treeshake: { removeDebugLogging: true },
+    automaticVercelMonitors: false,
+  },
 });
