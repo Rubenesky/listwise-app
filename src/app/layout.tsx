@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Suspense } from "react";
-import PostHogProvider from "@/components/PostHogProvider";
-import PostHogPageView from "@/components/PostHogPageView";
+import dynamic from "next/dynamic";
+
+const PostHogProvider = dynamic(() => import("@/components/PostHogProvider"), { ssr: false });
+const PostHogPageView = dynamic(() => import("@/components/PostHogPageView"), { ssr: false });
 import LeadMagnetPopup from "@/components/LeadMagnetPopup";
 import { BASE_URL } from "@/lib/config";
 import "./globals.css";
