@@ -1,6 +1,8 @@
+import "@/lib/env"; // validates all required env vars at startup (throws on missing vars)
 import { drizzle } from "drizzle-orm/libsql";
 import { createClient } from "@libsql/client";
 import * as schema from "./schema";
+import { log } from "@/lib/logger";
 
 export { schema };
 
@@ -14,15 +16,12 @@ function getInstance(): Db {
   const url = process.env.TURSO_DATABASE_URL;
   const authToken = process.env.TURSO_AUTH_TOKEN;
 
-  console.log(`[DB] TURSO_DATABASE_URL: ${url ? "✅ presente" : "❌ ausente"}`);
-  console.log(`[DB] TURSO_AUTH_TOKEN: ${authToken ? "✅ presente" : "❌ ausente"}`);
-
   if (!url || !authToken) {
-    throw new Error("❌ Faltan variables de entorno: TURSO_DATABASE_URL o TURSO_AUTH_TOKEN");
+    throw new Error("Missing env vars: TURSO_DATABASE_URL or TURSO_AUTH_TOKEN");
   }
 
   _instance = drizzle(createClient({ url, authToken }), { schema });
-  console.log("[DB] ✅ Conexión a Turso establecida");
+  log.debug("DB connection established");
   return _instance;
 }
 

@@ -10,6 +10,7 @@ import { AGENT_SYSTEM_PROMPT } from "@/lib/ai/agent-prompts";
 import { trackGamification } from "@/lib/gamification/track";
 import { ensureUser } from "@/lib/user/ensure-user";
 import { useCredits, addCredits } from "@/lib/credits/use-credits";
+import { log } from "@/lib/logger";
 
 const requestSchema = z.object({
   message: z.string().min(1).max(500),
@@ -70,7 +71,6 @@ export async function POST(req: Request) {
   try {
     const { userId } = await auth();
     if (!userId) {
-      console.log("❌ [Agent] Intento sin autenticación");
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
@@ -81,12 +81,12 @@ export async function POST(req: Request) {
     }
     const { message, listingId, conversationId, command, marketplace, supplementalAttrs } = parsedBody.data;
 
-    console.log(`🤖 [Agent] Usuario ${userId} - Mensaje: ${message.slice(0, 80)}`);
+    log.info({ userId, messagePreview: message.slice(0, 80) }, "Agent request received");
 
     // Rate limit per minute (all users)
     const { success: minuteOk } = await ratelimitAgentMinute.limit(`agent:${userId}`);
     if (!minuteOk) {
-      console.log(`❌ [Agent] Rate limit minuto excedido para ${userId}`);
+      log.warn({ userId }, "Agent rate limit (minute) exceeded");
       return NextResponse.json({ error: "Demasiadas consultas. Espera un momento." }, { status: 429 });
     }
 
@@ -107,7 +107,7 @@ export async function POST(req: Request) {
     if (isFree) {
       const { success: hourOk } = await ratelimitAgentHour.limit(`agent:${userId}:hour`);
       if (!hourOk) {
-        console.log(`❌ [Agent] Rate limit hora excedido para ${userId}`);
+        log.warn({ userId }, "Agent rate limit (hour) exceeded");
         return NextResponse.json({ error: "Has alcanzado el límite de consultas por hora." }, { status: 429 });
       }
     }
@@ -136,7 +136,7 @@ export async function POST(req: Request) {
 
     const [listing] = listingRows;
     if (!listing) {
-      console.log(`❌ [Agent] Producto ${listingId} no encontrado`);
+      log.warn({ userId, listingId }, "Listing not found");
       return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
     }
 
@@ -226,7 +226,7 @@ export async function POST(req: Request) {
     // Pro/Enterprise users pass through immediately (useCredits skips deduction for them).
     const creditResult = await useCredits(userId, 1, "Consulta de agente");
     if (!creditResult.success) {
-      console.log(`❌ [Agent] Usuario ${userId} sin créditos suficientes`);
+      log.info({ userId }, "Insufficient agent credits");
       return NextResponse.json({
         error: "Sin créditos",
         upsell: true,
@@ -252,7 +252,7 @@ export async function POST(req: Request) {
     // Call AI provider with streaming
     const aiProvider = getDefaultProvider();
     const aiConfig = providers[aiProvider];
-    console.log(`🤖 [Agent] Usando proveedor: ${aiProvider} (${aiConfig.defaultModel})`);
+    log.info({ userId, provider: aiProvider, model: aiConfig.defaultModel }, "Agent AI provider selected");
     const stream = await aiConfig.client.chat.completions.create({
       model: aiConfig.defaultModel,
       messages: [
@@ -296,7 +296,7 @@ export async function POST(req: Request) {
             ].join(" ");
             const foundJargon = JARGON_WORDS.filter((w) => textToCheck.toLowerCase().includes(w.toLowerCase()));
             if (foundJargon.length > 0) {
-              console.log(`⚠️ [Agent] Jerga detectada [${foundJargon.join(", ")}] — reintentando`);
+              log.debug({ userId, foundJargon }, "Jargon detected, retrying");
               try {
                 const retryContent = await aiConfig.client.chat.completions.create({
                   model: aiConfig.defaultModel,
@@ -317,10 +317,10 @@ export async function POST(req: Request) {
                 if (retryText) {
                   parsedResponse = JSON.parse(retryText);
                   parsedResponse._retried = true;
-                  console.log("✅ [Agent] Retry formal corregido");
+                  log.debug({ userId }, "Formal retry corrected");
                 }
               } catch (retryErr) {
-                console.warn("⚠️ [Agent] Retry fallido:", retryErr);
+                log.warn({ userId, err: retryErr }, "Formal retry failed");
               }
             }
           }
@@ -329,7 +329,7 @@ export async function POST(req: Request) {
           const inventedSpecs = detectInventedSpecs(parsedResponse, listing.attributes);
           if (inventedSpecs.length > 0) {
             parsedResponse._inventedSpecs = inventedSpecs;
-            console.warn(`⚠️ [Agent] Posibles specs inventadas: ${inventedSpecs.join(", ")}`);
+            log.warn({ userId, inventedSpecs }, "Possible fabricated specs detected");
           }
 
           const latency = Date.now() - startTime;
@@ -365,7 +365,7 @@ export async function POST(req: Request) {
             });
           }
 
-          trackGamification(userId, "agent_chat").catch((e) => console.warn("[gamification] trackGamification failed:", e));
+          trackGamification(userId, "agent_chat").catch((e) => log.warn({ err: e }, "trackGamification failed"));
 
           const remainingCredits = creditResult.remainingCredits;
           const finalConvId = conversation?.id ?? newConvId;
@@ -378,13 +378,13 @@ export async function POST(req: Request) {
             isFree,
           })}\n\n`));
 
-          console.log(`✅ [Agent] ${latency}ms, comando: ${detectedCommand}, créditos restantes: ${remainingCredits}`);
+          log.info({ userId, latencyMs: latency, command: detectedCommand, remainingCredits }, "Agent request completed");
           controller.close();
         } catch (error) {
-          console.error("❌ [Agent] Error en streaming:", error);
+          log.error({ userId, err: error }, "Agent streaming error");
           // Refund the pre-deducted credit since the AI call failed
           await addCredits(userId, 1, "refund", "Reembolso por error de agente").catch((e) =>
-            console.warn("[agent] Credit refund failed:", e)
+            log.warn({ err: e }, "Credit refund failed")
           );
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Error al procesar la respuesta" })}\n\n`));
           controller.close();
@@ -400,7 +400,7 @@ export async function POST(req: Request) {
       },
     });
   } catch (error) {
-    console.error("❌ [Agent] Error general:", error);
+    log.error({ err: error }, "Agent general error");
     return NextResponse.json({ error: "Error al procesar la consulta" }, { status: 500 });
   }
 }

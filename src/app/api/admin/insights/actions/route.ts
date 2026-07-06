@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { count, desc } from "drizzle-orm";
+import { log } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -27,7 +28,7 @@ export async function GET() {
 
     return NextResponse.json({ actions, total });
   } catch (error) {
-    console.error("❌ [Admin Insights Actions] Error:", error);
+    log.error({ err: error }, "Admin insights actions error");
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { count, sum, sql } from "drizzle-orm";
 import { LEVELS } from "@/lib/gamification/constants";
+import { log } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -46,7 +47,7 @@ export async function GET() {
 
     return NextResponse.json({ activeUsers, totalPoints, totalUsers, levelDistribution });
   } catch (error) {
-    console.error("❌ [Admin Insights Summary] Error:", error);
+    log.error({ err: error }, "Admin insights summary error");
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

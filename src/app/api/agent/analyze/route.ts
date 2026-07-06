@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { eq, and } from "drizzle-orm";
+import { log } from "@/lib/logger";
 
 // Rule-based analysis — no AI call, no credit charge
 function analyzeTitle(title: string | null): { score: number; notes: string[] } {
@@ -144,7 +145,7 @@ export async function GET(req: Request) {
       missingAttrs,
     });
   } catch (error) {
-    console.error("❌ [Analyze] Error:", error);
+    log.error({ err: error }, "Agent analyze error");
     return NextResponse.json({ error: "Error al analizar" }, { status: 500 });
   }
 }

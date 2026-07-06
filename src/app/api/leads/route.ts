@@ -3,15 +3,25 @@ import { createHash } from "crypto";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
+import { z } from "zod";
 import { sendEmail } from "@/lib/email/send";
 import { leadMagnetTemplate } from "@/lib/email/templates";
 import { ratelimitLeads } from "@/lib/rate-limit";
 import { escapeHtml } from "@/lib/sanitize";
+import { log } from "@/lib/logger";
 
-const EMAIL_RE = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
+const leadsBodySchema = z.object({
+  email: z.string().email().max(254),
+  name: z.string().max(100).optional(),
+  marketplace: z.string().max(50).optional(),
+  pageUrl: z.string().url().max(500).optional(),
+  utmSource: z.string().max(100).optional(),
+  utmMedium: z.string().max(100).optional(),
+  utmCampaign: z.string().max(100).optional(),
+});
 
 function hashIp(ip: string): string {
-  if (!process.env.IP_HASH_SALT) console.warn("[leads] IP_HASH_SALT not set — using default salt, hashes are reversible");
+  if (!process.env.IP_HASH_SALT) log.warn("IP_HASH_SALT not set — hashes reversible");
   return createHash("sha256")
     .update(ip + (process.env.IP_HASH_SALT ?? "lw-salt-default"))
     .digest("hex")
@@ -27,12 +37,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Demasiados intentos. Inténtalo mañana." }, { status: 429 });
     }
 
-    const body = await req.json();
-    const { email, name, marketplace, pageUrl, utmSource, utmMedium, utmCampaign } = body;
-
-    if (!email || typeof email !== "string" || email.length > 254 || !EMAIL_RE.test(email)) {
+    const body = await req.json().catch(() => null);
+    const parsed = leadsBodySchema.safeParse(body);
+    if (!parsed.success) {
       return NextResponse.json({ error: "Email inválido." }, { status: 400 });
     }
+    const { email, name, marketplace, pageUrl, utmSource, utmMedium, utmCampaign } = parsed.data;
 
     const safeEmail = email.toLowerCase().trim();
     const now = Math.floor(Date.now() / 1000);
@@ -76,7 +86,7 @@ export async function POST(req: Request) {
     });
 
     // Notify admin
-    if (!process.env.ADMIN_EMAIL) console.warn("[leads] ADMIN_EMAIL not set, falling back to hardcoded address");
+    if (!process.env.ADMIN_EMAIL) log.warn("ADMIN_EMAIL not set, using fallback");
     const adminEmail = process.env.ADMIN_EMAIL ?? "dcrubben25@gmail.com";
     const safeName = escapeHtml(name ? String(name).slice(0, 100) : "—");
     const safeMarketplace = escapeHtml(marketplace ? String(marketplace).slice(0, 50) : "—");
@@ -88,7 +98,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true });
   } catch (err) {
-    console.error("[leads] Error:", err);
+    log.error({ err }, "Leads route error");
     return NextResponse.json({ error: "Error interno." }, { status: 500 });
   }
 }

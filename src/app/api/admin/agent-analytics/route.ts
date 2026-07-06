@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { desc, inArray } from "drizzle-orm";
+import { log } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -60,7 +61,7 @@ export async function GET() {
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([date, count]) => ({ date, count }));
 
-    console.log(`📊 [Admin Analytics] ${total} consultas, ${Object.keys(commands).length} comandos únicos`);
+    log.info({ total, uniqueCommands: Object.keys(commands).length }, "Admin analytics fetched");
 
     return NextResponse.json({
       total,
@@ -81,7 +82,7 @@ export async function GET() {
       evolution,
     });
   } catch (error) {
-    console.error("❌ [Admin Analytics] Error:", error);
+    log.error({ err: error }, "Admin analytics error");
     return NextResponse.json({ error: "Error al obtener analítica" }, { status: 500 });
   }
 }

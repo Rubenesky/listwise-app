@@ -10,6 +10,7 @@ import { trackGamification } from "@/lib/gamification/track";
 import { useCredits, addCredits } from "@/lib/credits/use-credits";
 import { ensureUser } from "@/lib/user/ensure-user";
 import { inArray } from "drizzle-orm";
+import { log } from "@/lib/logger";
 
 import { validateRows } from "@/lib/csv/validate-rows";
 
@@ -35,7 +36,7 @@ async function sendTriggerEvent(userId: string, batchId: string, mode: string, p
 
   if (!response.ok) {
     const errorText = await response.text();
-    console.error("Error sending trigger event:", response.status, errorText);
+    log.error({ status: response.status, body: errorText }, "Trigger event failed");
     if (response.status === 429) {
       throw new Error("RATE_LIMIT");
     }
@@ -53,7 +54,7 @@ export async function POST(req: Request) {
     }
     const clerkUser = await currentUser();
     const userEmail = clerkUser?.emailAddresses[0]?.emailAddress;
-    console.log(`📤 [Upload] Usuario ${userId} subiendo archivo`);
+    log.info({ userId }, "Upload started");
 
     const { success } = await ratelimit.limit(userId);
     if (!success) {
@@ -75,7 +76,7 @@ export async function POST(req: Request) {
     ]);
 
     const userPlan = subscription.length > 0 ? subscription[0].plan : "free";
-    if (!(userPlan in PLAN_LIMITS)) console.warn(`[upload] Plan desconocido: "${userPlan}", usando límite free`);
+    if (!(userPlan in PLAN_LIMITS)) log.warn({ userId, plan: userPlan }, "Unknown plan, defaulting to free limit");
     const planLimit = PLAN_LIMITS[userPlan as keyof typeof PLAN_LIMITS] ?? PLAN_LIMITS.free;
     const currentCount = totalProducts[0]?.count || 0;
 
@@ -176,13 +177,13 @@ export async function POST(req: Request) {
       createdAt: Math.floor(Date.now() / 1000),
     }));
 
-    console.log(`📤 [Upload] Productos: ${listings.length}`);
+    log.info({ userId, count: listings.length }, "Listings inserted");
     await db.insert(schema.listings).values(listings);
 
     // 7. Disparar el worker de Trigger.dev
     const batchId = uuidv4();
     const insertedIds = listings.map((l) => l.id);
-    console.log(`📤 [Upload] Batch ID: ${batchId}`);
+    log.info({ userId, batchId }, "Batch triggered");
     try {
       await sendTriggerEvent(userId, batchId, mode, provider, userEmail);
     } catch (triggerError) {
@@ -196,7 +197,7 @@ export async function POST(req: Request) {
       throw triggerError;
     }
 
-    trackGamification(userId, "upload_csv").catch((e) => console.warn("[gamification] trackGamification failed:", e));
+    trackGamification(userId, "upload_csv").catch((e) => log.warn({ err: e }, "trackGamification failed"));
     return NextResponse.json({
       success: true,
       count: listings.length,
@@ -208,7 +209,7 @@ export async function POST(req: Request) {
     });
 
   } catch (error) {
-    console.error("Error en upload:", error);
+    log.error({ err: error }, "Upload error");
     const msg = error instanceof Error ? error.message : "";
     if (msg === "RATE_LIMIT") {
       return NextResponse.json(
