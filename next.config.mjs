@@ -1,4 +1,5 @@
 import { withSentryConfig } from "@sentry/nextjs";
+import withBundleAnalyzer from "@next/bundle-analyzer";
 
 const ContentSecurityPolicy = [
   "default-src 'self'",
@@ -44,7 +45,11 @@ const nextConfig = {
   },
 };
 
-export default withSentryConfig(nextConfig, {
+const analyzedConfig = withBundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+})(nextConfig);
+
+export default withSentryConfig(analyzedConfig, {
   silent: true,
   hideSourceMaps: true,
   disableLogger: true,
