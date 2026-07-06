@@ -5,6 +5,7 @@ import { db, schema } from "@/db";
 import { providers, getDefaultProvider } from "@/lib/ai/providers";
 import { isSPADomain, hasScrapingProvider, scrapeWithJSRendering, extractFromUrlSlug } from "@/lib/scraping/providers";
 import { sanitize } from "@/lib/sanitize";
+import { log } from "@/lib/logger";
 
 export interface CompetitorAnalysisPayload {
   analysisId: string;
@@ -252,7 +253,7 @@ async function fetchMobile(url: string): Promise<string | null> {
     const ab = await res.arrayBuffer();
     const html = new TextDecoder().decode(ab);
     if (isCloudflareBlocked(html)) {
-      console.log(`🔒 [Competitor] Cloudflare detectado en fetch móvil`);
+      log.debug("Cloudflare bloqueado en fetch móvil");
       return null;
     }
     return html;
@@ -268,14 +269,14 @@ async function fetchMobile(url: string): Promise<string | null> {
 async function scrapeShein(url: string): Promise<ScrapedData & { dataSource: string }> {
   // Always extract from slug as baseline — the slug IS the product title
   const { title: slugTitle, goodsId } = extractFromUrlSlug(url);
-  console.log(`📎 [Competitor/SHEIN] Slug extraído: "${slugTitle}" (ID: ${goodsId})`);
+  log.debug({ url, slugTitle, goodsId }, "SHEIN slug extraído");
 
   // Layer 1: mobile fetch
   const mobileHtml = await fetchMobile(url);
   if (mobileHtml) {
     const parsed = parseHtml(mobileHtml);
     if (!isContentPoor(parsed)) {
-      console.log(`✅ [Competitor/SHEIN] Layer 1 (móvil) exitoso: "${parsed.title.slice(0, 60)}"`);
+      log.debug({ title: parsed.title.slice(0, 60) }, "SHEIN Layer 1 móvil exitoso");
       // Use slug title if parsed title is worse
       if (slugTitle && (parsed.title.length < 20 || parsed.title.toLowerCase().includes("shein"))) {
         parsed.title = slugTitle;
@@ -287,23 +288,23 @@ async function scrapeShein(url: string): Promise<ScrapedData & { dataSource: str
   // Layer 2: JS rendering (Zenrows/ScrapingBee if configured)
   if (hasScrapingProvider()) {
     try {
-      console.log(`🌐 [Competitor/SHEIN] Layer 2 (JS rendering) para ${url}`);
+      log.debug({ url }, "SHEIN Layer 2 JS rendering");
       const jsHtml = await scrapeWithJSRendering(url);
       if (!isCloudflareBlocked(jsHtml)) {
         const parsed = parseHtml(jsHtml);
         if (!isContentPoor(parsed)) {
-          console.log(`✅ [Competitor/SHEIN] Layer 2 (JS rendering) exitoso`);
+          log.debug("SHEIN Layer 2 JS rendering exitoso");
           if (slugTitle && parsed.title.length < 20) parsed.title = slugTitle;
           return { ...parsed, dataSource: "js_rendering" };
         }
       }
     } catch (err) {
-      console.warn(`⚠️ [Competitor/SHEIN] Layer 2 falló: ${err}`);
+      log.warn({ err }, "SHEIN Layer 2 falló");
     }
   }
 
   // Layer 3: slug-only fallback — guaranteed, always works
-  console.log(`📎 [Competitor/SHEIN] Layer 3 (slug): usando título del URL`);
+  log.debug({ url }, "SHEIN Layer 3 slug fallback");
   const mainContent = [
     slugTitle ? `[TÍTULO] ${slugTitle}` : "",
     `[PLATAFORMA] SHEIN`,
@@ -333,7 +334,7 @@ async function scrapeUrl(url: string): Promise<ScrapedData & { dataSource?: stri
 
   // Other SPA domain → JS rendering if available, mobile UA fallback otherwise
   if (spa && !hasProvider) {
-    console.log(`📱 [Competitor] SPA sin provider (${new URL(url).hostname}), intentando mobile UA`);
+    log.debug({ hostname: new URL(url).hostname }, "SPA sin provider, intentando mobile UA");
     try {
       const mobileHtml = await fetchMobile(url);
       if (mobileHtml) {
@@ -346,7 +347,7 @@ async function scrapeUrl(url: string): Promise<ScrapedData & { dataSource?: stri
   }
 
   if (spa && hasProvider) {
-    console.log(`🌐 [Competitor] SPA detectado (${new URL(url).hostname}), usando JS rendering`);
+    log.debug({ hostname: new URL(url).hostname }, "SPA detectado, usando JS rendering");
     const html = await scrapeWithJSRendering(url);
     return parseHtml(html);
   }
@@ -357,7 +358,7 @@ async function scrapeUrl(url: string): Promise<ScrapedData & { dataSource?: stri
     html = await fetchNormal(url);
   } catch (fetchErr) {
     if (!hasProvider) throw fetchErr;
-    console.warn(`⚠️ [Competitor] Fetch normal falló (${fetchErr}), usando JS rendering`);
+    log.warn({ err: fetchErr }, "Fetch normal falló, usando JS rendering");
     const jsHtml = await scrapeWithJSRendering(url);
     return parseHtml(jsHtml);
   }
@@ -366,12 +367,12 @@ async function scrapeUrl(url: string): Promise<ScrapedData & { dataSource?: stri
 
   // Content too poor → upgrade to JS rendering
   if (isContentPoor(result) && hasProvider) {
-    console.log(`⚠️ [Competitor] Contenido pobre (título: "${result.title}"), usando JS rendering`);
+    log.debug({ title: result.title }, "Contenido pobre, actualizando a JS rendering");
     try {
       const jsHtml = await scrapeWithJSRendering(url);
       return parseHtml(jsHtml);
     } catch (jsErr) {
-      console.warn(`⚠️ [Competitor] JS rendering falló (${jsErr}), usando resultado normal`);
+      log.warn({ err: jsErr }, "JS rendering falló, usando resultado normal");
       return result;
     }
   }
@@ -388,7 +389,7 @@ export const analyzeCompetitorTask = task({
     factor: 2,
   },
   run: async (payload: CompetitorAnalysisPayload) => {
-    console.log(`🔍 [Competitor] Analizando: ${payload.url}`);
+    log.info({ analysisId: payload.analysisId, url: payload.url }, "Analizando competidor");
 
     await db
       .update(schema.competitorAnalyses)
@@ -398,10 +399,10 @@ export const analyzeCompetitorTask = task({
     let scraped: ScrapedData;
     try {
       scraped = await scrapeUrl(payload.url);
-      console.log(`✅ [Competitor] Scraping OK: título="${scraped.title.slice(0, 80)}" contenido=${scraped.mainContent.length}ch`);
+      log.info({ analysisId: payload.analysisId, title: scraped.title.slice(0, 80), contentLength: scraped.mainContent.length }, "Scraping completado");
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Error de scraping";
-      console.error("❌ [Competitor] Error scraping:", err);
+      log.error({ analysisId: payload.analysisId, err }, "Error scraping");
       await db
         .update(schema.competitorAnalyses)
         .set({ status: "FAILED", errorMessage: msg, updatedAt: Math.floor(Date.now() / 1000) })
@@ -441,7 +442,7 @@ Responde SOLO con JSON válido:
     try {
       const provider = getDefaultProvider();
       const config = providers[provider];
-      console.log(`🤖 [Competitor] Proveedor IA: ${provider}`);
+      log.info({ analysisId: payload.analysisId, provider }, "Proveedor IA seleccionado");
 
       const response = await config.client.chat.completions.create({
         model: config.defaultModel,
@@ -473,7 +474,7 @@ Responde SOLO con JSON válido:
         suggestions: toStrArr(parsed.suggestions),
       };
     } catch (aiErr) {
-      console.error("❌ [Competitor] Error IA:", aiErr);
+      log.error({ analysisId: payload.analysisId, err: aiErr }, "Error IA");
       await db
         .update(schema.competitorAnalyses)
         .set({ status: "FAILED", errorMessage: "Error en análisis IA", updatedAt: Math.floor(Date.now() / 1000) })
@@ -495,7 +496,7 @@ Responde SOLO con JSON válido:
       })
       .where(eq(schema.competitorAnalyses.id, payload.analysisId));
 
-    console.log(`✅ [Competitor] Análisis completado: ${payload.analysisId}`);
+    log.info({ analysisId: payload.analysisId }, "Análisis completado");
     return { success: true, analysisId: payload.analysisId };
   },
 });

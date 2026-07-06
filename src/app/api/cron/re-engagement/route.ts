@@ -4,6 +4,7 @@ import { and, lt, gte, isNotNull } from "drizzle-orm";
 import { clerkClient } from "@clerk/nextjs/server";
 import { sendEmail } from "@/lib/email/send";
 import { reEngagementTemplate } from "@/lib/email/templates";
+import { log } from "@/lib/logger";
 
 export async function GET(req: Request) {
   const secret = req.headers.get("x-cron-secret");
@@ -47,7 +48,7 @@ export async function GET(req: Request) {
       sentTo.add(userId);
       sent++;
     } catch (emailErr) {
-      console.warn(`[cron:re-engagement] Email failed for userId=${userId}:`, emailErr);
+      log.warn({ userId, err: emailErr }, "cron:re-engagement email failed (segment A)");
       failed++;
     }
   }
@@ -84,12 +85,12 @@ export async function GET(req: Request) {
           sentTo.add(user.id);
           sent++;
         } catch (emailErr) {
-          console.warn(`[cron:re-engagement] Email failed for userId=${user.id}:`, emailErr);
+          log.warn({ userId: user.id, err: emailErr }, "cron:re-engagement email failed (segment B)");
           failed++;
         }
       }
     } catch (batchErr) {
-      console.error(`[cron:re-engagement] Clerk batch failed (offset ${i}):`, batchErr);
+      log.error({ offset: i, batchSize: batch.length, err: batchErr }, "cron:re-engagement Clerk batch failed");
       failed += batch.length;
     }
   }

@@ -2,13 +2,14 @@ import { db, schema } from "@/db";
 import { eq, and, count, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { ACTION_POINTS, DAILY_LIMITS, getLevelInfo, GamificationAction } from "./constants";
+import { log } from "@/lib/logger";
 
 const SECONDS_PER_DAY = 86_400;
 
 /**
  * Records a gamification action directly in the DB.
  * Server-side only — bypasses HTTP rate limiting (trusted server calls).
- * Always call fire-and-forget: trackGamification(...).catch((e) => console.warn("[gamification]", e))
+ * Always call fire-and-forget: trackGamification(...).catch((e) => log.warn({ err: e }, "trackGamification failed"))
  */
 export async function trackGamification(userId: string, action: GamificationAction): Promise<void> {
   const points = ACTION_POINTS[action];
@@ -84,5 +85,5 @@ export async function trackGamification(userId: string, action: GamificationActi
     });
   });
 
-  console.log(`🎮 [Gamification] ${userId} +${points}pts (${action}) → ${newPoints} total`);
+  log.info({ userId, action, points, totalPoints: newPoints }, "Gamification action recorded");
 }

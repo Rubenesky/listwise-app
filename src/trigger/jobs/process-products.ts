@@ -8,6 +8,7 @@ import { SYSTEM_PROMPT, buildUserPromptWithVoice, MODE_CONFIG, type GenerationMo
 import { providers, getAIResponse, type AIProvider } from "@/lib/ai/providers";
 import type { GeneratedContent, BatchProcessPayload } from "@/types";
 import { trackGamification } from "@/lib/gamification/track";
+import { log } from "@/lib/logger";
 
 const qualityFlagsSchema = z.object({
   no_trademarks: z.boolean().optional(),
@@ -72,13 +73,12 @@ export const processProductsTask = task({
     factor: 2,
   },
   run: async (payload: BatchProcessPayload) => {
-    console.log(`📦 [Trigger] Procesando batch para usuario: ${payload.userId}`);
-    console.log(`[process-batch] ▶ Iniciando para userId: ${payload.userId}`);
+    log.info({ userId: payload.userId }, "Iniciando proceso de batch");
     const { userId, mode, provider, userEmail } = payload;
     const safeMode = (mode && mode in MODE_CONFIG ? mode : "creative") as GenerationMode;
     const safeProvider = (provider && provider in providers ? provider : "groq") as AIProvider;
     const aiConfig = providers[safeProvider];
-    console.log(`🤖 [process-batch] Usando proveedor: ${safeProvider} (${aiConfig.defaultModel})`);
+    log.info({ userId, provider: safeProvider, model: aiConfig.defaultModel }, "Proveedor AI seleccionado");
     const temperature = MODE_CONFIG[safeMode].temperature;
 
     // Fetch active voice profile once (before the loop)
@@ -113,15 +113,14 @@ export const processProductsTask = task({
           )
         ) as any;
     } catch (dbError) {
-      console.error("[process-batch] ❌ Error al consultar la BD:", dbError);
+      log.error({ userId, err: dbError }, "Error al consultar la BD");
       throw dbError;
     }
 
-    console.log(`📦 [Trigger] Productos pendientes: ${pendingListings.length}`);
-    console.log(`[process-batch] Listings PENDING encontrados: ${pendingListings.length}`);
+    log.info({ userId, count: pendingListings.length }, "Listings PENDING encontrados");
 
     if (pendingListings.length === 0) {
-      console.log(`[process-batch] ℹ️ No hay listings PENDING para userId: ${userId}`);
+      log.info({ userId }, "No hay listings PENDING");
       return { processed: 0, message: "No pending listings found." };
     }
 
@@ -185,9 +184,9 @@ export const processProductsTask = task({
             .where(eq(schema.listings.id, product.id));
           totalProcessed++;
           succeededListings.push(product);
-          trackGamification(userId, "complete_product").catch((e) => console.warn("[gamification] trackGamification failed:", e));
+          trackGamification(userId, "complete_product").catch((e) => log.warn({ err: e }, "trackGamification failed"));
         } catch (parseError) {
-          console.error(`❌ [parse] Error al parsear respuesta:`, parseError);
+          log.error({ userId, productId: product.id, err: parseError }, "Error al parsear respuesta IA");
           await markFailed(product.id, humanizeError(parseError));
         }
       } catch (error) {

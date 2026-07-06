@@ -2,6 +2,7 @@ import { db, schema } from "@/db";
 import { and, eq, or, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { trackGamification } from "@/lib/gamification/track";
+import { log } from "@/lib/logger";
 
 // Conversion badges — separate from registration badges (first_referral etc.)
 const BADGE_MAP: Record<number, { type: string; name: string; icon: string }> = {
@@ -15,7 +16,7 @@ export async function convertReferral(
   refereeUserId: string,
   plan: string
 ): Promise<boolean> {
-  console.log(`💰 [Referidos] Convirtiendo referido ${referralId} para usuario ${refereeUserId}, plan: ${plan}`);
+  log.info({ referralId, refereeUserId, plan }, "Iniciando conversión de referido");
 
   try {
     // Fetch BEFORE updating so we have referrerId and can run guards
@@ -26,13 +27,13 @@ export async function convertReferral(
       .limit(1);
 
     if (!referral) {
-      console.log(`❌ [Referidos] Referido no encontrado: ${referralId}`);
+      log.warn({ referralId }, "Referido no encontrado");
       return false;
     }
 
     // Self-referral guard — defense-in-depth; callers should also enforce this
     if (referral.referrerId === refereeUserId) {
-      console.log(`❌ [Referidos] Auto-referido bloqueado: referrerId === refereeUserId (${refereeUserId})`);
+      log.warn({ referralId, userId: refereeUserId }, "Auto-referido bloqueado");
       return false;
     }
 
@@ -48,11 +49,11 @@ export async function convertReferral(
       .returning({ id: schema.referrals.id });
 
     if (updated.length === 0) {
-      console.log(`⚠️ [Referidos] Referido ${referralId} ya fue convertido (race condition evitada)`);
+      log.info({ referralId }, "Referido ya convertido (race condition evitada)");
       return false;
     }
 
-    console.log(`✅ [Referidos] Referido ${referralId} marcado como convertido`);
+    log.info({ referralId, referrerId }, "Referido marcado como convertido");
 
     const rewardType = plan === "enterprise" ? "free_month_enterprise" : "free_month_pro";
 
@@ -114,16 +115,12 @@ export async function convertReferral(
       }
     });
 
-    console.log(`🎁 [Referidos] Recompensa asignada a referidor ${referrerId}: ${rewardType}`);
-    console.log(`📊 [Referidos] Créditos asignados al referido ${refereeUserId}: +10`);
-    console.log(`📊 [Referidos] Contadores actualizados para referidor ${referrerId}`);
-    console.log(`🏅 [Referidos] Referidor ${referrerId} tiene ${convertedCount} referidos convertidos`);
+    log.info({ referrerId, rewardType, refereeUserId, convertedCount }, "Conversión de referido completada");
 
-    trackGamification(referrerId, "referral_converted").catch((e) => console.warn("[gamification] trackGamification failed:", e));
-    console.log(`✅ [Referidos] Proceso de conversión completado para usuario ${refereeUserId}`);
+    trackGamification(referrerId, "referral_converted").catch((e) => log.warn({ err: e }, "trackGamification failed"));
     return true;
   } catch (error) {
-    console.error("❌ [Referidos] Error en convertReferral:", error);
+    log.error({ referralId, refereeUserId, err: error }, "Error en convertReferral");
     return false;
   }
 }

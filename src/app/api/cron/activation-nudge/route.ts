@@ -4,6 +4,7 @@ import { eq, isNull } from "drizzle-orm";
 import { clerkClient } from "@clerk/nextjs/server";
 import { sendEmail } from "@/lib/email/send";
 import { activationNudgeTemplate } from "@/lib/email/templates";
+import { log } from "@/lib/logger";
 
 export async function GET(req: Request) {
   const secret = req.headers.get("x-cron-secret");
@@ -54,12 +55,12 @@ export async function GET(req: Request) {
           });
           sent++;
         } catch (emailErr) {
-          console.warn(`[cron:activation] Email failed for ${email}:`, emailErr);
+          log.warn({ email, err: emailErr }, "cron:activation email failed");
           failed++;
         }
       }
     } catch (batchErr) {
-      console.warn(`[cron:activation] Batch fetch failed (size ${batch.length}):`, batchErr);
+      log.warn({ batchSize: batch.length, err: batchErr }, "cron:activation batch fetch failed");
       failed += batch.length;
     }
   }

@@ -1,5 +1,6 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { v4 as uuidv4 } from "uuid";
 
 // Rutas públicas (no requieren autenticación)
 const isPublicRoute = createRouteMatcher([
@@ -18,12 +19,15 @@ const isPublicRoute = createRouteMatcher([
 ]);
 
 export default clerkMiddleware(async (auth, req) => {
+  const requestId = uuidv4();
   const { userId } = await auth();
   const isPublic = isPublicRoute(req);
 
   // Si no está autenticado y no es pública, redirigir a login
   if (!userId && !isPublic) {
-    return NextResponse.redirect(new URL("/sign-in", req.url));
+    const res = NextResponse.redirect(new URL("/sign-in", req.url));
+    res.headers.set("x-request-id", requestId);
+    return res;
   }
 
   // Si está autenticado y está en landing o sign-in/sign-up, redirigir a dashboard
@@ -33,10 +37,14 @@ export default clerkMiddleware(async (auth, req) => {
     (path.startsWith("/sign-in") && !path.includes("/sso-callback") && !path.includes("/verify")) ||
     (path.startsWith("/sign-up") && !path.includes("/sso-callback") && !path.includes("/verify"));
   if (userId && isAuthOrLanding) {
-    return NextResponse.redirect(new URL("/dashboard", req.url));
+    const res = NextResponse.redirect(new URL("/dashboard", req.url));
+    res.headers.set("x-request-id", requestId);
+    return res;
   }
 
-  return NextResponse.next();
+  const res = NextResponse.next();
+  res.headers.set("x-request-id", requestId);
+  return res;
 });
 
 export const config = {

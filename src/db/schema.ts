@@ -119,16 +119,6 @@ export const voiceProfiles = sqliteTable("voice_profiles", {
   userIdIdx: index("idx_voice_profiles_user_id").on(table.userId),
 }));
 
-export const agentCredits = sqliteTable("agent_credits", {
-  id: text("id").primaryKey(),
-  userId: text("user_id").notNull(),
-  credits: integer("credits").default(0),
-  plan: text("plan").default("free"),
-  createdAt: integer("created_at").default(0),
-  expiresAt: integer("expires_at"),
-}, (table) => ({
-  userIdx: index("idx_agent_credits_user_id").on(table.userId),
-}));
 
 export const agentConversations = sqliteTable("agent_conversations", {
   id: text("id").primaryKey(),
