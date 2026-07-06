@@ -41,7 +41,7 @@
     "csv-parse": "^5.6.0",
     "deepseek-sdk": "^1.0.0",
     "dotenv": "^17.4.2",
-    "drizzle-orm": "^0.40.0",
+    "drizzle-orm": "^0.45.2",
     "groq-sdk": "^1.2.1",
     "lucide-react": "^0.474.0",
     "next": "^15.2.3",
@@ -59,6 +59,11 @@
     "uuid": "^11.0.5",
     "zod": "^3.24.1"
   },
+  "overrides": {
+    "ws": "^8.21.0",
+    "cookie": "^0.7.0",
+    "systeminformation": "^5.31.6"
+  },
   "optionalDependencies": {
     "@libsql/linux-x64-gnu": "0.4.7"
   },
@@ -72,7 +77,7 @@
     "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^8.62.1",
     "@typescript-eslint/parser": "^8.62.1",
-    "drizzle-kit": "^0.30.4",
+    "drizzle-kit": "^0.31.10",
     "eslint": "^9.19.0",
     "eslint-config-next": "^15.2.3",
     "jest": "^29.7.0",
