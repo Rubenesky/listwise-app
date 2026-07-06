@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { eq, and, desc } from "drizzle-orm";
+import { log } from "@/lib/logger";
 
 export async function GET(req: Request) {
   try {
@@ -34,7 +35,7 @@ export async function GET(req: Request) {
       },
     });
   } catch (error) {
-    console.error("❌ [Agent Conversation] Error:", error);
+    log.error({ err: error }, "agent/conversation error");
     return NextResponse.json({ error: "Error al cargar historial" }, { status: 500 });
   }
 }

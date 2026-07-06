@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { count, eq } from "drizzle-orm";
+import { log } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -29,7 +30,7 @@ export async function GET() {
 
     return NextResponse.json({ total, completed, pending, failed });
   } catch (err) {
-    console.error("[listings/stats] Error:", err);
+    log.error({ err }, "listings/stats error");
     return NextResponse.json({ error: "Error al obtener estadísticas" }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { Webhook } from "svix";
 import { headers } from "next/headers";
 import { sendEmail } from "@/lib/email/send";
 import { welcomeEmailTemplate } from "@/lib/email/templates";
+import { log } from "@/lib/logger";
 
 interface ClerkEmailAddress {
   email_address: string;
@@ -44,7 +45,7 @@ export async function POST(req: Request) {
       "svix-signature": svix_signature,
     }) as ClerkUserCreatedEvent;
   } catch (err) {
-    console.error("[webhooks/clerk] Signature verification failed:", err);
+    log.error({ err }, "Clerk webhook signature verification failed");
     return new Response("Invalid signature", { status: 400 });
   }
 

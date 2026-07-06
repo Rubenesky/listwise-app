@@ -5,6 +5,7 @@ import { eq, and } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { trackGamification } from "@/lib/gamification/track";
 import { ratelimitSave } from "@/lib/rate-limit";
+import { log } from "@/lib/logger";
 
 export async function PUT(
   req: Request,
@@ -26,9 +27,6 @@ export async function PUT(
     const body = await req.json();
     const { title, bullets, description, variantId, style } = body;
 
-    console.log(`💾 [Save] Guardando descripción para producto ${id}`);
-    if (variantId) console.log(`📝 [Save] Variante seleccionada: ${variantId} (${style})`);
-
     // Verify ownership before writing
     const [existing] = await db
       .select({ id: schema.listings.id })
@@ -37,7 +35,7 @@ export async function PUT(
       .limit(1);
 
     if (!existing) {
-      console.log(`❌ [Save] Producto ${id} no encontrado`);
+      log.warn({ userId, listingId: id }, "Save: listing not found");
       return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
     }
 
@@ -70,14 +68,14 @@ export async function PUT(
         style: String(style),
         selectedAt: Math.floor(Date.now() / 1000),
       });
-      console.log(`📊 [Save] Selección registrada: variante ${variantIndex} (${style}) para producto ${id}`);
+      log.info({ userId, listingId: id, variantIndex, style }, "Variant selection recorded");
     }
 
-    console.log(`✅ [Save] Descripción guardada para producto ${id}`);
-    trackGamification(userId, "edit_description").catch((e) => console.warn("[gamification] trackGamification failed:", e));
+    log.info({ userId, listingId: id }, "Listing saved");
+    trackGamification(userId, "edit_description").catch((e) => log.warn({ err: e }, "trackGamification failed"));
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("❌ [Save] Error al guardar:", error);
+    log.error({ err: error }, "Save listing error");
     return NextResponse.json({ error: "Error al guardar" }, { status: 500 });
   }
 }

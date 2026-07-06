@@ -7,6 +7,7 @@ import { addCredits } from "@/lib/credits/use-credits";
 import { ensureUser } from "@/lib/user/ensure-user";
 import { sendEmail } from "@/lib/email/send";
 import { referralRegistrationTemplate } from "@/lib/email/templates";
+import { log } from "@/lib/logger";
 
 const BADGE_MAP: Record<number, { type: string; name: string; icon: string }> = {
   1: { type: "first_referral", name: "Primer Referido", icon: "🤝" },
@@ -26,7 +27,6 @@ export async function POST(req: Request) {
 
     const cleanCode = code.trim();
 
-    // Find referrer by personal referral code
     const [referrer] = await db
       .select({ id: schema.users.id })
       .from(schema.users)
@@ -43,7 +43,6 @@ export async function POST(req: Request) {
 
     await ensureUser(userId);
 
-    // Idempotency: one referral per user
     const [existing] = await db
       .select({ id: schema.referrals.id })
       .from(schema.referrals)
@@ -54,19 +53,17 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Ya tienes un referido registrado" }, { status: 409 });
     }
 
-    // Get referee email from Clerk (non-blocking)
     let refereeEmail: string | null = null;
     try {
       const clerk = await clerkClient();
       const clerkUser = await clerk.users.getUser(userId);
       refereeEmail = clerkUser.emailAddresses[0]?.emailAddress ?? null;
     } catch {
-      // Email is optional — don't fail the registration
+      // Email is optional
     }
 
     const now = Math.floor(Date.now() / 1000);
 
-    // DB has UNIQUE on code column — suffix with random bytes to avoid collision
     await db.insert(schema.referrals).values({
       id: uuidv4(),
       referrerId: referrer.id,
@@ -78,17 +75,14 @@ export async function POST(req: Request) {
       registeredAt: now,
     });
 
-    // 10 credits to both parties
     await addCredits(userId, 10, "bonus", "Bienvenida: 10 créditos por registrarte con enlace de invitación");
     await addCredits(referrer.id, 10, "bonus", "Créditos por invitar a un nuevo usuario");
 
-    // Increment referrer totalReferrals
     await db
       .update(schema.users)
       .set({ totalReferrals: sql`total_referrals + 1` })
       .where(eq(schema.users.id, referrer.id));
 
-    // Award registration badge if milestone reached
     const [referrerData] = await db
       .select({ totalReferrals: schema.users.totalReferrals })
       .from(schema.users)
@@ -97,7 +91,6 @@ export async function POST(req: Request) {
 
     const total = referrerData?.totalReferrals ?? 0;
 
-    // Check ALL milestones crossed — awards retroactively if a previous milestone was missed
     const earnedBadges = await db
       .select({ type: schema.badges.type })
       .from(schema.badges)
@@ -112,13 +105,12 @@ export async function POST(req: Request) {
           .insert(schema.badges)
           .values({ id: uuidv4(), userId: referrer.id, type: badge.type, name: badge.name, icon: badge.icon, earnedAt: now })
           .onConflictDoNothing();
-        console.log(`🏅 [Referidos] Insignia "${badge.name}" otorgada a ${referrer.id} (${total} registros >= ${milestone})`);
+        log.info({ referrerId: referrer.id, badge: badge.type, total }, "Referral badge awarded");
       }
     }
 
-    console.log(`✅ [Referidos] Registrado: referee=${userId} (${refereeEmail}) → referrer=${referrer.id}`);
+    log.info({ refereeId: userId, referrerId: referrer.id }, "Referral registered");
 
-    // Email al referidor — no bloqueante
     try {
       const clerk = await clerkClient();
       const referrerClerkUser = await clerk.users.getUser(referrer.id);
@@ -131,12 +123,12 @@ export async function POST(req: Request) {
         });
       }
     } catch {
-      // Email no es crítico — no falla el registro si hay error
+      // Email non-critical
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("❌ [Referidos] Error en register:", error);
+    log.error({ err: error }, "Referral register error");
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

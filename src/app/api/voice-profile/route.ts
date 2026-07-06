@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { log } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -18,7 +19,7 @@ export async function GET() {
 
     return NextResponse.json({ profiles });
   } catch (error) {
-    console.error("[voice-profile GET]", error);
+    log.error({ err: error }, "voice-profile GET error");
     return NextResponse.json({ error: "Error al obtener perfiles" }, { status: 500 });
   }
 }

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { eq, and } from "drizzle-orm";
+import { log } from "@/lib/logger";
 
 export async function GET(
   _req: Request,
@@ -15,8 +16,6 @@ export async function GET(
 
     const { id } = await params;
 
-    console.log(`📦 [Preview] Obteniendo producto ${id} para usuario ${userId}`);
-
     const [listing] = await db
       .select()
       .from(schema.listings)
@@ -24,11 +23,9 @@ export async function GET(
       .limit(1);
 
     if (!listing) {
-      console.log(`❌ [Preview] Producto ${id} no encontrado`);
+      log.warn({ userId, listingId: id }, "Preview: listing not found");
       return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
     }
-
-    console.log(`✅ [Preview] Producto ${id} obtenido correctamente`);
 
     return NextResponse.json({
       id: listing.id,
@@ -42,7 +39,7 @@ export async function GET(
       status: listing.status,
     });
   } catch (error) {
-    console.error("❌ [Preview] Error al obtener producto:", error);
+    log.error({ err: error }, "Preview listing error");
     return NextResponse.json({ error: "Error al obtener producto" }, { status: 500 });
   }
 }

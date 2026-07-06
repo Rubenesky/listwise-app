@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { ratelimit } from "@/lib/rate-limit";
+import { log } from "@/lib/logger";
 
 const bodySchema = z.object({
   productName: z.string().min(1).max(200),
@@ -36,7 +37,7 @@ async function sendTriggerEvent(userId: string, batchId: string) {
 
   if (!response.ok) {
     const text = await response.text();
-    console.error("[listings/from-photo] Trigger error:", response.status, text);
+    log.error({ status: response.status, body: text }, "from-photo: Trigger.dev error");
     throw new Error("TRIGGER_FAILED");
   }
 
@@ -91,7 +92,7 @@ export async function POST(req: Request) {
     try {
       await sendTriggerEvent(userId, batchId);
     } catch (triggerErr) {
-      console.error("[listings/from-photo] Trigger failed:", triggerErr);
+      log.error({ err: triggerErr, userId, listingId }, "from-photo: Trigger failed");
       await db
         .update(schema.listings)
         .set({
@@ -112,7 +113,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, listingId });
   } catch (error) {
-    console.error("[listings/from-photo] Error:", error);
+    log.error({ err: error }, "from-photo: unhandled error");
     return NextResponse.json(
       { error: "Error interno del servidor." },
       { status: 500 }

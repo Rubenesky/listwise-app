@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
+import { log } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -10,17 +11,14 @@ export async function GET() {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
-    console.log(`🏅 [Referidos] Consultando insignias de usuario: ${userId}`);
-
     const userBadges = await db
       .select()
       .from(schema.badges)
       .where(eq(schema.badges.userId, userId));
 
-    console.log(`🏅 [Referidos] ${userBadges.length} insignias encontradas para ${userId}`);
     return NextResponse.json({ badges: userBadges });
   } catch (err) {
-    console.error("[referrals/badges] Error:", err);
+    log.error({ err }, "Referral badges error");
     return NextResponse.json({ error: "Error al obtener insignias" }, { status: 500 });
   }
 }

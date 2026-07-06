@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { desc, eq } from "drizzle-orm";
+import { log } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -16,7 +17,7 @@ export async function GET() {
 
     return NextResponse.json({ rewards });
   } catch (error) {
-    console.error("❌ [Referidos] Error listando recompensas:", error);
+    log.error({ err: error }, "referrals/rewards error");
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

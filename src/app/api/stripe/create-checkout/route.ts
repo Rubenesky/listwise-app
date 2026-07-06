@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import Stripe from "stripe";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
+import { log } from "@/lib/logger";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-05-27.dahlia",
@@ -46,8 +47,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Plan no válido" }, { status: 400 });
     }
 
-    console.log("🔑 Creando sesión para:", priceId);
-    console.log("📦 Price ID:", PRICE_IDS[priceId]);
+    log.info({ userId, priceId }, "Checkout session requested");
 
     const isOneTime = ONE_TIME_PRICE_IDS.has(priceId);
 
@@ -87,12 +87,12 @@ export async function POST(req: Request) {
         .limit(1);
 
       if (referral && referral.referrerId === userId) {
-        console.log(`❌ [Stripe] Auto-referido bloqueado en checkout para usuario ${userId}`);
+        log.warn({ userId }, "Self-referral blocked at checkout");
       } else if (referral) {
         validatedReferralCode = String(referralCode).slice(0, 80);
-        console.log(`🔗 [Stripe] Checkout incluye referralCode validado: ${validatedReferralCode}`);
+        log.info({ userId, referralCode: validatedReferralCode }, "Referral code validated");
       } else {
-        console.log(`⚠️ [Stripe] Código de referido no encontrado: ${referralCode}`);
+        log.warn({ userId, referralCode }, "Referral code not found");
       }
     }
 
@@ -117,11 +117,11 @@ export async function POST(req: Request) {
       },
     });
 
-    console.log("✅ Sesión creada:", session.id);
+    log.info({ userId, priceId, sessionId: session.id }, "Checkout session created");
 
     return NextResponse.json({ sessionId: session.id, url: session.url });
   } catch (error) {
-    console.error("❌ Error creating checkout session:", error);
+    log.error({ err: error }, "Checkout session creation error");
     return NextResponse.json(
       { error: "Error al crear la sesión de pago" },
       { status: 500 }

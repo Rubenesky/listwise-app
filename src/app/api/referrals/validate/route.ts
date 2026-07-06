@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
+import { log } from "@/lib/logger";
 
 export async function GET(req: Request) {
   try {
@@ -11,8 +12,6 @@ export async function GET(req: Request) {
       return NextResponse.json({ error: "Código requerido" }, { status: 400 });
     }
 
-    console.log(`🔍 [Referidos] Validando código: ${code}`);
-
     const [referral] = await db
       .select()
       .from(schema.referrals)
@@ -20,19 +19,17 @@ export async function GET(req: Request) {
       .limit(1);
 
     if (!referral) {
-      console.log(`❌ [Referidos] Código inválido: ${code}`);
       return NextResponse.json({ valid: false, error: "Código inválido" });
     }
 
     if (referral.status !== "pending") {
-      console.log(`⚠️ [Referidos] Código ya utilizado: ${code} (estado: ${referral.status})`);
+      log.warn({ code, status: referral.status }, "Referral code already used");
       return NextResponse.json({ valid: false, error: "Código ya utilizado" });
     }
 
-    console.log(`✅ [Referidos] Código válido: ${code} - Referidor: ${referral.referrerId}`);
     return NextResponse.json({ valid: true, referrerId: referral.referrerId });
   } catch (err) {
-    console.error("[referrals/validate] Error:", err);
+    log.error({ err }, "Referral validate error");
     return NextResponse.json({ error: "Error al validar código" }, { status: 500 });
   }
 }

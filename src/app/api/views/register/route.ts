@@ -3,6 +3,7 @@ import { db, schema } from "@/db";
 import { eq, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { ratelimit } from "@/lib/rate-limit";
+import { log } from "@/lib/logger";
 
 export async function POST(req: Request) {
   try {
@@ -53,11 +54,11 @@ export async function POST(req: Request) {
       .set({ shareCount: sql`share_count + 1` })
       .where(eq(schema.listings.id, listing.id));
 
-    console.log(`👁️ [Views] Visita registrada para slug: ${slug} desde ${ip} (${referrer ?? "direct"})`);
+    log.info({ slug, referrer: referrer ?? "direct" }, "View registered");
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("❌ [Views] Error:", error);
+    log.error({ err: error }, "views/register error");
     return NextResponse.json({ error: "Error al registrar visita" }, { status: 500 });
   }
 }

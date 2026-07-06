@@ -12,6 +12,7 @@ import { ensureUser } from "@/lib/user/ensure-user";
 import { trackGamification } from "@/lib/gamification/track";
 import { sendEmail } from "@/lib/email/send";
 import { churnPreventionTemplate } from "@/lib/email/templates";
+import { log } from "@/lib/logger";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-05-27.dahlia",
@@ -31,11 +32,11 @@ export async function POST(req: Request) {
     try {
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
     } catch (err) {
-      console.error("❌ Webhook signature verification failed:", err);
+      log.error({ err }, "Stripe webhook signature verification failed");
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     }
 
-    console.log(`📨 Evento recibido: ${event.type}`);
+    log.info({ eventType: event.type }, "Stripe webhook received");
 
     switch (event.type) {
       case "checkout.session.completed": {
@@ -43,14 +44,14 @@ export async function POST(req: Request) {
         const userId = session.client_reference_id;
 
         if (!userId) {
-          console.error("❌ userId no encontrado");
+          log.error({ eventType: event.type }, "checkout.session.completed: userId missing");
           break;
         }
 
         // Handle agent credit pack purchases
         const creditsToAdd = parseAgentCredits(session.metadata as Record<string, string | undefined> ?? {});
         if (creditsToAdd > 0) {
-          console.log(`💰 [Stripe Webhook] +${creditsToAdd} créditos de agente para ${userId}`);
+          log.info({ userId, credits: creditsToAdd }, "Agent credits purchased");
           await addCredits(
             userId,
             creditsToAdd,
@@ -58,24 +59,23 @@ export async function POST(req: Request) {
             `Pack ${creditsToAdd} créditos`,
             session.id
           );
-          console.log(`✅ [Stripe Webhook] Créditos de agente actualizados para ${userId}`);
           break;
         }
 
         const priceId = session.metadata?.priceId;
 
         if (!priceId) {
-          console.error("❌ priceId no encontrado");
+          log.error({ userId }, "checkout.session.completed: priceId missing");
           break;
         }
 
         const plan = planFromPriceId(priceId);
         if (!plan) {
-          console.error(`❌ Price ID desconocido: ${priceId}`);
+          log.error({ userId, priceId }, "checkout.session.completed: unknown priceId");
           break;
         }
 
-        console.log(`📨 [Stripe Webhook] Pago completado para usuario: ${userId}, plan: ${plan}`);
+        log.info({ userId, plan }, "checkout.session.completed: payment received");
 
         // Auto-convert referral: look up by refereeId (set at registration time)
         const [pendingReferral] = await db
@@ -90,15 +90,12 @@ export async function POST(req: Request) {
           .limit(1);
 
         if (pendingReferral) {
-          console.log(`💰 [Stripe Webhook] Referido encontrado para ${userId}, convirtiendo: ${pendingReferral.id}`);
           const ok = await convertReferral(pendingReferral.id, userId, plan);
           if (ok) {
-            console.log(`✅ [Stripe Webhook] Referido convertido para usuario ${userId}`);
+            log.info({ userId, referralId: pendingReferral.id }, "Referral converted");
           } else {
-            console.log(`⚠️ [Stripe Webhook] Conversión de referido falló silenciosamente para ${userId}`);
+            log.warn({ userId, referralId: pendingReferral.id }, "Referral conversion failed silently");
           }
-        } else {
-          console.log(`ℹ️ [Stripe Webhook] Usuario ${userId} no tiene referido registrado`);
         }
 
         const existing = await db
@@ -116,7 +113,7 @@ export async function POST(req: Request) {
             periodStart = stripeSub.current_period_start;
             periodEnd = stripeSub.current_period_end;
           } catch (e) {
-            console.warn("⚠️ [Stripe Webhook] No se pudo obtener periodo de suscripción:", e);
+            log.warn({ err: e }, "Could not retrieve subscription period from Stripe");
           }
         }
 
@@ -132,7 +129,7 @@ export async function POST(req: Request) {
               currentPeriodEnd: periodEnd,
             })
             .where(eq(schema.subscriptions.userId, userId));
-          console.log(`✅ Suscripción actualizada para usuario ${userId} a plan ${plan}`);
+          log.info({ userId, plan }, "Subscription updated");
         } else {
           await db.insert(schema.subscriptions).values({
             id: uuidv4(),
@@ -144,7 +141,7 @@ export async function POST(req: Request) {
             currentPeriodStart: periodStart,
             currentPeriodEnd: periodEnd,
           });
-          console.log(`✅ Nueva suscripción creada para usuario ${userId} a plan ${plan}`);
+          log.info({ userId, plan }, "Subscription created");
         }
 
         // Sync plan to Clerk publicMetadata for instant client-side reads
@@ -154,9 +151,9 @@ export async function POST(req: Request) {
           await clerk.users.updateUserMetadata(userId, {
             publicMetadata: { ...clerkUser.publicMetadata, plan },
           });
-          console.log(`✅ [Stripe Webhook] Clerk metadata sincronizada: ${userId} → ${plan}`);
+          log.info({ userId, plan }, "Clerk metadata synced");
         } catch (metaErr) {
-          console.warn("⚠️ [Stripe Webhook] No se pudo sincronizar Clerk metadata:", metaErr);
+          log.warn({ err: metaErr }, "Could not sync Clerk metadata");
         }
 
         // Assign plan credits and update agentPlan in users table
@@ -169,13 +166,13 @@ export async function POST(req: Request) {
             .where(eq(schema.users.id, userId));
           if (credits > 0) {
             await addCredits(userId, credits, "bonus", `Créditos plan ${plan}`, session.id);
-            console.log(`✅ [Stripe Webhook] +${credits} créditos plan ${plan} para ${userId}`);
+            log.info({ userId, plan, credits }, "Plan credits awarded");
           }
         } catch (creditErr) {
-          console.warn("⚠️ [Stripe Webhook] No se pudieron asignar créditos del plan:", creditErr);
+          log.warn({ err: creditErr }, "Could not assign plan credits");
         }
 
-        trackGamification(userId, "upgrade_pro").catch((e) => console.warn("[gamification] trackGamification failed:", e));
+        trackGamification(userId, "upgrade_pro").catch((e) => log.warn({ err: e }, "trackGamification failed"));
 
         break;
       }
@@ -207,7 +204,7 @@ export async function POST(req: Request) {
         if (credits > 0) {
           await ensureUser(sub.userId);
           await addCredits(sub.userId, credits, "bonus", `Créditos renovación ${sub.plan}`, invoice.id ?? undefined);
-          console.log(`✅ [Stripe Webhook] +${credits} créditos renovación ${sub.plan} para ${sub.userId}`);
+          log.info({ userId: sub.userId, plan: sub.plan, credits }, "Renewal credits awarded");
         }
         break;
       }
@@ -228,7 +225,7 @@ export async function POST(req: Request) {
             .update(schema.subscriptions)
             .set({ status: "canceled" })
             .where(eq(schema.subscriptions.id, user[0].id));
-          console.log(`❌ Suscripción cancelada para usuario ${user[0].userId}`);
+          log.info({ userId: user[0].userId, plan: canceledPlan }, "Subscription canceled");
 
           // Churn prevention email
           try {
@@ -243,19 +240,19 @@ export async function POST(req: Request) {
               });
             }
           } catch (e) {
-            console.warn("⚠️ [Stripe Webhook] No se pudo enviar email de churn:", e);
+            log.warn({ err: e }, "Could not send churn prevention email");
           }
         }
         break;
       }
 
       default:
-        console.log(`ℹ️ Evento no manejado: ${event.type}`);
+        log.debug({ eventType: event.type }, "Unhandled Stripe webhook event");
     }
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    console.error("❌ Error procesando webhook:", error);
+    log.error({ err: error }, "Stripe webhook processing error");
     return NextResponse.json(
       { error: "Error interno" },
       { status: 500 }

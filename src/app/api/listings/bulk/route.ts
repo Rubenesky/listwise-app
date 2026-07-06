@@ -3,6 +3,7 @@ import { eq, and, inArray } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import { db, schema } from "@/db";
+import { log } from "@/lib/logger";
 
 export async function DELETE(): Promise<NextResponse<{ deleted: number } | { error: string }>> {
   const { userId } = await auth();
@@ -60,7 +61,7 @@ export async function POST(): Promise<NextResponse<{ retrying: number } | { erro
       }
     );
   } catch (err) {
-    console.error("[bulk/retry] Network error calling Trigger.dev:", err);
+    log.error({ err }, "bulk/retry: network error calling Trigger.dev");
     await db
       .update(schema.listings)
       .set({ status: "FAILED" })
@@ -73,9 +74,7 @@ export async function POST(): Promise<NextResponse<{ retrying: number } | { erro
 
   if (!triggerResponse.ok) {
     const body = await triggerResponse.text().catch(() => "(unreadable)");
-    console.error(
-      `[bulk/retry] Trigger.dev returned ${triggerResponse.status}: ${body}`
-    );
+    log.error({ status: triggerResponse.status, body }, "bulk/retry: Trigger.dev non-OK response");
     await db
       .update(schema.listings)
       .set({ status: "FAILED" })

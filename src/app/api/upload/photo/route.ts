@@ -4,6 +4,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { ratelimit } from "@/lib/rate-limit";
 import { useCredits, addCredits } from "@/lib/credits/use-credits";
 import { ensureUser } from "@/lib/user/ensure-user";
+import { log } from "@/lib/logger";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -28,7 +29,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Credit gate — prevent cost abuse on this expensive Vision API call
     await ensureUser(userId);
     const creditResult = await useCredits(userId, 1, "Análisis de foto con IA");
     if (!creditResult.success) {
@@ -86,7 +86,7 @@ export async function POST(req: Request) {
       }
       rawText = block.text;
     } catch (err) {
-      console.error("[upload/photo] Vision API error:", err);
+      log.error({ err, userId }, "upload/photo: Vision API error");
       await addCredits(userId, 1, "refund", "Reembolso por fallo en análisis de foto").catch(() => {});
       return NextResponse.json(
         { error: "No se pudo analizar la imagen. Inténtalo de nuevo." },
@@ -115,7 +115,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ success: true, analysis });
   } catch (error) {
-    console.error("[upload/photo] Error:", error);
+    log.error({ err: error }, "upload/photo: unhandled error");
     return NextResponse.json(
       { error: "Error interno del servidor." },
       { status: 500 }

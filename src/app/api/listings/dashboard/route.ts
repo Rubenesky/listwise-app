@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { eq, desc, count } from "drizzle-orm";
+import { log } from "@/lib/logger";
 
 export async function GET(req: Request) {
   try {
@@ -54,7 +55,7 @@ export async function GET(req: Request) {
       },
     });
   } catch (error) {
-    console.error("❌ [Dashboard] Error:", error);
+    log.error({ err: error }, "listings/dashboard error");
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

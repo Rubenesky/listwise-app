@@ -111,12 +111,10 @@ export default function PricingPageClient({ isSignedIn }: PricingPageClientProps
     if (ref) {
       localStorage.setItem("listwise_referral_code", ref);
       setReferralCode(ref);
-      console.log(`🔗 [Pricing] Código de referido guardado: ${ref}`);
     } else {
       const saved = localStorage.getItem("listwise_referral_code");
       if (saved) {
         setReferralCode(saved);
-        console.log(`🔗 [Pricing] Código de referido recuperado: ${saved}`);
       }
     }
   }, []);
@@ -130,8 +128,6 @@ export default function PricingPageClient({ isSignedIn }: PricingPageClientProps
     setLoading(priceId);
 
     try {
-      console.log(`💰 [Pricing] Iniciando pago para: ${priceId}`);
-      console.log(`🔗 [Pricing] Código de referido: ${referralCode ?? "ninguno"}`);
 
       const response = await fetch("/api/stripe/create-checkout", {
         method: "POST",

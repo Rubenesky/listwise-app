@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
+import { log } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -10,15 +11,12 @@ export async function GET() {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
-    console.log(`📊 [Referidos] Consultando estadísticas de usuario: ${userId}`);
-
     const allReferrals = await db
       .select()
       .from(schema.referrals)
       .where(eq(schema.referrals.referrerId, userId));
 
     const converted = allReferrals.filter((r) => r.status === "converted").length;
-    console.log(`📊 [Referidos] Estadísticas de ${userId}: total=${allReferrals.length}, convertidos=${converted}`);
 
     return NextResponse.json({
       total: allReferrals.length,
@@ -27,7 +25,7 @@ export async function GET() {
       converted,
     });
   } catch (err) {
-    console.error("[referrals/stats] Error:", err);
+    log.error({ err }, "Referral stats error");
     return NextResponse.json({ error: "Error al obtener estadísticas" }, { status: 500 });
   }
 }

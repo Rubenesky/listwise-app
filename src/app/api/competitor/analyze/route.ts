@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 import { promises as dns, LookupAddress } from "dns";
 import { useCredits } from "@/lib/credits/use-credits";
 import { ratelimitCompetitor } from "@/lib/rate-limit";
+import { log } from "@/lib/logger";
 
 // ─── SSRF Protection — DNS-based validation ─────────────────────────────────
 
@@ -78,11 +79,11 @@ async function validateUrlSSRF(
 
   for (const { address, family } of addresses) {
     if (family === 4 && isPrivateIPv4(address)) {
-      console.warn(`⚠️ [Competitor] SSRF block: ${host} → ${address} (private IPv4)`);
+      log.warn({ host, address }, "SSRF block: private IPv4");
       return { ok: false, error: "La URL apunta a una red interna" };
     }
     if (family === 6 && isPrivateIPv6(address)) {
-      console.warn(`⚠️ [Competitor] SSRF block: ${host} → ${address} (private IPv6)`);
+      log.warn({ host, address }, "SSRF block: private IPv6");
       return { ok: false, error: "La URL apunta a una red interna" };
     }
   }
@@ -133,7 +134,7 @@ export async function POST(req: Request) {
     }
 
     if (!checkOrigin(req)) {
-      console.warn(`⚠️ [Competitor] Origin mismatch from userId=${userId}`);
+      log.warn({ userId }, "Competitor analyze: origin mismatch");
       return NextResponse.json({ error: "Solicitud no permitida" }, { status: 403 });
     }
 
@@ -168,7 +169,7 @@ export async function POST(req: Request) {
       .limit(1);
 
     if (cached) {
-      console.log(`💾 [Competitor] Cache hit: ${normalizedUrl}`);
+      log.info({ userId, analysisId: cached.id }, "Competitor analyze: cache hit");
       return NextResponse.json({ analysisId: cached.id, cached: true });
     }
 
@@ -225,7 +226,7 @@ export async function POST(req: Request) {
     );
 
     if (!triggerRes.ok) {
-      console.error("❌ [Competitor] Trigger falló:", triggerRes.status);
+      log.error({ userId, status: triggerRes.status }, "Competitor analyze: Trigger.dev failed");
       await db
         .update(schema.competitorAnalyses)
         .set({ status: "FAILED", errorMessage: "Error al iniciar análisis" })
@@ -233,10 +234,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No se pudo iniciar el análisis" }, { status: 503 });
     }
 
-    console.log(`🚀 [Competitor] Análisis iniciado: ${analysisId}`);
+    log.info({ userId, analysisId }, "Competitor analysis started");
     return NextResponse.json({ analysisId, cached: false, remainingCredits: creditResult.remainingCredits });
   } catch (error) {
-    console.error("❌ [Competitor] Error:", error);
+    log.error({ err: error }, "Competitor analyze error");
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

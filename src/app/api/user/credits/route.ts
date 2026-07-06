@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { ensureUser } from "@/lib/user/ensure-user";
+import { log } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -22,7 +23,7 @@ export async function GET() {
       plan: user?.agentPlan ?? "free",
     });
   } catch (error) {
-    console.error("❌ [Credits] Error:", error);
+    log.error({ err: error }, "user/credits error");
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

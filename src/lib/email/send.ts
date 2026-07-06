@@ -1,4 +1,5 @@
 import { Resend } from "resend";
+import { log } from "@/lib/logger";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const FROM = process.env.FROM_EMAIL ?? "ListWise <hola@listwise.app>";
@@ -13,13 +14,13 @@ export async function sendEmail({
   html: string;
 }) {
   if (!process.env.RESEND_API_KEY) {
-    console.warn("[email] RESEND_API_KEY no configurada — email omitido");
+    log.warn("RESEND_API_KEY not set — email skipped");
     return;
   }
   try {
     const { error } = await resend.emails.send({ from: FROM, to, subject, html });
-    if (error) console.error("[email] Error de Resend:", error);
+    if (error) log.error({ resendError: error }, "Resend API error");
   } catch (err) {
-    console.error("[email] Error al enviar:", err);
+    log.error({ err }, "sendEmail failed");
   }
 }

@@ -1,3 +1,5 @@
+import { log } from "@/lib/logger";
+
 export type ScrapingProvider = "zenrows" | "scrapingbee";
 
 // Extract product title and ID from URL slug (works for SHEIN, Temu, and similar -p-ID patterns)
@@ -78,10 +80,10 @@ export async function scrapeWithJSRendering(url: string): Promise<string> {
   const secondary: ScrapingProvider = primary === "zenrows" ? "scrapingbee" : "zenrows";
 
   try {
-    console.log(`🌐 [Scraping] Usando ${primary} para ${url}`);
+    log.info({ provider: primary, url }, "Scraping started");
     return primary === "zenrows" ? await fetchZenrows(url) : await fetchScrapingBee(url);
   } catch (err) {
-    console.warn(`⚠️ [Scraping] ${primary} falló (${err}). Intentando ${secondary}...`);
+    log.warn({ err, primary, secondary }, "Primary scraping provider failed, trying fallback");
     return secondary === "zenrows" ? await fetchZenrows(url) : await fetchScrapingBee(url);
   }
 }

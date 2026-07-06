@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { eq, desc } from "drizzle-orm";
+import { log } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -17,7 +18,7 @@ export async function GET() {
 
     return NextResponse.json({ transactions });
   } catch (error) {
-    console.error("❌ [Credits History] Error:", error);
+    log.error({ err: error }, "user/credits/history error");
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

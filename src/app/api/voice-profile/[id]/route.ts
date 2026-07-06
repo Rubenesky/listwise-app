@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { and, eq } from "drizzle-orm";
 import { db, schema } from "@/db";
+import { log } from "@/lib/logger";
 
 export async function DELETE(
   _req: Request,
@@ -21,7 +22,7 @@ export async function DELETE(
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error("[voice-profile DELETE]", error);
+    log.error({ err: error }, "voice-profile DELETE error");
     return NextResponse.json({ error: "Error al eliminar el perfil" }, { status: 500 });
   }
 }
@@ -67,7 +68,7 @@ export async function PATCH(
       return NextResponse.json({ success: true, isActive: true });
     }
   } catch (error) {
-    console.error("[voice-profile PATCH]", error);
+    log.error({ err: error }, "voice-profile PATCH error");
     return NextResponse.json({ error: "Error al actualizar el perfil" }, { status: 500 });
   }
 }

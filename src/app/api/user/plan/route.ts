@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
+import { log } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -18,7 +19,6 @@ export async function GET() {
 
     const plan = subscription.length > 0 ? subscription[0].plan : "free";
 
-    // Sync plan to Clerk publicMetadata so future loads are instant (no fetch needed)
     try {
       const clerk = await clerkClient();
       const user = await clerk.users.getUser(userId);
@@ -28,7 +28,7 @@ export async function GET() {
         });
       }
     } catch (syncErr) {
-      console.warn("⚠️ [Plan] No se pudo sincronizar metadata de Clerk:", syncErr);
+      log.warn({ err: syncErr, userId }, "user/plan: Clerk metadata sync failed");
     }
 
     return NextResponse.json({
@@ -36,7 +36,7 @@ export async function GET() {
       status: subscription.length > 0 ? subscription[0].status : "active",
     });
   } catch (error) {
-    console.error("Error getting user plan:", error);
+    log.error({ err: error }, "user/plan error");
     return NextResponse.json({ error: "Error al obtener el plan" }, { status: 500 });
   }
 }

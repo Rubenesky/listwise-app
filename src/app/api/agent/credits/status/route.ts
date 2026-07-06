@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
+import { log } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -21,7 +22,7 @@ export async function GET() {
       plan: user?.agentPlan ?? "free",
     });
   } catch (error) {
-    console.error("❌ [Agent Credits Status] Error:", error);
+    log.error({ err: error }, "agent/credits/status error");
     return NextResponse.json({ error: "Error al obtener créditos" }, { status: 500 });
   }
 }

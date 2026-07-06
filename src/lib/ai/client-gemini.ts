@@ -1,3 +1,5 @@
+import { log } from "@/lib/logger";
+
 type GeminiContent = { role: "user" | "model"; parts: { text: string }[] };
 
 type GeminiRequest = {
@@ -22,8 +24,8 @@ export const GEMINI_MODEL = "gemini-2.5-flash";
 
 function getApiKey(): string {
   const apiKey = process.env.GEMINI_API_KEY;
-  console.log(`[Gemini] GEMINI_API_KEY: ${apiKey ? "✅ presente" : "❌ ausente"}`);
   if (!apiKey) throw new Error("GEMINI_API_KEY no está configurada");
+  log.debug({ present: true }, "Gemini API key loaded");
   return apiKey;
 }
 
@@ -77,7 +79,6 @@ async function geminiPost(model: string, apiKey: string, body: GeminiRequest): P
   const parts: any[] = (data.candidates?.[0]?.content?.parts ?? []);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const text = parts.filter((p: any) => !p.thought && typeof p.text === "string").map((p: any) => p.text as string).join("").trim();
-  console.log(`[Gemini] Respuesta (primeros 200 chars): ${text.slice(0, 200)}`);
   if (!text) throw new Error("Gemini devolvió respuesta vacía");
   return text;
 }
@@ -89,7 +90,6 @@ export const gemini = {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       create: async (params: any): Promise<any> => {
         const apiKey = getApiKey();
-        console.log("[Gemini] ✅ Cliente inicializado (REST v1)");
         const model: string = params.model ?? GEMINI_MODEL;
         const isJson = params.response_format?.type === "json_object";
 

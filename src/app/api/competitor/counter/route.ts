@@ -6,6 +6,7 @@ import { z } from "zod";
 import { getAIResponse } from "@/lib/ai/providers";
 import { useCredits } from "@/lib/credits/use-credits";
 import { sanitize } from "@/lib/sanitize";
+import { log } from "@/lib/logger";
 
 const bodySchema = z.object({
   listingId: z.string().min(1),
@@ -128,7 +129,7 @@ Devuelve SOLO JSON válido:
       remainingCredits: creditResult.remainingCredits,
     });
   } catch (error) {
-    console.error("❌ [Counter] Error:", error);
+    log.error({ err: error }, "competitor/counter error");
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

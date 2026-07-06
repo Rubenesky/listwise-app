@@ -4,6 +4,7 @@ import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { getLevelInfo } from "@/lib/gamification/constants";
+import { log } from "@/lib/logger";
 
 export async function GET() {
   try {
@@ -57,7 +58,7 @@ export async function GET() {
       badges,
     });
   } catch (error) {
-    console.error("❌ [Gamification Status] Error:", error);
+    log.error({ err: error }, "gamification/status error");
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

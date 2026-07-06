@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { and, eq } from "drizzle-orm";
+import { log } from "@/lib/logger";
 
 export async function GET(
   _req: Request,
@@ -43,7 +44,7 @@ export async function GET(
       createdAt: record.createdAt,
     });
   } catch (error) {
-    console.error("❌ [Competitor Status] Error:", error);
+    log.error({ err: error }, "competitor/status error");
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

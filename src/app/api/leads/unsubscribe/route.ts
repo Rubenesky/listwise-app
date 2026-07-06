@@ -1,5 +1,6 @@
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
+import { log } from "@/lib/logger";
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise-app.onrender.com";
 
@@ -18,7 +19,7 @@ export async function GET(req: Request) {
       { status: 200, headers: { "Content-Type": "text/html; charset=utf-8" } }
     );
   } catch (err) {
-    console.error("[leads/unsubscribe] Error:", err);
+    log.error({ err }, "leads/unsubscribe error");
     return new Response("Error al procesar la baja.", { status: 500, headers: { "Content-Type": "text/plain" } });
   }
 }

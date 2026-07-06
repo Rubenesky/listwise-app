@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
 import { groq } from "@/lib/ai/client-groq";
 import { v4 as uuidv4 } from "uuid";
+import { log } from "@/lib/logger";
 
 const requestSchema = z.object({
   examples: z
@@ -92,7 +93,7 @@ Responde SOLO en JSON con este formato exacto:
 
     return NextResponse.json({ success: true, id, profile: profileData, name });
   } catch (error) {
-    console.error("[voice-profile/analyze]", error);
+    log.error({ err: error }, "voice-profile/analyze error");
     return NextResponse.json(
       { error: "Error al analizar el perfil de voz. Inténtalo de nuevo." },
       { status: 500 }

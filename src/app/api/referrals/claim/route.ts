@@ -4,6 +4,7 @@ import { db, schema } from "@/db";
 import { and, eq, sql } from "drizzle-orm";
 import { addCredits } from "@/lib/credits/use-credits";
 import Stripe from "stripe";
+import { log } from "@/lib/logger";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -18,18 +19,14 @@ export async function POST(req: Request) {
   try {
     const { userId } = await auth();
     if (!userId) {
-      console.log("❌ [Referidos] Intento de reclamación sin autenticación");
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
     const { rewardId } = await req.json();
 
     if (!rewardId) {
-      console.log(`❌ [Referidos] Reward ID no proporcionado por usuario ${userId}`);
       return NextResponse.json({ error: "Reward ID requerido" }, { status: 400 });
     }
-
-    console.log(`🎁 [Referidos] Usuario ${userId} reclamando recompensa: ${rewardId}`);
 
     // Fetch first to check ownership before any mutation
     const [reward] = await db
@@ -39,12 +36,11 @@ export async function POST(req: Request) {
       .limit(1);
 
     if (!reward) {
-      console.log(`❌ [Referidos] Recompensa no encontrada: ${rewardId}`);
       return NextResponse.json({ error: "Recompensa no encontrada" }, { status: 404 });
     }
 
     if (reward.userId !== userId) {
-      console.log(`❌ [Referidos] Usuario ${userId} no es propietario de la recompensa ${rewardId}`);
+      log.warn({ userId, rewardId }, "Referral reward ownership mismatch");
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
@@ -59,19 +55,19 @@ export async function POST(req: Request) {
       .returning({ id: schema.referralRewards.id, type: schema.referralRewards.type, amount: schema.referralRewards.amount });
 
     if (updated.length === 0) {
-      console.log(`❌ [Referidos] Recompensa ${rewardId} ya reclamada (race condition evitada)`);
+      log.warn({ userId, rewardId }, "Referral reward already claimed (race condition prevented)");
       return NextResponse.json({ error: "Recompensa no disponible" }, { status: 409 });
     }
 
     const claimed = updated[0];
-    console.log(`✅ [Referidos] Recompensa ${rewardId} reclamada por ${userId}`);
+    log.info({ userId, rewardId, type: claimed.type }, "Referral reward claimed");
 
     if (claimed.type === "credit" && claimed.amount) {
       await db
         .insert(schema.users)
         .values({ id: userId, credits: claimed.amount })
         .onConflictDoUpdate({ target: schema.users.id, set: { credits: sql`credits + ${claimed.amount}` } });
-      console.log(`💰 [Referidos] ${claimed.amount} créditos añadidos a ${userId}`);
+      log.info({ userId, credits: claimed.amount }, "Credits added from referral reward");
     } else if (claimed.type === "free_month_pro" || claimed.type === "free_month_enterprise") {
       // Try Stripe coupon first if user has an active subscription
       const [activeSub] = await db
@@ -84,19 +80,19 @@ export async function POST(req: Request) {
         await stripe.subscriptions.update(activeSub.stripeSubscriptionId, {
           discounts: [{ coupon: COUPON_ID }],
         });
-        console.log(`🎁 [Referidos] Cupón Stripe aplicado a suscripción ${activeSub.stripeSubscriptionId} para ${userId}`);
+        log.info({ userId, subscriptionId: activeSub.stripeSubscriptionId }, "Stripe coupon applied");
       } else {
         // Fallback: user not subscribed yet — give equivalent credits
         const creditsToAdd = FALLBACK_CREDITS[claimed.type] ?? 1500;
         const label = claimed.type === "free_month_enterprise" ? "1 mes Enterprise gratis" : "1 mes Pro gratis";
         await addCredits(userId, creditsToAdd, "bonus", `Recompensa por referido: ${label} (${creditsToAdd} créditos)`);
-        console.log(`🎁 [Referidos] Fallback: ${creditsToAdd} créditos añadidos a ${userId} por ${claimed.type}`);
+        log.info({ userId, credits: creditsToAdd, type: claimed.type }, "Referral fallback credits added");
       }
     }
 
     return NextResponse.json({ success: true, type: claimed.type });
   } catch (error) {
-    console.error("❌ [Referidos] Error al reclamar recompensa:", error);
+    log.error({ err: error }, "Referral claim error");
     return NextResponse.json({ error: "Error al reclamar recompensa" }, { status: 500 });
   }
 }

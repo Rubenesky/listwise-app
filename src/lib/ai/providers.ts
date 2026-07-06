@@ -1,6 +1,7 @@
 import type Groq from "groq-sdk";
 import { groq } from "./client-groq";
 import { gemini } from "./client-gemini";
+import { log } from "@/lib/logger";
 
 export type AIProvider = "groq" | "gemini";
 
@@ -50,17 +51,17 @@ export async function getAIResponse(
   const config = providers[selected];
 
   try {
-    console.log(`🤖 [AI] Usando proveedor: ${selected} (${config.defaultModel})`);
+    log.debug({ provider: selected, model: config.defaultModel }, "AI provider selected");
     return await config.client.chat.completions.create({
       model: config.defaultModel,
       messages,
       ...options,
     });
   } catch (error) {
-    console.error(`❌ [AI] Falló ${selected}:`, error);
+    log.error({ err: error, provider: selected }, "AI provider failed");
     const fallback = getAvailableProviders().find((p) => p !== selected);
     if (!fallback) throw error;
-    console.log(`🔄 [AI] Usando fallback: ${fallback}`);
+    log.info({ fallback }, "AI fallback provider selected");
     const fb = providers[fallback];
     try {
       return await fb.client.chat.completions.create({
@@ -69,7 +70,7 @@ export async function getAIResponse(
         ...options,
       });
     } catch (fallbackError) {
-      console.error(`❌ [AI] Falló fallback ${fallback}:`, fallbackError);
+      log.error({ err: fallbackError, provider: fallback }, "AI fallback provider failed");
       throw fallbackError;
     }
   }

@@ -12,6 +12,7 @@ import {
   getLevelInfo,
   GamificationAction,
 } from "@/lib/gamification/constants";
+import { log } from "@/lib/logger";
 
 const bodySchema = z.object({
   action: z.string().refine((v) => VALID_ACTIONS.includes(v), { message: "Acción inválida" }),
@@ -34,7 +35,6 @@ export async function POST(req: Request) {
     }
     const action = parsed.data.action as GamificationAction;
 
-    // Get user plan from subscriptions
     const [subscription] = await db
       .select({ plan: schema.subscriptions.plan })
       .from(schema.subscriptions)
@@ -42,7 +42,6 @@ export async function POST(req: Request) {
       .limit(1);
     const isPro = subscription?.plan === "pro" || subscription?.plan === "enterprise";
 
-    // Check daily limit via DB count
     const limits = DAILY_LIMITS[action];
     const dailyLimit = isPro ? limits.pro : limits.free;
     const dayAgo = Math.floor(Date.now() / 1000) - 86400;
@@ -63,7 +62,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Límite diario alcanzado para esta acción", limitReached: true }, { status: 429 });
     }
 
-    // Get or create gamification record
     let [record] = await db
       .select()
       .from(schema.gamification)
@@ -87,7 +85,6 @@ export async function POST(req: Request) {
     const newLevelInfo = getLevelInfo(newPoints);
     const leveledUp = newLevelInfo.level > oldLevelInfo.level;
 
-    // Compute new badges
     const existingBadges = JSON.parse((record.badges ?? "[]") as string) as string[];
     const newBadges = [...existingBadges];
     if (newLevelInfo.level >= 5 && !existingBadges.includes("level_5")) newBadges.push("level_5");
@@ -96,7 +93,6 @@ export async function POST(req: Request) {
     if (action === "share_landing" && !existingBadges.includes("sharer")) newBadges.push("sharer");
     if (action === "agent_chat" && !existingBadges.includes("ai_user")) newBadges.push("ai_user");
 
-    // Update streak (day-based)
     const lastActivity = record.lastActivity ?? 0;
     const todayStr = new Date().toDateString();
     const lastActivityStr = lastActivity ? new Date(lastActivity * 1000).toDateString() : null;
@@ -106,18 +102,15 @@ export async function POST(req: Request) {
       newStreak = lastActivityStr === yesterdayStr ? newStreak + 1 : 1;
     }
 
-    // Update gamification record
     await db
       .update(schema.gamification)
       .set({ points: newPoints, level: newLevelInfo.level, badges: JSON.stringify(newBadges), streak: newStreak, lastActivity: now, updatedAt: now })
       .where(eq(schema.gamification.userId, userId));
 
-    // Insert history
     await db.insert(schema.gamificationHistory).values({
       id: uuidv4(), userId, action, points: pointsToAdd, createdAt: now,
     });
 
-    // Award discount code on level up to 5 or 6
     if (leveledUp && (newLevelInfo.level === 5 || newLevelInfo.level === 6)) {
       const discountType = `level_${newLevelInfo.level}`;
       const [existingDiscount] = await db
@@ -132,11 +125,10 @@ export async function POST(req: Request) {
           expiresAt: now + 90 * 24 * 60 * 60,
           createdAt: now,
         });
-        console.log(`🎁 [Gamification] Discount awarded to ${userId}: ${code}`);
+        log.info({ userId, code, level: newLevelInfo.level }, "Gamification discount awarded");
       }
     }
 
-    // Auto-award daily_streak bonus on first action of the day
     if (lastActivityStr !== todayStr) {
       const streakPoints = ACTION_POINTS["daily_streak"] ?? 3;
       const streakLimit = DAILY_LIMITS["daily_streak"]?.pro ?? 1;
@@ -157,11 +149,11 @@ export async function POST(req: Request) {
         await db.insert(schema.gamificationHistory).values({
           id: uuidv4(), userId, action: "daily_streak", points: streakPoints, createdAt: now,
         });
-        console.log(`🔥 [Gamification] ${userId} +${streakPoints}pts daily_streak`);
+        log.debug({ userId, streakPoints }, "Daily streak bonus awarded");
       }
     }
 
-    console.log(`🎮 [Gamification] ${userId} +${pointsToAdd}pts (${action}) → total: ${newPoints}`);
+    log.debug({ userId, action, pointsToAdd, totalPoints: newPoints }, "Gamification action processed");
 
     return NextResponse.json({
       success: true,
@@ -175,7 +167,7 @@ export async function POST(req: Request) {
       streak: newStreak,
     });
   } catch (error) {
-    console.error("❌ [Gamification Action] Error:", error);
+    log.error({ err: error }, "Gamification action error");
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

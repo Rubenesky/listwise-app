@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
 import { desc } from "drizzle-orm";
 import { getLevelInfo } from "@/lib/gamification/constants";
+import { log } from "@/lib/logger";
 
 interface RankingItem {
   rank: number;
@@ -63,7 +64,7 @@ export async function GET() {
 
     return NextResponse.json({ ranking });
   } catch (error) {
-    console.error("❌ [Gamification Ranking] Error:", error);
+    log.error({ err: error }, "gamification/ranking error");
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

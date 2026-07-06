@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { eq, and } from "drizzle-orm";
+import { log } from "@/lib/logger";
 
 export async function POST(
   req: Request,
@@ -39,7 +40,7 @@ export async function POST(
 
     return NextResponse.json({ success: true, rating });
   } catch (error) {
-    console.error("❌ [Rate] Error:", error);
+    log.error({ err: error }, "listings/rate error");
     return NextResponse.json({ error: "Error interno" }, { status: 500 });
   }
 }

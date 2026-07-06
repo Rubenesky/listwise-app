@@ -7,6 +7,7 @@ import { buildUserPrompt } from "@/lib/ai/prompts";
 import { ratelimit } from "@/lib/rate-limit";
 import { z } from "zod";
 import { trackGamification } from "@/lib/gamification/track";
+import { log } from "@/lib/logger";
 
 const generatedContentSchema = z.object({
   title: z.string().max(80),
@@ -34,14 +35,13 @@ export async function POST(
   try {
     const { userId } = await auth();
     if (!userId) {
-      console.log("❌ [Variants] Intento sin autenticación");
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
     // Rate limiting — separate bucket per user for variants endpoint
     const { success, limit, reset, remaining } = await ratelimit.limit(`variants:${userId}`);
     if (!success) {
-      console.log(`❌ [Variants] Rate limit excedido para usuario ${userId}`);
+      log.warn({ userId }, "Variants rate limit exceeded");
       return NextResponse.json(
         {
           error: "Has generado demasiadas variantes. Espera un momento.",
@@ -64,7 +64,7 @@ export async function POST(
       // Use default count if body is invalid
     }
 
-    console.log(`🎨 [Variants] Generando ${count} variantes para producto ${id}, usuario ${userId}`);
+    log.info({ userId, listingId: id, count }, "Variants generation started");
 
     const [listing] = await db
       .select()
@@ -73,13 +73,11 @@ export async function POST(
       .limit(1);
 
     if (!listing) {
-      console.log(`❌ [Variants] Producto ${id} no encontrado`);
+      log.warn({ userId, listingId: id }, "Listing not found for variants");
       return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
     }
 
     const variantCount = Math.min(count, STYLES.length);
-
-    console.log(`🎨 [Variants] Lanzando ${variantCount} llamadas en paralelo para ${id}`);
 
     const results = await Promise.allSettled(
       STYLES.slice(0, variantCount).map((style, i) =>
@@ -109,31 +107,30 @@ export async function POST(
     const variants = results.flatMap((result, i) => {
       const style = STYLES[i];
       if (result.status === "rejected") {
-        console.error(`❌ [Variants] Error generando variante ${i + 1} (${style}):`, result.reason);
+        log.error({ userId, listingId: id, style, err: result.reason }, "Variant generation failed");
         return [];
       }
       try {
         const text = result.value.choices[0]?.message?.content ?? "{}";
         const parsed = JSON.parse(text);
         const validated = generatedContentSchema.parse(parsed);
-        console.log(`✅ [Variants] Variante ${i + 1} (${style}) generada`);
         return [{ id: `variant-${i + 1}`, style, ...validated }];
       } catch (err) {
-        console.error(`❌ [Variants] Error procesando variante ${i + 1} (${style}):`, err);
+        log.error({ userId, listingId: id, style, err }, "Variant parse error");
         return [];
       }
     });
 
     if (variants.length === 0) {
-      console.log(`❌ [Variants] No se generaron variantes para ${id}`);
+      log.warn({ userId, listingId: id }, "No variants generated");
       return NextResponse.json({ error: "No se pudieron generar variantes" }, { status: 500 });
     }
 
-    console.log(`✅ [Variants] ${variants.length} variantes generadas para ${id}`);
-    trackGamification(userId, "generate_product").catch((e) => console.warn("[gamification] trackGamification failed:", e));
+    log.info({ userId, listingId: id, variantCount: variants.length }, "Variants generated");
+    trackGamification(userId, "generate_product").catch((e) => log.warn({ err: e }, "trackGamification failed"));
     return NextResponse.json({ variants });
   } catch (error) {
-    console.error("❌ [Variants] Error general:", error);
+    log.error({ err: error }, "Variants general error");
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: "Datos inválidos", details: error.errors }, { status: 400 });
     }

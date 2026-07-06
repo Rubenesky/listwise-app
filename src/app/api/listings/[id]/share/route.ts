@@ -4,6 +4,7 @@ import { db, schema } from "@/db";
 import { eq, and } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { trackGamification } from "@/lib/gamification/track";
+import { log } from "@/lib/logger";
 
 function generateSlug(productName: string): string {
   const base = productName
@@ -29,8 +30,6 @@ export async function POST(
 
     const { id } = await params;
 
-    console.log(`🔗 [Share] Generando landing page para producto ${id}`);
-
     const [listing] = await db
       .select()
       .from(schema.listings)
@@ -38,7 +37,7 @@ export async function POST(
       .limit(1);
 
     if (!listing) {
-      console.log(`❌ [Share] Producto ${id} no encontrado`);
+      log.warn({ userId, listingId: id }, "Share: listing not found");
       return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
     }
 
@@ -50,23 +49,20 @@ export async function POST(
     if (!slug) {
       slug = generateSlug(listing.productName);
       await db.update(schema.listings).set({ slug }).where(eq(schema.listings.id, id));
-      console.log(`✅ [Share] Slug generado: ${slug}`);
-    } else {
-      console.log(`✅ [Share] Slug existente reutilizado: ${slug}`);
+      log.info({ userId, listingId: id, slug }, "Share: slug generated");
     }
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL;
     if (!appUrl) {
-      console.error("[share] NEXT_PUBLIC_APP_URL is not set");
+      log.error({ listingId: id }, "NEXT_PUBLIC_APP_URL is not set");
       return NextResponse.json({ error: "Configuración de servidor incompleta" }, { status: 500 });
     }
     const shareUrl = `${appUrl}/share/${slug}`;
 
-    console.log(`✅ [Share] URL generada: ${shareUrl}`);
-    trackGamification(userId, "share_landing").catch((e) => console.warn("[gamification] trackGamification failed:", e));
+    trackGamification(userId, "share_landing").catch((e) => log.warn({ err: e }, "trackGamification failed"));
     return NextResponse.json({ url: shareUrl, slug });
   } catch (error) {
-    console.error("❌ [Share] Error:", error);
+    log.error({ err: error }, "Share listing error");
     return NextResponse.json({ error: "Error al generar URL" }, { status: 500 });
   }
 }
