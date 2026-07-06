@@ -13,6 +13,7 @@ import { trackGamification } from "@/lib/gamification/track";
 import { sendEmail } from "@/lib/email/send";
 import { churnPreventionTemplate } from "@/lib/email/templates";
 import { log } from "@/lib/logger";
+import { redis } from "@/lib/redis";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2026-05-27.dahlia",
@@ -34,6 +35,14 @@ export async function POST(req: Request) {
     } catch (err) {
       log.error({ err }, "Stripe webhook signature verification failed");
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+    }
+
+    // Idempotency: skip if this event was already processed (Stripe retries up to 72h)
+    const idempotencyKey = `stripe:event:${event.id}`;
+    const isNew = await redis.set(idempotencyKey, "1", { nx: true, ex: 90000 });
+    if (!isNew) {
+      log.info({ eventId: event.id, eventType: event.type }, "Stripe webhook duplicate — skipped");
+      return NextResponse.json({ received: true });
     }
 
     log.info({ eventType: event.type }, "Stripe webhook received");
