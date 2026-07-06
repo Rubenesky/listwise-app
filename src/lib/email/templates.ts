@@ -1,3 +1,5 @@
+import { escapeHtml } from "@/lib/sanitize";
+
 const BASE = `
   <div style="font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
     <div style="background:#2563eb;padding:24px 32px;">
@@ -17,15 +19,6 @@ const BASE = `
     </div>
   </div>
 `;
-
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#x27;");
-}
 
 function wrap(body: string): string {
   return BASE.replace("{{BODY}}", body);

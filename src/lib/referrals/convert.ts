@@ -118,7 +118,7 @@ export async function convertReferral(
       }
     }
 
-    trackGamification(referrerId, "referral_converted").catch(() => {});
+    trackGamification(referrerId, "referral_converted").catch((e) => console.warn("[gamification] trackGamification failed:", e));
     console.log(`✅ [Referidos] Proceso de conversión completado para usuario ${refereeUserId}`);
     return true;
   } catch (error) {

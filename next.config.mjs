@@ -11,7 +11,15 @@ const securityHeaders = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  serverExternalPackages: ["@trigger.dev/sdk", "@trigger.dev/sdk/v3"],
+  serverExternalPackages: [
+    "@trigger.dev/sdk",
+    "@trigger.dev/sdk/v3",
+    "groq-sdk",
+    "@google/generative-ai",
+    "openai",
+    "cheerio",
+    "@libsql/client",
+  ],
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];
   },

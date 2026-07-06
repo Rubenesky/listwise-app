@@ -373,7 +373,7 @@ export async function POST(req: Request) {
             createdAt: Math.floor(Date.now() / 1000),
           });
 
-          trackGamification(userId, "agent_chat").catch(() => {});
+          trackGamification(userId, "agent_chat").catch((e) => console.warn("[gamification] trackGamification failed:", e));
 
           const remainingCredits = Math.max(0, credits - 1);
           const finalConvId = conversation?.id ?? newConvId;

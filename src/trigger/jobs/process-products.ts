@@ -181,7 +181,7 @@ export const processProductsTask = task({
             })
             .where(eq(schema.listings.id, product.id));
           totalProcessed++;
-          trackGamification(userId, "complete_product").catch(() => {});
+          trackGamification(userId, "complete_product").catch((e) => console.warn("[gamification] trackGamification failed:", e));
         } catch (parseError) {
           console.error(`❌ [parse] Error al parsear respuesta:`, parseError);
           await markFailed(product.id, humanizeError(parseError));

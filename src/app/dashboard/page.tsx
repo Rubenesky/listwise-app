@@ -109,6 +109,7 @@ export default function DashboardPage() {
   const [batchTotal, setBatchTotal] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const pollDelayRef = useRef(4000);
 
   // Modal state
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
@@ -245,17 +246,23 @@ export default function DashboardPage() {
 
   const stopPolling = useCallback(() => {
     if (intervalRef.current) {
-      clearInterval(intervalRef.current);
+      clearTimeout(intervalRef.current);
       intervalRef.current = null;
     }
   }, []);
 
   const startPolling = useCallback(() => {
     if (intervalRef.current) return;
-    intervalRef.current = setInterval(async () => {
+    pollDelayRef.current = 4000;
+
+    const tick = async () => {
       try {
         const res = await fetch(`/api/listings/dashboard?page=${currentPageRef.current}&limit=20`);
-        if (!res.ok) return;
+        if (!res.ok) {
+          pollDelayRef.current = Math.min(pollDelayRef.current * 2, 30000);
+          intervalRef.current = setTimeout(tick, pollDelayRef.current);
+          return;
+        }
         const json = await res.json();
         const data: ListingRow[] = json.listings ?? [];
         setListings(data);
@@ -264,13 +271,20 @@ export default function DashboardPage() {
           (l) => l.status === "PENDING" || l.status === "PROCESSING"
         );
         if (!hasActive) {
+          intervalRef.current = null;
           stopPolling();
           setIsProcessing(false);
+        } else {
+          pollDelayRef.current = Math.min(pollDelayRef.current * 2, 30000);
+          intervalRef.current = setTimeout(tick, pollDelayRef.current);
         }
       } catch {
-        // ignore transient polling errors
+        pollDelayRef.current = Math.min(pollDelayRef.current * 2, 30000);
+        intervalRef.current = setTimeout(tick, pollDelayRef.current);
       }
-    }, 4000);
+    };
+
+    intervalRef.current = setTimeout(tick, pollDelayRef.current);
   }, [stopPolling]);
 
   const fetchListings = useCallback(async (page = 1) => {
@@ -539,7 +553,7 @@ export default function DashboardPage() {
 
   const planLabel = PLAN_LABELS[plan] || "Gratuito";
   const planColor = PLAN_COLORS[plan] || "bg-gray-100 text-gray-700";
-  const planLimit = PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS] || 10;
+  const planLimit = PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS] ?? PLAN_LIMITS.free;
   const currentCount = pagination.total || listings.length;
   const hasPendingOrProcessing = pendingOrProcessingCount > 0;
 

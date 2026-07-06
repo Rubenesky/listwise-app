@@ -63,22 +63,20 @@ export async function POST(req: Request) {
       );
     }
 
-    // 1. Obtener el plan del usuario
-    const subscription = await db
-      .select()
-      .from(schema.subscriptions)
-      .where(eq(schema.subscriptions.userId, userId))
-      .limit(1);
+    // 1+2. Obtener plan y contar productos en paralelo
+    const [subscription, totalProducts] = await Promise.all([
+      db.select({ plan: schema.subscriptions.plan })
+        .from(schema.subscriptions)
+        .where(eq(schema.subscriptions.userId, userId))
+        .limit(1),
+      db.select({ count: count() })
+        .from(schema.listings)
+        .where(eq(schema.listings.userId, userId)),
+    ]);
 
     const userPlan = subscription.length > 0 ? subscription[0].plan : "free";
-    const planLimit = PLAN_LIMITS[userPlan as keyof typeof PLAN_LIMITS] || 10;
-
-    // 2. Contar productos actuales del usuario
-    const totalProducts = await db
-      .select({ count: count() })
-      .from(schema.listings)
-      .where(eq(schema.listings.userId, userId));
-
+    if (!(userPlan in PLAN_LIMITS)) console.warn(`[upload] Plan desconocido: "${userPlan}", usando límite free`);
+    const planLimit = PLAN_LIMITS[userPlan as keyof typeof PLAN_LIMITS] ?? PLAN_LIMITS.free;
     const currentCount = totalProducts[0]?.count || 0;
 
     // 3. Parsear el CSV
@@ -198,7 +196,7 @@ export async function POST(req: Request) {
       throw triggerError;
     }
 
-    trackGamification(userId, "upload_csv").catch(() => {});
+    trackGamification(userId, "upload_csv").catch((e) => console.warn("[gamification] trackGamification failed:", e));
     return NextResponse.json({
       success: true,
       count: listings.length,

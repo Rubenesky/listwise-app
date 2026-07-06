@@ -175,7 +175,7 @@ export async function POST(req: Request) {
           console.warn("⚠️ [Stripe Webhook] No se pudieron asignar créditos del plan:", creditErr);
         }
 
-        trackGamification(userId, "upgrade_pro").catch(() => {});
+        trackGamification(userId, "upgrade_pro").catch((e) => console.warn("[gamification] trackGamification failed:", e));
 
         break;
       }

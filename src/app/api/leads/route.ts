@@ -6,10 +6,7 @@ import { v4 as uuidv4 } from "uuid";
 import { sendEmail } from "@/lib/email/send";
 import { leadMagnetTemplate } from "@/lib/email/templates";
 import { ratelimitLeads } from "@/lib/rate-limit";
-
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
-}
+import { escapeHtml } from "@/lib/sanitize";
 
 const EMAIL_RE = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 
@@ -66,7 +63,7 @@ export async function POST(req: Request) {
       });
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise-app.onrender.com";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise.app";
     const pdfUrl = process.env.LEAD_MAGNET_PDF_URL ?? "";
     const unsubscribeUrl = `${appUrl}/api/leads/unsubscribe?id=${leadId}`;
 

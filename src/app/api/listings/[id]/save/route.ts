@@ -74,7 +74,7 @@ export async function PUT(
     }
 
     console.log(`✅ [Save] Descripción guardada para producto ${id}`);
-    trackGamification(userId, "edit_description").catch(() => {});
+    trackGamification(userId, "edit_description").catch((e) => console.warn("[gamification] trackGamification failed:", e));
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("❌ [Save] Error al guardar:", error);

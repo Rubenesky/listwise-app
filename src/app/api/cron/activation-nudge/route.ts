@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db, schema } from "@/db";
+import { eq, isNull } from "drizzle-orm";
 import { clerkClient } from "@clerk/nextjs/server";
 import { sendEmail } from "@/lib/email/send";
 import { activationNudgeTemplate } from "@/lib/email/templates";
@@ -14,20 +15,14 @@ export async function GET(req: Request) {
   const fortyEightHoursAgo = now - 48 * 60 * 60 * 1000;
   const seventyTwoHoursAgo = now - 72 * 60 * 60 * 1000;
 
-  // All user IDs in our DB
-  const allUsers = await db.select({ userId: schema.users.id }).from(schema.users);
-  if (allUsers.length === 0) return NextResponse.json({ total: 0, sent: 0, failed: 0 });
+  // Users with zero listings — single LEFT JOIN instead of two full-table scans
+  const noListingRows = await db
+    .select({ userId: schema.users.id })
+    .from(schema.users)
+    .leftJoin(schema.listings, eq(schema.users.id, schema.listings.userId))
+    .where(isNull(schema.listings.id));
 
-  // User IDs that have at least one listing
-  const listingsRows = await db
-    .selectDistinct({ userId: schema.listings.userId })
-    .from(schema.listings);
-  const hasListings = new Set(listingsRows.map((r) => r.userId));
-
-  // Users with zero listings
-  const noListingIds = allUsers
-    .map((u) => u.userId)
-    .filter((id) => !hasListings.has(id));
+  const noListingIds = noListingRows.map((r) => r.userId);
 
   if (noListingIds.length === 0) return NextResponse.json({ total: 0, sent: 0, failed: 0 });
 
@@ -58,11 +53,13 @@ export async function GET(req: Request) {
             html: activationNudgeTemplate({ name: user.firstName ?? undefined }),
           });
           sent++;
-        } catch {
+        } catch (emailErr) {
+          console.warn(`[cron:activation] Email failed for ${email}:`, emailErr);
           failed++;
         }
       }
-    } catch {
+    } catch (batchErr) {
+      console.warn(`[cron:activation] Batch fetch failed (size ${batch.length}):`, batchErr);
       failed += batch.length;
     }
   }

@@ -58,7 +58,7 @@ export async function POST(
     const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL}/share/${slug}`;
 
     console.log(`✅ [Share] URL generada: ${shareUrl}`);
-    trackGamification(userId, "share_landing").catch(() => {});
+    trackGamification(userId, "share_landing").catch((e) => console.warn("[gamification] trackGamification failed:", e));
     return NextResponse.json({ url: shareUrl, slug });
   } catch (error) {
     console.error("❌ [Share] Error:", error);

@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
-import { auth } from "@clerk/nextjs/server";
 import { Suspense } from "react";
 import PostHogProvider from "@/components/PostHogProvider";
 import PostHogPageView from "@/components/PostHogPageView";
@@ -85,13 +84,11 @@ const organizationJsonLd = {
   sameAs: [],
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { userId } = await auth();
-
   return (
     <ClerkProvider>
       <html lang="es" suppressHydrationWarning>
@@ -107,7 +104,7 @@ export default async function RootLayout({
               <PostHogPageView />
             </Suspense>
             {children}
-            {!userId && <LeadMagnetPopup />}
+            <LeadMagnetPopup />
           </PostHogProvider>
         </body>
       </html>

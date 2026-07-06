@@ -6,7 +6,7 @@ import { ACTION_POINTS, DAILY_LIMITS, getLevelInfo } from "./constants";
 /**
  * Records a gamification action directly in the DB.
  * Server-side only — bypasses HTTP rate limiting (trusted server calls).
- * Always call fire-and-forget: trackGamification(...).catch(() => {})
+ * Always call fire-and-forget: trackGamification(...).catch((e) => console.warn("[gamification]", e))
  */
 export async function trackGamification(userId: string, action: string): Promise<void> {
   const points = ACTION_POINTS[action];

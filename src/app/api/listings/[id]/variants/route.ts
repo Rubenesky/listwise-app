@@ -126,7 +126,7 @@ export async function POST(
     }
 
     console.log(`✅ [Variants] ${variants.length} variantes generadas para ${id}`);
-    trackGamification(userId, "generate_product").catch(() => {});
+    trackGamification(userId, "generate_product").catch((e) => console.warn("[gamification] trackGamification failed:", e));
     return NextResponse.json({ variants });
   } catch (error) {
     console.error("❌ [Variants] Error general:", error);

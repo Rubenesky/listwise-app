@@ -65,6 +65,7 @@ export default function CompetitorPage() {
   const [error, setError] = useState("");
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingDelayRef = useRef(3000);
 
   function useInAgent(suggestion: string) {
     localStorage.setItem("agent_prefill", JSON.stringify({
@@ -106,28 +107,41 @@ export default function CompetitorPage() {
 
   function stopPolling() {
     if (pollingRef.current) {
-      clearInterval(pollingRef.current);
+      clearTimeout(pollingRef.current);
       pollingRef.current = null;
     }
   }
 
   function startPolling(id: string) {
     stopPolling();
-    pollingRef.current = setInterval(async () => {
+    pollingDelayRef.current = 3000;
+
+    const tick = async () => {
       try {
         const res = await fetch(`/api/competitor/status/${id}`);
-        if (!res.ok) return;
+        if (!res.ok) {
+          pollingDelayRef.current = Math.min(pollingDelayRef.current * 2, 30000);
+          pollingRef.current = setTimeout(tick, pollingDelayRef.current);
+          return;
+        }
         const data: AnalysisResult = await res.json();
         setResult(data);
         if (data.status === "COMPLETED" || data.status === "FAILED") {
+          pollingRef.current = null;
           stopPolling();
           setLoading(false);
           loadHistory();
+        } else {
+          pollingDelayRef.current = Math.min(pollingDelayRef.current * 2, 30000);
+          pollingRef.current = setTimeout(tick, pollingDelayRef.current);
         }
       } catch {
-        // transient error — keep polling
+        pollingDelayRef.current = Math.min(pollingDelayRef.current * 2, 30000);
+        pollingRef.current = setTimeout(tick, pollingDelayRef.current);
       }
-    }, 3000);
+    };
+
+    pollingRef.current = setTimeout(tick, pollingDelayRef.current);
   }
 
   async function handleSubmit(e: React.FormEvent) {

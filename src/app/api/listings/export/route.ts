@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 export async function GET() {
   try {
@@ -10,12 +10,19 @@ export async function GET() {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
-    const listings = await db
-      .select()
+    const completed = await db
+      .select({
+        productName: schema.listings.productName,
+        generatedTitle: schema.listings.generatedTitle,
+        generatedBullets: schema.listings.generatedBullets,
+        generatedDescription: schema.listings.generatedDescription,
+      })
       .from(schema.listings)
-      .where(eq(schema.listings.userId, userId));
+      .where(and(
+        eq(schema.listings.userId, userId),
+        eq(schema.listings.status, "COMPLETED")
+      ));
 
-    const completed = listings.filter((l) => l.status === "COMPLETED");
     if (completed.length === 0) {
       return NextResponse.json(
         { error: "No hay productos completados para exportar." },

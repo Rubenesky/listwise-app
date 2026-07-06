@@ -42,8 +42,8 @@ export async function POST(req: Request) {
       userId: listing.userId,
       visitorIp: null,
       visitorUserAgent: req.headers.get("user-agent") ?? null,
-      referrer: referrer ?? "direct",
-      device: device ?? "desktop",
+      referrer: String(referrer ?? "direct").slice(0, 200),
+      device: String(device ?? "desktop").slice(0, 50),
       createdAt: now,
     });
 

@@ -6,7 +6,7 @@ export const users = sqliteTable("users", {
   referralCode: text("referral_code").unique(),
   totalReferrals: integer("total_referrals").notNull().default(0),
   convertedReferrals: integer("converted_referrals").notNull().default(0),
-  agentCredits: integer("agent_credits").default(10),
+  agentCredits: integer("agent_credits").default(20),
   agentPlan: text("agent_plan").default("free"),
 });
 
@@ -79,6 +79,7 @@ export const listings = sqliteTable("listings", {
 }, (table) => ({
   userIdIdx: index("idx_listings_user_id").on(table.userId),
   userCreatedIdx: index("idx_listings_user_id_created_at").on(table.userId, table.createdAt),
+  userStatusIdx: index("idx_listings_user_id_status").on(table.userId, table.status),
 }));
 
 export const pageViews = sqliteTable("page_views", {

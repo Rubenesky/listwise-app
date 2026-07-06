@@ -36,12 +36,25 @@ export async function useCredits(
     return { success: false, remainingCredits: current, error: "insufficient" };
   }
 
-  // Deduct for all plans (Pro/Enterprise never blocked but still tracked)
-  await db.update(schema.users)
-    .set({ agentCredits: sql`agent_credits - ${amount}` })
-    .where(eq(schema.users.id, userId));
+  // Deduct for all plans — free can go to zero (already blocked above), pro/enterprise floored at 0
+  const deductExpr = plan === "free"
+    ? sql`agent_credits - ${amount}`
+    : sql`max(0, agent_credits - ${amount})`;
 
-  await logTransaction(userId, -amount, "usage", description);
+  await db.transaction(async (tx) => {
+    await tx.update(schema.users)
+      .set({ agentCredits: deductExpr })
+      .where(eq(schema.users.id, userId));
+    await tx.insert(schema.creditTransactions).values({
+      id: uuidv4(),
+      userId,
+      amount: -amount,
+      type: "usage",
+      description,
+      stripeRef: null,
+      createdAt: Math.floor(Date.now() / 1000),
+    });
+  });
 
   return { success: true, remainingCredits: current - amount };
 }
@@ -54,27 +67,18 @@ export async function addCredits(
   stripeRef?: string
 ): Promise<void> {
   await ensureUser(userId);
-  await db.update(schema.users)
-    .set({ agentCredits: sql`agent_credits + ${amount}` })
-    .where(eq(schema.users.id, userId));
-
-  await logTransaction(userId, amount, type, description, stripeRef);
-}
-
-async function logTransaction(
-  userId: string,
-  amount: number,
-  type: string,
-  description: string,
-  stripeRef?: string
-): Promise<void> {
-  await db.insert(schema.creditTransactions).values({
-    id: uuidv4(),
-    userId,
-    amount,
-    type,
-    description,
-    stripeRef: stripeRef ?? null,
-    createdAt: Math.floor(Date.now() / 1000),
+  await db.transaction(async (tx) => {
+    await tx.update(schema.users)
+      .set({ agentCredits: sql`agent_credits + ${amount}` })
+      .where(eq(schema.users.id, userId));
+    await tx.insert(schema.creditTransactions).values({
+      id: uuidv4(),
+      userId,
+      amount,
+      type,
+      description,
+      stripeRef: stripeRef ?? null,
+      createdAt: Math.floor(Date.now() / 1000),
+    });
   });
 }
