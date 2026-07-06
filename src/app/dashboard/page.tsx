@@ -1,7 +1,7 @@
 "use client";
 
 import { useUser } from "@clerk/nextjs";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useUserPlan } from "@/lib/hooks/useUserPlan";
 import { PLAN_LIMITS } from "@/lib/constants";
 import VoiceProfileManager from "@/components/VoiceProfileManager";
@@ -227,18 +227,20 @@ export default function DashboardPage() {
   ).length;
   const failedCount = listings.filter((l) => l.status === "FAILED").length;
 
-  // Filtered + sorted listings
-  const filteredListings = listings
-    .filter((l) => {
-      const matchesSearch = !searchQuery || l.productName.toLowerCase().includes(searchQuery.toLowerCase()) || (l.generatedTitle ?? "").toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus = statusFilter === "all" || l.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    })
-    .sort((a, b) => {
-      if (sortByHealth === "none") return 0;
-      const diff = calcHealthScore(a) - calcHealthScore(b);
-      return sortByHealth === "asc" ? diff : -diff;
-    });
+  // Filtered + sorted listings (memoized to avoid O(n log n) health score calls on every render)
+  const filteredListings = useMemo(() => {
+    const withScore = listings.map((l) => ({ ...l, _score: calcHealthScore(l) }));
+    return withScore
+      .filter((l) => {
+        const matchesSearch = !searchQuery || l.productName.toLowerCase().includes(searchQuery.toLowerCase()) || (l.generatedTitle ?? "").toLowerCase().includes(searchQuery.toLowerCase());
+        const matchesStatus = statusFilter === "all" || l.status === statusFilter;
+        return matchesSearch && matchesStatus;
+      })
+      .sort((a, b) => {
+        if (sortByHealth === "none") return 0;
+        return sortByHealth === "asc" ? a._score - b._score : b._score - a._score;
+      });
+  }, [listings, searchQuery, statusFilter, sortByHealth]);
 
   // Progress bar
   const processedInBatch = Math.max(0, batchTotal - pendingOrProcessingCount);
@@ -329,15 +331,9 @@ export default function DashboardPage() {
 
   useEffect(() => {
     localStorage.setItem("listwise_generation_mode", selectedMode);
-  }, [selectedMode]);
-
-  useEffect(() => {
     localStorage.setItem("listwise_marketplace", marketplace);
-  }, [marketplace]);
-
-  useEffect(() => {
     localStorage.setItem("listwise_price_segment", priceSegment);
-  }, [priceSegment]);
+  }, [selectedMode, marketplace, priceSegment]);
 
   const handleRate = async (listingId: string, rating: number | null) => {
     setListings((prev) =>
@@ -1364,7 +1360,7 @@ export default function DashboardPage() {
                     </tr>
                   )}
                   {filteredListings.map((listing) => {
-                    const score = calcHealthScore(listing);
+                    const score = listing._score;
                     const { label, color } = getHealthLabel(score);
                     const isExpanded = expandedRows.has(listing.id);
                     return (

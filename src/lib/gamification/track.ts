@@ -1,19 +1,21 @@
 import { db, schema } from "@/db";
 import { eq, and, count, sql } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
-import { ACTION_POINTS, DAILY_LIMITS, getLevelInfo } from "./constants";
+import { ACTION_POINTS, DAILY_LIMITS, getLevelInfo, GamificationAction } from "./constants";
+
+const SECONDS_PER_DAY = 86_400;
 
 /**
  * Records a gamification action directly in the DB.
  * Server-side only — bypasses HTTP rate limiting (trusted server calls).
  * Always call fire-and-forget: trackGamification(...).catch((e) => console.warn("[gamification]", e))
  */
-export async function trackGamification(userId: string, action: string): Promise<void> {
+export async function trackGamification(userId: string, action: GamificationAction): Promise<void> {
   const points = ACTION_POINTS[action];
   if (!points) return;
 
   const now = Math.floor(Date.now() / 1000);
-  const dayAgo = now - 86400;
+  const dayAgo = now - SECONDS_PER_DAY;
 
   // Check daily limit (use pro limits for server-generated actions)
   const limit = DAILY_LIMITS[action]?.pro ?? 999;
@@ -61,23 +63,25 @@ export async function trackGamification(userId: string, action: string): Promise
   const lastActivity = record.lastActivity ?? 0;
   const today = new Date().toDateString();
   const lastDay = lastActivity ? new Date(lastActivity * 1000).toDateString() : null;
-  const yesterday = new Date(Date.now() - 86400000).toDateString();
+  const yesterday = new Date(Date.now() - SECONDS_PER_DAY * 1000).toDateString();
   let newStreak = record.streak ?? 1;
   if (lastDay !== today) {
     newStreak = lastDay === yesterday ? newStreak + 1 : 1;
   }
 
-  await db.update(schema.gamification).set({
-    points: newPoints,
-    level: newLevelInfo.level,
-    badges: JSON.stringify(newBadges),
-    streak: newStreak,
-    lastActivity: now,
-    updatedAt: now,
-  }).where(eq(schema.gamification.userId, userId));
+  await db.transaction(async (tx) => {
+    await tx.update(schema.gamification).set({
+      points: sql`points + ${points}`,
+      level: newLevelInfo.level,
+      badges: JSON.stringify(newBadges),
+      streak: newStreak,
+      lastActivity: now,
+      updatedAt: now,
+    }).where(eq(schema.gamification.userId, userId));
 
-  await db.insert(schema.gamificationHistory).values({
-    id: uuidv4(), userId, action, points, createdAt: now,
+    await tx.insert(schema.gamificationHistory).values({
+      id: uuidv4(), userId, action, points, createdAt: now,
+    });
   });
 
   console.log(`🎮 [Gamification] ${userId} +${points}pts (${action}) → ${newPoints} total`);

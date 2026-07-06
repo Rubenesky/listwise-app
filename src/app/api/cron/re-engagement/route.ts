@@ -46,7 +46,8 @@ export async function GET(req: Request) {
       });
       sentTo.add(userId);
       sent++;
-    } catch {
+    } catch (emailErr) {
+      console.warn(`[cron:re-engagement] Email failed for userId=${userId}:`, emailErr);
       failed++;
     }
   }
@@ -82,11 +83,13 @@ export async function GET(req: Request) {
           });
           sentTo.add(user.id);
           sent++;
-        } catch {
+        } catch (emailErr) {
+          console.warn(`[cron:re-engagement] Email failed for userId=${user.id}:`, emailErr);
           failed++;
         }
       }
-    } catch {
+    } catch (batchErr) {
+      console.error(`[cron:re-engagement] Clerk batch failed (offset ${i}):`, batchErr);
       failed += batch.length;
     }
   }

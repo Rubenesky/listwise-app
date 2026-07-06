@@ -50,7 +50,8 @@ beforeEach(() => {
 
 describe("trackGamification", () => {
   it("returns early for unknown action without touching DB", async () => {
-    await trackGamification("user-1", "nonexistent_action");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await trackGamification("user-1", "nonexistent_action" as any);
     expect(mockDb.select).not.toHaveBeenCalled();
   });
 

@@ -7,7 +7,7 @@ export const LEVELS: { level: number; name: string; minPoints: number; icon: str
   { level: 6, name: "Leyenda", minPoints: 5000, icon: "⭐" },
 ];
 
-export const ACTION_POINTS: Record<string, number> = {
+export const ACTION_POINTS = {
   upload_csv: 1,
   generate_product: 2,
   complete_product: 3,
@@ -17,7 +17,9 @@ export const ACTION_POINTS: Record<string, number> = {
   referral_converted: 15,
   upgrade_pro: 30,
   daily_streak: 3,
-};
+} as const satisfies Record<string, number>;
+
+export type GamificationAction = keyof typeof ACTION_POINTS;
 
 export const DAILY_LIMITS: Record<string, { free: number; pro: number }> = {
   upload_csv: { free: 3, pro: 10 },
@@ -33,7 +35,15 @@ export const DAILY_LIMITS: Record<string, { free: number; pro: number }> = {
 
 export const VALID_ACTIONS = Object.keys(ACTION_POINTS);
 
-export function getLevelInfo(points: number) {
+export function getLevelInfo(points: number): {
+  level: number;
+  name: string;
+  icon: string;
+  currentLevelPoints: number;
+  nextLevelPoints: number;
+  nextLevelName: string | null;
+  isMaxLevel: boolean;
+} {
   let currentLevel = LEVELS[0];
   for (const l of LEVELS) {
     if (points >= l.minPoints) currentLevel = l;

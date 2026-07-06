@@ -11,6 +11,7 @@ import { escapeHtml } from "@/lib/sanitize";
 const EMAIL_RE = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)+$/;
 
 function hashIp(ip: string): string {
+  if (!process.env.IP_HASH_SALT) console.warn("[leads] IP_HASH_SALT not set — using default salt, hashes are reversible");
   return createHash("sha256")
     .update(ip + (process.env.IP_HASH_SALT ?? "lw-salt-default"))
     .digest("hex")

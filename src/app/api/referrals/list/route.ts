@@ -20,7 +20,8 @@ export async function GET() {
 
     console.log(`📋 [Referidos] ${referrals.length} referidos encontrados para usuario: ${userId}`);
     return NextResponse.json({ referrals });
-  } catch {
+  } catch (err) {
+    console.error("[referrals/list] Error:", err);
     return NextResponse.json({ error: "Error al listar referidos" }, { status: 500 });
   }
 }

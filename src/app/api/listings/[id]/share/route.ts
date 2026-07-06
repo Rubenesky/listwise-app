@@ -55,7 +55,12 @@ export async function POST(
       console.log(`✅ [Share] Slug existente reutilizado: ${slug}`);
     }
 
-    const shareUrl = `${process.env.NEXT_PUBLIC_APP_URL}/share/${slug}`;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (!appUrl) {
+      console.error("[share] NEXT_PUBLIC_APP_URL is not set");
+      return NextResponse.json({ error: "Configuración de servidor incompleta" }, { status: 500 });
+    }
+    const shareUrl = `${appUrl}/share/${slug}`;
 
     console.log(`✅ [Share] URL generada: ${shareUrl}`);
     trackGamification(userId, "share_landing").catch((e) => console.warn("[gamification] trackGamification failed:", e));

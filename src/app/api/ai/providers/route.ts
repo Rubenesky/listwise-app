@@ -5,7 +5,8 @@ export async function GET() {
   try {
     const available = getAvailableProviders();
     return NextResponse.json({ providers: available });
-  } catch {
+  } catch (err) {
+    console.error("[ai/providers] getAvailableProviders failed:", err);
     return NextResponse.json({ providers: ["groq"] });
   }
 }

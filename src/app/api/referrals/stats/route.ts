@@ -26,7 +26,8 @@ export async function GET() {
       registered: allReferrals.filter((r) => r.status === "registered").length,
       converted,
     });
-  } catch {
+  } catch (err) {
+    console.error("[referrals/stats] Error:", err);
     return NextResponse.json({ error: "Error al obtener estadísticas" }, { status: 500 });
   }
 }

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { ratelimit } from "@/lib/rate-limit";
-import { useCredits } from "@/lib/credits/use-credits";
+import { useCredits, addCredits } from "@/lib/credits/use-credits";
 import { ensureUser } from "@/lib/user/ensure-user";
 
 const ALLOWED_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
@@ -85,7 +85,9 @@ export async function POST(req: Request) {
         throw new Error("Unexpected response type from vision API");
       }
       rawText = block.text;
-    } catch {
+    } catch (err) {
+      console.error("[upload/photo] Vision API error:", err);
+      await addCredits(userId, 1, "refund", "Reembolso por fallo en análisis de foto").catch(() => {});
       return NextResponse.json(
         { error: "No se pudo analizar la imagen. Inténtalo de nuevo." },
         { status: 500 }

@@ -102,7 +102,10 @@ const ALLOWED_HOST = (() => {
 
 function checkOrigin(req: Request): boolean {
   const origin = req.headers.get("origin");
-  if (!origin) return true; // no Origin: server-to-server / curl — allow
+  // No early-return for missing Origin: Clerk auth is the primary protection,
+  // but we also enforce origin matching for browser clients to prevent CSRF
+  // credit-drain. Non-browser server-to-server callers should rely on Clerk.
+  if (!origin) return false;
   try {
     // Exact host comparison prevents substring bypass (evil.com?listwise.app)
     return new URL(origin).host === ALLOWED_HOST;

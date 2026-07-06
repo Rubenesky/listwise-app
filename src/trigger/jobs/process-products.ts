@@ -1,7 +1,7 @@
 import { task, retry } from "@trigger.dev/sdk/v3";
 import { sendEmail } from "@/lib/email/send";
 import { listingReadyTemplate } from "@/lib/email/templates";
-import { eq, and } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
 import { SYSTEM_PROMPT, buildUserPromptWithVoice, MODE_CONFIG, type GenerationMode, type VoiceProfileData, type Marketplace, type PriceSegment } from "@/lib/ai/prompts";
@@ -94,10 +94,17 @@ export const processProductsTask = task({
       // Non-fatal — proceed without voice profile
     }
 
-    let pendingListings: (typeof schema.listings.$inferSelect)[];
+    let pendingListings: Pick<typeof schema.listings.$inferSelect, "id" | "productName" | "category" | "attributes" | "marketplace" | "priceSegment">[];
     try {
       pendingListings = await db
-        .select()
+        .select({
+          id: schema.listings.id,
+          productName: schema.listings.productName,
+          category: schema.listings.category,
+          attributes: schema.listings.attributes,
+          marketplace: schema.listings.marketplace,
+          priceSegment: schema.listings.priceSegment,
+        })
         .from(schema.listings)
         .where(
           and(
@@ -119,16 +126,12 @@ export const processProductsTask = task({
     }
 
     const listingIds = pendingListings.map((l) => l.id);
-    await Promise.all(
-      listingIds.map((id) =>
-        db
-          .update(schema.listings)
-          .set({ status: "PROCESSING" })
-          .where(eq(schema.listings.id, id))
-      )
-    );
+    await db.update(schema.listings)
+      .set({ status: "PROCESSING" })
+      .where(inArray(schema.listings.id, listingIds));
 
     let totalProcessed = 0;
+    const succeededListings: typeof pendingListings = [];
 
     for (const product of pendingListings) {
       try {
@@ -181,6 +184,7 @@ export const processProductsTask = task({
             })
             .where(eq(schema.listings.id, product.id));
           totalProcessed++;
+          succeededListings.push(product);
           trackGamification(userId, "complete_product").catch((e) => console.warn("[gamification] trackGamification failed:", e));
         } catch (parseError) {
           console.error(`❌ [parse] Error al parsear respuesta:`, parseError);
@@ -190,12 +194,10 @@ export const processProductsTask = task({
         await markFailed(product.id, humanizeError(error));
       }
 
-      await new Promise(resolve => setTimeout(resolve, 1000));
     }
 
     if (userEmail && totalProcessed > 0) {
-      const productNames = pendingListings
-        .filter((l) => l.status !== "FAILED")
+      const productNames = succeededListings
         .map((l) => l.productName)
         .slice(0, 10);
       await sendEmail({

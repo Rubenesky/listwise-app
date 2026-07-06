@@ -19,7 +19,8 @@ export async function GET() {
 
     console.log(`🏅 [Referidos] ${userBadges.length} insignias encontradas para ${userId}`);
     return NextResponse.json({ badges: userBadges });
-  } catch {
+  } catch (err) {
+    console.error("[referrals/badges] Error:", err);
     return NextResponse.json({ error: "Error al obtener insignias" }, { status: 500 });
   }
 }

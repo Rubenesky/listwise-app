@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { providers, getDefaultProvider } from "@/lib/ai/providers";
 import { ratelimitAgentMinute, ratelimitAgentHour } from "@/lib/rate-limit";
 import { z } from "zod";
@@ -9,6 +9,7 @@ import { v4 as uuidv4 } from "uuid";
 import { AGENT_SYSTEM_PROMPT } from "@/lib/ai/agent-prompts";
 import { trackGamification } from "@/lib/gamification/track";
 import { ensureUser } from "@/lib/user/ensure-user";
+import { useCredits, addCredits } from "@/lib/credits/use-credits";
 
 const requestSchema = z.object({
   message: z.string().min(1).max(500),
@@ -92,16 +93,15 @@ export async function POST(req: Request) {
     // Ensure user row exists with free-tier defaults (new user path)
     await ensureUser(userId);
 
-    // Fetch user info
+    // Fetch user info (plan only — credits are managed atomically by useCredits below)
     const [user] = await db
-      .select({ agentCredits: schema.users.agentCredits, agentPlan: schema.users.agentPlan })
+      .select({ agentPlan: schema.users.agentPlan })
       .from(schema.users)
       .where(eq(schema.users.id, userId))
       .limit(1);
 
     const agentPlan = user?.agentPlan ?? "free";
     const isFree = agentPlan === "free";
-    const credits = user?.agentCredits ?? 0;
 
     // Rate limit per hour (free users only)
     if (isFree) {
@@ -110,22 +110,6 @@ export async function POST(req: Request) {
         console.log(`❌ [Agent] Rate limit hora excedido para ${userId}`);
         return NextResponse.json({ error: "Has alcanzado el límite de consultas por hora." }, { status: 429 });
       }
-    }
-
-    // Check credits (free users only)
-    if (isFree && credits <= 0) {
-      console.log(`❌ [Agent] Usuario ${userId} sin créditos`);
-      return NextResponse.json({
-        error: "Sin créditos",
-        upsell: true,
-        message: "Has agotado tus consultas gratuitas. Compra más consultas o actualiza a Pro.",
-        plans: [
-          { name: "20 consultas", price: 0.99 },
-          { name: "50 consultas", price: 1.99 },
-          { name: "100 consultas", price: 2.99 },
-          { name: "Plan Pro", price: 29 },
-        ],
-      }, { status: 403 });
     }
 
     // Run all independent DB reads in parallel — 4 roundtrips → 1
@@ -237,6 +221,24 @@ export async function POST(req: Request) {
     const detectedCommand = command ?? detectCommand(message);
     const startTime = Date.now();
     const newConvId = uuidv4();
+
+    // Atomically deduct 1 credit BEFORE starting the AI call to prevent TOCTOU races.
+    // Pro/Enterprise users pass through immediately (useCredits skips deduction for them).
+    const creditResult = await useCredits(userId, 1, "Consulta de agente");
+    if (!creditResult.success) {
+      console.log(`❌ [Agent] Usuario ${userId} sin créditos suficientes`);
+      return NextResponse.json({
+        error: "Sin créditos",
+        upsell: true,
+        message: "Has agotado tus consultas gratuitas. Compra más consultas o actualiza a Pro.",
+        plans: [
+          { name: "20 consultas", price: 0.99 },
+          { name: "50 consultas", price: 1.99 },
+          { name: "100 consultas", price: 2.99 },
+          { name: "Plan Pro", price: 29 },
+        ],
+      }, { status: 402 });
+    }
 
     // When formal tone is requested, inject anti-jargon guard into the AI user message.
     // The stored/displayed message remains the original — only the AI sees the injected version.
@@ -363,19 +365,9 @@ export async function POST(req: Request) {
             });
           }
 
-          // Atomic credit decrement — MAX(0,...) prevents negative values under concurrent requests
-          await db.update(schema.users)
-            .set({ agentCredits: sql`MAX(0, agent_credits - 1)` })
-            .where(eq(schema.users.id, userId));
-          await db.insert(schema.creditTransactions).values({
-            id: uuidv4(), userId, amount: -1, type: "usage",
-            description: "Consulta agente IA", stripeRef: null,
-            createdAt: Math.floor(Date.now() / 1000),
-          });
-
           trackGamification(userId, "agent_chat").catch((e) => console.warn("[gamification] trackGamification failed:", e));
 
-          const remainingCredits = Math.max(0, credits - 1);
+          const remainingCredits = creditResult.remainingCredits;
           const finalConvId = conversation?.id ?? newConvId;
 
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
@@ -390,6 +382,10 @@ export async function POST(req: Request) {
           controller.close();
         } catch (error) {
           console.error("❌ [Agent] Error en streaming:", error);
+          // Refund the pre-deducted credit since the AI call failed
+          await addCredits(userId, 1, "refund", "Reembolso por error de agente").catch((e) =>
+            console.warn("[agent] Credit refund failed:", e)
+          );
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Error al procesar la respuesta" })}\n\n`));
           controller.close();
         }

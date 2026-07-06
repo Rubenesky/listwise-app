@@ -90,7 +90,8 @@ export async function POST(req: Request) {
 
     try {
       await sendTriggerEvent(userId, batchId);
-    } catch {
+    } catch (triggerErr) {
+      console.error("[listings/from-photo] Trigger failed:", triggerErr);
       await db
         .update(schema.listings)
         .set({

@@ -40,17 +40,51 @@ export async function POST(): Promise<NextResponse<{ retrying: number } | { erro
   const clerkUser = await currentUser();
   const userEmail = clerkUser?.emailAddresses[0]?.emailAddress;
 
+  const failedIds = failed.map((r) => r.id);
   const batchId = uuidv4();
-  await fetch("https://api.trigger.dev/api/v1/tasks/process-batch/trigger", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.TRIGGER_SECRET_KEY}`,
-    },
-    body: JSON.stringify({
-      payload: { userId, batchId, mode: "creative", provider: "groq", userEmail },
-    }),
-  });
+
+  let triggerResponse: Response;
+  try {
+    triggerResponse = await fetch(
+      "https://api.trigger.dev/api/v1/tasks/process-batch/trigger",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.TRIGGER_SECRET_KEY}`,
+        },
+        body: JSON.stringify({
+          payload: { userId, batchId, mode: "creative", provider: "groq", userEmail },
+        }),
+        signal: AbortSignal.timeout(10_000),
+      }
+    );
+  } catch (err) {
+    console.error("[bulk/retry] Network error calling Trigger.dev:", err);
+    await db
+      .update(schema.listings)
+      .set({ status: "FAILED" })
+      .where(inArray(schema.listings.id, failedIds));
+    return NextResponse.json(
+      { error: "No se pudo reiniciar el procesamiento" },
+      { status: 503 }
+    );
+  }
+
+  if (!triggerResponse.ok) {
+    const body = await triggerResponse.text().catch(() => "(unreadable)");
+    console.error(
+      `[bulk/retry] Trigger.dev returned ${triggerResponse.status}: ${body}`
+    );
+    await db
+      .update(schema.listings)
+      .set({ status: "FAILED" })
+      .where(inArray(schema.listings.id, failedIds));
+    return NextResponse.json(
+      { error: "No se pudo reiniciar el procesamiento" },
+      { status: 503 }
+    );
+  }
 
   return NextResponse.json({ retrying: failed.length });
 }

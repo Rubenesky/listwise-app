@@ -25,7 +25,8 @@ function wrap(body: string): string {
 }
 
 function ctaButton(label: string, href: string): string {
-  return `<a href="${href}" style="display:inline-block;margin:20px 0 8px;padding:12px 28px;background:#2563eb;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:8px;">${label}</a>`;
+  const safeHref = /^https?:\/\//.test(href) ? href : "#";
+  return `<a href="${safeHref}" style="display:inline-block;margin:20px 0 8px;padding:12px 28px;background:#2563eb;color:#ffffff;font-size:15px;font-weight:600;text-decoration:none;border-radius:8px;">${label}</a>`;
 }
 
 export function welcomeEmailTemplate({ firstName }: { firstName: string }): string {

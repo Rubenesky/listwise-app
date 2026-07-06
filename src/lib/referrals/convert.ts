@@ -56,67 +56,68 @@ export async function convertReferral(
 
     const rewardType = plan === "enterprise" ? "free_month_enterprise" : "free_month_pro";
 
-    await db.insert(schema.referralRewards).values({
-      id: uuidv4(),
-      userId: referrerId,
-      referralId,
-      type: rewardType,
-      amount: 1,
-      status: "pending",
-      createdAt: now,
+    let convertedCount = 0;
+
+    await db.transaction(async (tx) => {
+      await tx.insert(schema.referralRewards).values({
+        id: uuidv4(),
+        userId: referrerId,
+        referralId,
+        type: rewardType,
+        amount: 1,
+        status: "pending",
+        createdAt: now,
+      });
+
+      // Give 10 credits to the referee (upsert — row may not exist yet)
+      await tx
+        .insert(schema.users)
+        .values({ id: refereeUserId, credits: 10 })
+        .onConflictDoUpdate({ target: schema.users.id, set: { credits: sql`credits + 10` } });
+
+      // Increment referrer counters (upsert — row may not exist yet)
+      await tx
+        .insert(schema.users)
+        .values({ id: referrerId, convertedReferrals: 1, totalReferrals: 1 })
+        .onConflictDoUpdate({
+          target: schema.users.id,
+          set: {
+            convertedReferrals: sql`converted_referrals + 1`,
+            totalReferrals: sql`total_referrals + 1`,
+          },
+        });
+
+      const [referrer] = await tx
+        .select({ convertedReferrals: schema.users.convertedReferrals })
+        .from(schema.users)
+        .where(eq(schema.users.id, referrerId))
+        .limit(1);
+
+      convertedCount = referrer?.convertedReferrals ?? 0;
+
+      // Check ALL milestones crossed — awards retroactively if a previous milestone was missed
+      const earnedBadges = await tx
+        .select({ type: schema.badges.type })
+        .from(schema.badges)
+        .where(eq(schema.badges.userId, referrerId));
+
+      const earnedTypes = new Set(earnedBadges.map((b) => b.type));
+
+      for (const [milestoneStr, badge] of Object.entries(BADGE_MAP)) {
+        const milestone = parseInt(milestoneStr);
+        if (convertedCount >= milestone && !earnedTypes.has(badge.type)) {
+          await tx
+            .insert(schema.badges)
+            .values({ id: uuidv4(), userId: referrerId, type: badge.type, name: badge.name, icon: badge.icon, earnedAt: now })
+            .onConflictDoNothing();
+        }
+      }
     });
 
     console.log(`🎁 [Referidos] Recompensa asignada a referidor ${referrerId}: ${rewardType}`);
-
-    // Give 10 credits to the referee (upsert — row may not exist yet)
-    await db
-      .insert(schema.users)
-      .values({ id: refereeUserId, credits: 10 })
-      .onConflictDoUpdate({ target: schema.users.id, set: { credits: sql`credits + 10` } });
-
     console.log(`📊 [Referidos] Créditos asignados al referido ${refereeUserId}: +10`);
-
-    // Increment referrer counters (upsert — row may not exist yet)
-    await db
-      .insert(schema.users)
-      .values({ id: referrerId, convertedReferrals: 1, totalReferrals: 1 })
-      .onConflictDoUpdate({
-        target: schema.users.id,
-        set: {
-          convertedReferrals: sql`converted_referrals + 1`,
-          totalReferrals: sql`total_referrals + 1`,
-        },
-      });
-
     console.log(`📊 [Referidos] Contadores actualizados para referidor ${referrerId}`);
-
-    const [referrer] = await db
-      .select({ convertedReferrals: schema.users.convertedReferrals })
-      .from(schema.users)
-      .where(eq(schema.users.id, referrerId))
-      .limit(1);
-
-    const count = referrer?.convertedReferrals ?? 0;
-    console.log(`🏅 [Referidos] Referidor ${referrerId} tiene ${count} referidos convertidos`);
-
-    // Check ALL milestones crossed — awards retroactively if a previous milestone was missed
-    const earnedBadges = await db
-      .select({ type: schema.badges.type })
-      .from(schema.badges)
-      .where(eq(schema.badges.userId, referrerId));
-
-    const earnedTypes = new Set(earnedBadges.map((b) => b.type));
-
-    for (const [milestoneStr, badge] of Object.entries(BADGE_MAP)) {
-      const milestone = parseInt(milestoneStr);
-      if (count >= milestone && !earnedTypes.has(badge.type)) {
-        await db
-          .insert(schema.badges)
-          .values({ id: uuidv4(), userId: referrerId, type: badge.type, name: badge.name, icon: badge.icon, earnedAt: now })
-          .onConflictDoNothing();
-        console.log(`🏅 [Referidos] Insignia "${badge.name}" otorgada a ${referrerId} (${count} conversiones >= ${milestone})`);
-      }
-    }
+    console.log(`🏅 [Referidos] Referidor ${referrerId} tiene ${convertedCount} referidos convertidos`);
 
     trackGamification(referrerId, "referral_converted").catch((e) => console.warn("[gamification] trackGamification failed:", e));
     console.log(`✅ [Referidos] Proceso de conversión completado para usuario ${refereeUserId}`);

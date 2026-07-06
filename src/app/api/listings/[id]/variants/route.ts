@@ -77,22 +77,18 @@ export async function POST(
       return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
     }
 
-    const variants = [];
     const variantCount = Math.min(count, STYLES.length);
 
-    for (let i = 0; i < variantCount; i++) {
-      const style = STYLES[i % STYLES.length];
-      const stylePrompt = STYLE_PROMPTS[style];
+    console.log(`🎨 [Variants] Lanzando ${variantCount} llamadas en paralelo para ${id}`);
 
-      console.log(`🎨 [Variants] Generando variante ${i + 1}/${variantCount} (${style})`);
-
-      try {
-        const response = await groq.chat.completions.create({
+    const results = await Promise.allSettled(
+      STYLES.slice(0, variantCount).map((style, i) =>
+        groq.chat.completions.create({
           model: "llama-3.3-70b-versatile",
           messages: [
             {
               role: "system",
-              content: `Eres un copywriter experto en e-commerce con 10 años de experiencia. Genera una descripción de producto con el siguiente estilo: ${stylePrompt}\n\nResponde EN ESTRICTAMENTE JSON con:\n{"title": "Título de máximo 80 caracteres","bullets": ["Beneficio 1","Beneficio 2","Beneficio 3","Beneficio 4","Beneficio 5"],"description": "Descripción de 150-200 palabras"}\n\nLos bullets deben empezar con verbos en presente. La descripción debe ser persuasiva y orientada a la conversión.`,
+              content: `Eres un copywriter experto en e-commerce con 10 años de experiencia. Genera una descripción de producto con el siguiente estilo: ${STYLE_PROMPTS[style]}\n\nResponde EN ESTRICTAMENTE JSON con:\n{"title": "Título de máximo 80 caracteres","bullets": ["Beneficio 1","Beneficio 2","Beneficio 3","Beneficio 4","Beneficio 5"],"description": "Descripción de 150-200 palabras"}\n\nLos bullets deben empezar con verbos en presente. La descripción debe ser persuasiva y orientada a la conversión.`,
             },
             {
               role: "user",
@@ -106,19 +102,27 @@ export async function POST(
           temperature: 0.7 + i * 0.1,
           max_tokens: 1024,
           response_format: { type: "json_object" },
-        });
+        })
+      )
+    );
 
-        const text = response.choices[0]?.message?.content ?? "{}";
+    const variants = results.flatMap((result, i) => {
+      const style = STYLES[i];
+      if (result.status === "rejected") {
+        console.error(`❌ [Variants] Error generando variante ${i + 1} (${style}):`, result.reason);
+        return [];
+      }
+      try {
+        const text = result.value.choices[0]?.message?.content ?? "{}";
         const parsed = JSON.parse(text);
         const validated = generatedContentSchema.parse(parsed);
-
-        variants.push({ id: `variant-${i + 1}`, style, ...validated });
         console.log(`✅ [Variants] Variante ${i + 1} (${style}) generada`);
+        return [{ id: `variant-${i + 1}`, style, ...validated }];
       } catch (err) {
-        console.error(`❌ [Variants] Error generando variante ${i + 1}:`, err);
-        // Skip failed variant and continue
+        console.error(`❌ [Variants] Error procesando variante ${i + 1} (${style}):`, err);
+        return [];
       }
-    }
+    });
 
     if (variants.length === 0) {
       console.log(`❌ [Variants] No se generaron variantes para ${id}`);

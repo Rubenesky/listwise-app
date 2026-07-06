@@ -6,8 +6,8 @@ export const users = sqliteTable("users", {
   referralCode: text("referral_code").unique(),
   totalReferrals: integer("total_referrals").notNull().default(0),
   convertedReferrals: integer("converted_referrals").notNull().default(0),
-  agentCredits: integer("agent_credits").default(20),
-  agentPlan: text("agent_plan").default("free"),
+  agentCredits: integer("agent_credits").notNull().default(20),
+  agentPlan: text("agent_plan").notNull().default("free"),
 });
 
 export const referrals = sqliteTable("referrals", {
@@ -154,6 +154,7 @@ export const agentAnalytics = sqliteTable("agent_analytics", {
 }, (table) => ({
   userIdx: index("idx_agent_analytics_user_id").on(table.userId),
   createdAtIdx: index("idx_agent_analytics_created_at").on(table.createdAt),
+  userListingIdx: index("idx_agent_analytics_user_listing").on(table.userId, table.listingId),
 }));
 
 export const gamification = sqliteTable("gamification", {
@@ -161,7 +162,7 @@ export const gamification = sqliteTable("gamification", {
   userId: text("user_id").notNull().unique(),
   points: integer("points").default(0),
   level: integer("level").default(1),
-  badges: text("badges").default("[]"),
+  badges: text("badges").notNull().default("[]"),
   streak: integer("streak").default(0),
   lastActivity: integer("last_activity"),
   updatedAt: integer("updated_at").default(0),
@@ -210,6 +211,7 @@ export const competitorAnalyses = sqliteTable("competitor_analyses", {
 }, (table) => ({
   userIdx: index("idx_competitor_analyses_user_id").on(table.userId),
   urlCacheIdx: index("idx_competitor_analyses_url").on(table.url, table.cacheExpiresAt),
+  listingStatusIdx: index("idx_competitor_analyses_listing_status").on(table.listingId, table.status),
 }));
 
 export const leads = sqliteTable("leads", {

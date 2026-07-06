@@ -10,6 +10,7 @@ import {
   DAILY_LIMITS,
   VALID_ACTIONS,
   getLevelInfo,
+  GamificationAction,
 } from "@/lib/gamification/constants";
 
 const bodySchema = z.object({
@@ -31,7 +32,7 @@ export async function POST(req: Request) {
     if (!parsed.success) {
       return NextResponse.json({ error: "Acción inválida" }, { status: 400 });
     }
-    const { action } = parsed.data;
+    const action = parsed.data.action as GamificationAction;
 
     // Get user plan from subscriptions
     const [subscription] = await db

@@ -21,7 +21,8 @@ export async function GET() {
     const credits = user?.credits ?? 0;
     console.log(`💰 [Referidos] Créditos de ${userId}: ${credits}`);
     return NextResponse.json({ credits });
-  } catch {
+  } catch (err) {
+    console.error("[referrals/credits] Error:", err);
     return NextResponse.json({ error: "Error al obtener créditos" }, { status: 500 });
   }
 }

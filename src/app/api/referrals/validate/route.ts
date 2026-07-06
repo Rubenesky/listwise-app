@@ -31,7 +31,8 @@ export async function GET(req: Request) {
 
     console.log(`✅ [Referidos] Código válido: ${code} - Referidor: ${referral.referrerId}`);
     return NextResponse.json({ valid: true, referrerId: referral.referrerId });
-  } catch {
+  } catch (err) {
+    console.error("[referrals/validate] Error:", err);
     return NextResponse.json({ error: "Error al validar código" }, { status: 500 });
   }
 }
