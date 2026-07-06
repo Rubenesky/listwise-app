@@ -75,6 +75,7 @@ export async function POST(req: Request) {
     });
 
     // Notify admin
+    if (!process.env.ADMIN_EMAIL) console.warn("[leads] ADMIN_EMAIL not set, falling back to hardcoded address");
     const adminEmail = process.env.ADMIN_EMAIL ?? "dcrubben25@gmail.com";
     const safeName = escapeHtml(name ? String(name).slice(0, 100) : "—");
     const safeMarketplace = escapeHtml(marketplace ? String(marketplace).slice(0, 50) : "—");

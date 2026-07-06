@@ -56,7 +56,7 @@ export async function useCredits(
     });
   });
 
-  return { success: true, remainingCredits: current - amount };
+  return { success: true, remainingCredits: Math.max(0, current - amount) };
 }
 
 export async function addCredits(

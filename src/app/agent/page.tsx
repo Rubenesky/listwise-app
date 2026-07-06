@@ -130,7 +130,7 @@ export default function AgentPage() {
           }
         } catch { /* ignore */ }
       })
-      .catch(() => {})
+      .catch((e) => console.warn("[agent] Error cargando listings:", e))
       .finally(() => setLoadingListings(false));
   }, []);
 

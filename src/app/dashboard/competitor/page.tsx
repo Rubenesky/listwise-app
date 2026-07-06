@@ -92,7 +92,7 @@ export default function CompetitorPage() {
         const done = (d.listings ?? []).filter((l: Listing) => l.status === "COMPLETED");
         setListings(done);
       })
-      .catch(() => {});
+      .catch((e) => console.warn("[competitor] Error cargando listings:", e));
 
     loadHistory();
     return () => stopPolling();
@@ -102,7 +102,7 @@ export default function CompetitorPage() {
     fetch("/api/competitor/history")
       .then((r) => r.json())
       .then((d) => setHistory(d.analyses ?? []))
-      .catch(() => {});
+      .catch((e) => console.warn("[competitor] Error cargando historial:", e));
   }
 
   function stopPolling() {

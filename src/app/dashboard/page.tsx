@@ -310,7 +310,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (isSignedIn) {
       fetchListings();
-      fetch("/api/user/credits").then((r) => r.json()).then((d) => setCredits(d.credits ?? null)).catch(() => {});
+      fetch("/api/user/credits").then((r) => r.json()).then((d) => setCredits(d.credits ?? null)).catch((e) => console.warn("[dashboard] Error cargando créditos:", e));
     }
   }, [isSignedIn, fetchListings]);
 
