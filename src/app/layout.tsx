@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 
 const PostHogProvider = dynamic(() => import("@/components/PostHogProvider"), { ssr: false });
 const PostHogPageView = dynamic(() => import("@/components/PostHogPageView"), { ssr: false });
+const WebVitals = dynamic(() => import("@/components/WebVitals"), { ssr: false });
 import LeadMagnetPopup from "@/components/LeadMagnetPopup";
 import { BASE_URL } from "@/lib/config";
 import "./globals.css";
@@ -104,6 +105,7 @@ export default function RootLayout({
           <PostHogProvider>
             <Suspense fallback={null}>
               <PostHogPageView />
+              <WebVitals />
             </Suspense>
             {children}
             <LeadMagnetPopup />
