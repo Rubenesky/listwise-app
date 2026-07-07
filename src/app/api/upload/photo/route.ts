@@ -12,9 +12,8 @@ const MAX_BYTES = 5 * 1024 * 1024;
 const VISION_PROMPT =
   'Eres un experto en ecommerce. Analiza la imagen de este producto y devuelve SOLO un JSON válido con esta estructura exacta: { "productName": string (nombre descriptivo del producto en español, máx 100 chars), "category": string (una de: ropa, electrónica, hogar, deportes, alimentación, belleza, juguetes, mascotas, otro), "attributes": { key: string value: string } (máximo 6 atributos clave como material, color, dimensiones, uso, etc.), "primaryKeyword": string (keyword principal para SEO, 2-4 palabras en español), "confidence": number (0-1, tu nivel de confianza en el análisis) }';
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
 export async function POST(req: Request) {
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   try {
     const { userId } = await auth();
     if (!userId) {
