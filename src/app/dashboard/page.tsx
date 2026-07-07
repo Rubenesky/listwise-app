@@ -3,7 +3,6 @@
 import { useUser } from "@clerk/nextjs";
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useUserPlan } from "@/lib/hooks/useUserPlan";
-import { PLAN_LIMITS } from "@/lib/constants";
 import VoiceProfileManager from "@/components/VoiceProfileManager";
 import InfoTooltip from "@/components/InfoTooltip";
 import GamificationWidget from "@/components/GamificationWidget";
@@ -549,7 +548,6 @@ export default function DashboardPage() {
 
   const planLabel = PLAN_LABELS[plan] || "Gratuito";
   const planColor = PLAN_COLORS[plan] || "bg-gray-100 text-gray-700";
-  const planLimit = PLAN_LIMITS[plan as keyof typeof PLAN_LIMITS] ?? PLAN_LIMITS.free;
   const currentCount = pagination.total || listings.length;
   const hasPendingOrProcessing = pendingOrProcessingCount > 0;
 

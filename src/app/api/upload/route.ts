@@ -8,7 +8,6 @@ import { PLAN_LIMITS } from "@/lib/constants";
 import { ratelimit } from "@/lib/rate-limit";
 import { trackGamification } from "@/lib/gamification/track";
 import { useCredits, addCredits } from "@/lib/credits/use-credits";
-import { ensureUser } from "@/lib/user/ensure-user";
 import { inArray } from "drizzle-orm";
 import { log } from "@/lib/logger";
 
@@ -108,7 +107,7 @@ export async function POST(req: Request) {
         skip_empty_lines: true,
         trim: true,
       });
-    } catch (error) {
+    } catch {
       return NextResponse.json({ error: "Error al parsear el CSV" }, { status: 400 });
     }
 

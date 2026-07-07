@@ -39,6 +39,15 @@ const nextConfig = {
     "openai",
     "cheerio",
     "@libsql/client",
+    // Pino uses worker threads for transports — keep external so
+    // node_modules paths (lib/worker.js) resolve correctly at runtime
+    "pino",
+    "pino-pretty",
+    "thread-stream",
+    "@logtail/pino",
+    // Anthropic SDK has module-level instantiation; keep external to avoid
+    // missing-key error during Next.js "Collecting page data" build phase
+    "@anthropic-ai/sdk",
   ],
   async headers() {
     return [{ source: "/(.*)", headers: securityHeaders }];

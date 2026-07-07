@@ -1,4 +1,3 @@
-import type Groq from "groq-sdk";
 import { groq } from "./client-groq";
 import { gemini } from "./client-gemini";
 import { log } from "@/lib/logger";

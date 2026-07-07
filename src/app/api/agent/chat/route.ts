@@ -22,7 +22,6 @@ const requestSchema = z.object({
 });
 
 const FORMAL_TRIGGER_RE = /formal|profesional|corporativo/i;
-const JARGON_RE = /idónea|idóneo|óptim[ao]|fusionando|integración de|elección idónea|configuraciones de vestuario|confiere|multifuncional|vestuario contemporáneo|Considere la|pieza esencial|estética refinada|resistencia óptima|diversas situaciones|entornos multifuncionales/i;
 
 const SPEC_PATTERNS: RegExp[] = [
   /\bIPX?\d+\b/gi,
