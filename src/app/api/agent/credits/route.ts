@@ -3,10 +3,6 @@ import { auth } from "@clerk/nextjs/server";
 import Stripe from "stripe";
 import { log } from "@/lib/logger";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-05-27.dahlia",
-});
-
 const CREDIT_PACKS = [
   { id: "pack_s", credits: 20, priceId: process.env.STRIPE_PACK_S_PRICE_ID },
   { id: "pack_m", credits: 50, priceId: process.env.STRIPE_PACK_M_PRICE_ID },
@@ -14,6 +10,9 @@ const CREDIT_PACKS = [
 ];
 
 export async function POST(req: Request) {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: "2026-05-27.dahlia",
+  });
   try {
     const { userId } = await auth();
     if (!userId) {

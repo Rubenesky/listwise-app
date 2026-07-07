@@ -6,8 +6,6 @@ import { addCredits } from "@/lib/credits/use-credits";
 import Stripe from "stripe";
 import { log } from "@/lib/logger";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
 const COUPON_ID = "LISTWISE_REFERRAL_FREE_MONTH";
 
 const FALLBACK_CREDITS: Record<string, number> = {
@@ -16,6 +14,7 @@ const FALLBACK_CREDITS: Record<string, number> = {
 };
 
 export async function POST(req: Request) {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
   try {
     const { userId } = await auth();
     if (!userId) {

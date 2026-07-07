@@ -5,10 +5,6 @@ import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
 import { log } from "@/lib/logger";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-05-27.dahlia",
-});
-
 const PRICE_IDS: Record<string, string> = {
   pro: "price_1Tl68X1uySlskct3CuBf7pjw",
   enterprise: "price_1Tl69t1uySlskct3TIl1qBqc",
@@ -35,6 +31,9 @@ const PLAN_NAMES: Record<string, string> = {
 };
 
 export async function POST(req: Request) {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: "2026-05-27.dahlia",
+  });
   try {
     const { userId } = await auth();
     if (!userId) {

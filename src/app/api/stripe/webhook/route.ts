@@ -15,14 +15,13 @@ import { churnPreventionTemplate } from "@/lib/email/templates";
 import { log } from "@/lib/logger";
 import { redis } from "@/lib/redis";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: "2026-05-27.dahlia",
-});
-
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
 
 export async function POST(req: Request) {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: "2026-05-27.dahlia",
+  });
   try {
     const body = await req.text();
     const headersList = await headers();

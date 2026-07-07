@@ -1,6 +1,8 @@
 import DashboardNav from "@/components/DashboardNav";
 import GamificationToast from "@/components/GamificationToast";
 
+export const dynamic = "force-dynamic";
+
 export default function DashboardLayout({
   children,
 }: {
