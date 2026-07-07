@@ -115,7 +115,7 @@ jobs:
     name: E2E Tests (Staging)
     runs-on: ubuntu-latest
     needs: [build]
-    if: ${{ vars.STAGING_URL != '' }}
+    environment: STAGING_URL
     steps:
       - uses: actions/checkout@v6
 
