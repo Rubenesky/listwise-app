@@ -17,11 +17,12 @@ test("sign-up page loads without a server error", async ({ page }) => {
 
 test("sign-in page has email input or Clerk widget", async ({ page }) => {
   await page.goto("/sign-in");
-  // Clerk renders either an iframe or a direct form — wait for either
-  const hasClerkWidget =
-    (await page.locator('iframe[src*="clerk"]').count()) > 0 ||
-    (await page.locator('input[type="email"], input[name="identifier"]').count()) > 0;
-  expect(hasClerkWidget).toBe(true);
+  await page.waitForLoadState("networkidle");
+  // Clerk renders either an iframe or a direct form — wait up to 15s for either
+  const clerkLocator = page.locator(
+    'iframe[src*="clerk"], input[type="email"], input[name="identifier"]'
+  );
+  await expect(clerkLocator.first()).toBeVisible({ timeout: 15000 });
 });
 
 // ─── Authenticated flow stubs (skipped — require real Clerk session) ──────────

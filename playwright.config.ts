@@ -9,6 +9,8 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? "github" : "list",
+  // 60s to accommodate Render free-tier cold starts (~20-30s on first request)
+  timeout: 60000,
   use: {
     baseURL: BASE_URL,
     trace: "on-first-retry",

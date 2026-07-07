@@ -130,6 +130,19 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install chromium --with-deps
 
+      - name: Warm up staging server
+        run: |
+          echo "Waiting for staging server to wake up..."
+          for i in $(seq 1 12); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" "${{ vars.STAGING_URL }}/api/health" --max-time 10 || echo "000")
+            echo "Attempt $i: HTTP $STATUS"
+            if [ "$STATUS" = "200" ]; then
+              echo "Server is up!"
+              break
+            fi
+            sleep 10
+          done
+
       - name: Run E2E tests against staging
         run: npm run test:e2e
         env:
