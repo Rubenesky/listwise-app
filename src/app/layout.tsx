@@ -1,12 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
-import { Suspense } from "react";
-import dynamic from "next/dynamic";
-
-const PostHogProvider = dynamic(() => import("@/components/PostHogProvider"), { ssr: false });
-const PostHogPageView = dynamic(() => import("@/components/PostHogPageView"), { ssr: false });
-const WebVitals = dynamic(() => import("@/components/WebVitals"), { ssr: false });
+import ClientProviders from "@/components/ClientProviders";
 import LeadMagnetPopup from "@/components/LeadMagnetPopup";
 import { BASE_URL } from "@/lib/config";
 import "./globals.css";
@@ -102,14 +97,10 @@ export default function RootLayout({
               __html: JSON.stringify(organizationJsonLd).replace(/</g, "\\u003c"),
             }}
           />
-          <PostHogProvider>
-            <Suspense fallback={null}>
-              <PostHogPageView />
-              <WebVitals />
-            </Suspense>
+          <ClientProviders>
             {children}
             <LeadMagnetPopup />
-          </PostHogProvider>
+          </ClientProviders>
         </body>
       </html>
     </ClerkProvider>
