@@ -111,7 +111,7 @@ export const processProductsTask = task({
             eq(schema.listings.userId, userId),
             eq(schema.listings.status, "PENDING")
           )
-        ) as any;
+        );
     } catch (dbError) {
       log.error({ userId, err: dbError }, "Error al consultar la BD");
       throw dbError;

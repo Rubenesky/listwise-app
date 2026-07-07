@@ -30,6 +30,7 @@ export async function POST(req: Request) {
     }
 
     await ensureUser(userId);
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const creditResult = await useCredits(userId, 1, "Análisis de foto con IA");
     if (!creditResult.success) {
       return NextResponse.json(

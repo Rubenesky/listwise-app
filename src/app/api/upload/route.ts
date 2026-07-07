@@ -143,6 +143,7 @@ export async function POST(req: Request) {
     }
 
     // 5b. Credit check: require 1 credit per product before generating
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const creditResult = await useCredits(
       userId,
       newProductsCount,

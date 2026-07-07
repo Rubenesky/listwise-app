@@ -67,7 +67,7 @@ export default function CompetitorPage() {
   const pollingRef = useRef<NodeJS.Timeout | null>(null);
   const pollingDelayRef = useRef(3000);
 
-  function useInAgent(suggestion: string) {
+  function applyInAgent(suggestion: string) {
     localStorage.setItem("agent_prefill", JSON.stringify({
       listingId: selectedListingId || undefined,
       message: `Aplica esta sugerencia del análisis de competencia a mi listing: "${suggestion}"`,
@@ -475,7 +475,7 @@ export default function CompetitorPage() {
                               {copiedIndex === i ? "✓ Copiado" : "📋 Copiar"}
                             </button>
                             <button
-                              onClick={() => useInAgent(s)}
+                              onClick={() => applyInAgent(s)}
                               className="flex items-center gap-1.5 text-xs px-3 py-1.5 bg-yellow-600 text-white rounded-lg hover:bg-yellow-700 transition-colors font-medium"
                             >
                               🤖 Aplicar con Agent

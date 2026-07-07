@@ -116,7 +116,7 @@ export default function AdminAnalyticsPage() {
         <ul className="space-y-2 text-sm text-gray-700">
           {data.commands.length > 0 && (
             <li>
-              🔍 El comando más usado es <strong>"{data.commands[0].name}"</strong> con{" "}
+              🔍 El comando más usado es <strong>&ldquo;{data.commands[0].name}&rdquo;</strong> con{" "}
               {data.commands[0].count} consultas.
             </li>
           )}
@@ -135,7 +135,7 @@ export default function AdminAnalyticsPage() {
           {data.products.length > 0 && (
             <li>
               📦 Producto más consultado:{" "}
-              <strong>"{data.products[0].name}"</strong> ({data.products[0].count} consultas).
+              <strong>&ldquo;{data.products[0].name}&rdquo;</strong> ({data.products[0].count} consultas).
             </li>
           )}
           {data.total === 0 && (

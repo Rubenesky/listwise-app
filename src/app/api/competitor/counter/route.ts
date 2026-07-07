@@ -60,6 +60,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Análisis de competidor no encontrado o no completado" }, { status: 404 });
     }
 
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const creditResult = await useCredits(userId, 2, "Análisis de contra-posicionamiento");
     if (!creditResult.success) {
       return NextResponse.json(

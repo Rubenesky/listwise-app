@@ -224,6 +224,7 @@ export async function POST(req: Request) {
 
     // Atomically deduct 1 credit BEFORE starting the AI call to prevent TOCTOU races.
     // Pro/Enterprise users pass through immediately (useCredits skips deduction for them).
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const creditResult = await useCredits(userId, 1, "Consulta de agente");
     if (!creditResult.success) {
       log.info({ userId }, "Insufficient agent credits");

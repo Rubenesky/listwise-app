@@ -174,6 +174,7 @@ export async function POST(req: Request) {
     }
 
     // Credit check: 2 credits required for a new analysis
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const creditResult = await useCredits(userId, 2, "Análisis de competidor");
     if (!creditResult.success) {
       return NextResponse.json(
