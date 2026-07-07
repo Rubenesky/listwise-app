@@ -73,4 +73,10 @@ export type Env = z.infer<typeof envSchema>;
  * import { env } from "@/lib/env";
  * const db = createClient({ url: env.TURSO_DATABASE_URL });
  */
-export const env = envSchema.parse(process.env);
+// During CI builds (SKIP_ENV_VALIDATION=1) or Next.js page collection
+// (NEXT_PHASE=phase-production-build) server secrets aren't available.
+// Runtime deployments (Render) always have real values and validate normally.
+export const env =
+  process.env.SKIP_ENV_VALIDATION || process.env.NEXT_PHASE === "phase-production-build"
+    ? (process.env as unknown as Env)
+    : envSchema.parse(process.env);
