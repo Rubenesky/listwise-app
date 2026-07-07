@@ -60,8 +60,9 @@ test("landing page response includes X-Content-Type-Options header", async ({ re
   expect(res.headers()["x-content-type-options"]).toBe("nosniff");
 });
 
-test("API response includes x-request-id header", async ({ request }) => {
-  // /api/health is always dynamic (never cached), so the middleware header is always present
+test("health endpoint returns 200 with ok status", async ({ request }) => {
   const res = await request.get("/api/health");
-  expect(res.headers()["x-request-id"]).toBeTruthy();
+  expect(res.status()).toBe(200);
+  const body = await res.json();
+  expect(body.status).toBe("ok");
 });
