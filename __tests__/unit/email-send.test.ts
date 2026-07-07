@@ -1,9 +1,14 @@
 const mockSend = jest.fn();
+const mockLogError = jest.fn();
 
 jest.mock("resend", () => ({
   Resend: jest.fn().mockImplementation(() => ({
     emails: { send: mockSend },
   })),
+}));
+
+jest.mock("@/lib/logger", () => ({
+  log: { error: mockLogError, warn: jest.fn(), info: jest.fn(), debug: jest.fn() },
 }));
 
 import { sendEmail } from "@/lib/email/send";
@@ -45,20 +50,16 @@ describe("sendEmail", () => {
 
   it("logs error but does not throw when resend returns an error object", async () => {
     process.env.RESEND_API_KEY = "re_test_key";
-    const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
     mockSend.mockResolvedValue({ data: null, error: { message: "invalid email" } });
     await expect(sendEmail({ to: "bad-email", subject: "Test", html: "<p>test</p>" })).resolves.toBeUndefined();
-    expect(consoleSpy).toHaveBeenCalled();
-    consoleSpy.mockRestore();
+    expect(mockLogError).toHaveBeenCalled();
   });
 
   it("swallows exceptions thrown by resend", async () => {
     process.env.RESEND_API_KEY = "re_test_key";
-    const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
     mockSend.mockRejectedValue(new Error("network error"));
     await expect(sendEmail({ to: "user@example.com", subject: "Test", html: "<p>test</p>" })).resolves.toBeUndefined();
-    expect(consoleSpy).toHaveBeenCalled();
-    consoleSpy.mockRestore();
+    expect(mockLogError).toHaveBeenCalled();
   });
 
   it("defaults from address to ListWise brand when FROM_EMAIL is not set", async () => {

@@ -4,6 +4,7 @@ import { useCredits, addCredits } from "@/lib/credits/use-credits";
 
 const mockSelect = jest.fn();
 const mockUpdate = jest.fn();
+const mockTransaction = jest.fn();
 
 jest.mock("@/db", () => ({
   db: {
@@ -12,8 +13,10 @@ jest.mock("@/db", () => ({
     insert: () => ({
       values: () => ({
         onConflictDoNothing: jest.fn().mockResolvedValue(undefined),
+        onConflictDoUpdate: jest.fn().mockResolvedValue(undefined),
       }),
     }),
+    transaction: (fn: (tx: object) => Promise<unknown>) => mockTransaction(fn),
   },
   schema: {
     users: { id: "id", agentCredits: "agent_credits", agentPlan: "agent_plan" },
@@ -34,6 +37,18 @@ function mockUser(plan: string | null, credits: number) {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  mockTransaction.mockImplementation(async (fn: (tx: object) => Promise<unknown>) => {
+    const tx = {
+      update: () => ({ set: () => ({ where: mockUpdate }) }),
+      insert: () => ({
+        values: () => ({
+          onConflictDoNothing: jest.fn().mockResolvedValue(undefined),
+          onConflictDoUpdate: jest.fn().mockResolvedValue(undefined),
+        }),
+      }),
+    };
+    return fn(tx);
+  });
 });
 
 // ─── useCredits ───────────────────────────────────────────────────────────────

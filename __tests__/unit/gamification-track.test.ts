@@ -19,6 +19,7 @@ const mockDb = {
   select: jest.fn(),
   update: jest.fn(),
   insert: jest.fn(),
+  transaction: jest.fn(),
 };
 
 jest.mock("@/db", () => ({
@@ -46,6 +47,7 @@ beforeEach(() => {
   mockDb.select.mockImplementation(() => makeChain(mockSelectQueue.shift() ?? []));
   mockDb.update.mockImplementation(() => makeChain([]));
   mockDb.insert.mockImplementation(() => makeChain([]));
+  mockDb.transaction.mockImplementation(async (fn: (tx: typeof mockDb) => Promise<unknown>) => fn(mockDb));
 });
 
 describe("trackGamification", () => {

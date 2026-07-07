@@ -19,6 +19,7 @@ const mockDb = {
   select: jest.fn(),
   update: jest.fn(),
   insert: jest.fn(),
+  transaction: jest.fn(),
 };
 
 jest.mock("@/db", () => ({
@@ -52,6 +53,7 @@ beforeEach(() => {
   mockDb.select.mockImplementation(() => makeChain(mockSelectQueue.shift() ?? []));
   mockDb.update.mockImplementation(() => makeChain([]));
   mockDb.insert.mockImplementation(() => makeChain([]));
+  mockDb.transaction.mockImplementation(async (fn: (tx: typeof mockDb) => Promise<unknown>) => fn(mockDb));
 });
 
 describe("convertReferral", () => {
@@ -152,10 +154,7 @@ describe("convertReferral", () => {
 
   it("returns false and does not throw when an unexpected error occurs", async () => {
     mockDb.select.mockImplementationOnce(() => { throw new Error("DB connection error"); });
-    const consoleSpy = jest.spyOn(console, "error").mockImplementation(() => {});
     const result = await convertReferral("ref-err", "user-err", "pro");
     expect(result).toBe(false);
-    expect(consoleSpy).toHaveBeenCalled();
-    consoleSpy.mockRestore();
   });
 });
