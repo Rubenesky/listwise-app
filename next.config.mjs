@@ -4,7 +4,9 @@ import withBundleAnalyzer from "@next/bundle-analyzer";
 const ContentSecurityPolicy = [
   "default-src 'self'",
   // Next.js requires 'unsafe-inline' for styles; 'unsafe-eval' for dev HMR
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://clerk.listwise.io",
+  // Clerk serves clerk-js from its Frontend API domain — either a custom domain
+  // (clerk.listwise.io) or, when none is configured, its default *.clerk.accounts.dev
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://clerk.listwise.io https://*.clerk.accounts.dev",
   "style-src 'self' 'unsafe-inline'",
   // Allow images from any HTTPS origin (product images, CDN assets, Clerk avatars)
   "img-src 'self' data: blob: https:",
@@ -12,7 +14,7 @@ const ContentSecurityPolicy = [
   // API calls to Clerk, Stripe, Upstash, Sentry, PostHog, Trigger.dev, Turso
   "connect-src 'self' https:",
   // Clerk OAuth hosted pages need frame-src
-  "frame-src 'self' https://clerk.listwise.io https://js.stripe.com https://hooks.stripe.com",
+  "frame-src 'self' https://clerk.listwise.io https://*.clerk.accounts.dev https://js.stripe.com https://hooks.stripe.com",
   "frame-ancestors 'none'",
   "object-src 'none'",
   "base-uri 'self'",
