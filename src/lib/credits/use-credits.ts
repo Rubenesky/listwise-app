@@ -1,5 +1,5 @@
 import { db, schema } from "@/db";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { ensureUser } from "@/lib/user/ensure-user";
 
@@ -67,6 +67,24 @@ export async function addCredits(
   stripeRef?: string
 ): Promise<void> {
   await ensureUser(userId);
+
+  // Defense-in-depth: a Stripe event can be delivered to more than one webhook
+  // endpoint (e.g. staging + production both registered), each processing it
+  // independently. Skip if this exact reference was already credited.
+  if (stripeRef) {
+    const [existing] = await db
+      .select({ id: schema.creditTransactions.id })
+      .from(schema.creditTransactions)
+      .where(
+        and(
+          eq(schema.creditTransactions.userId, userId),
+          eq(schema.creditTransactions.stripeRef, stripeRef)
+        )
+      )
+      .limit(1);
+    if (existing) return;
+  }
+
   await db.transaction(async (tx) => {
     await tx.update(schema.users)
       .set({ agentCredits: sql`agent_credits + ${amount}` })

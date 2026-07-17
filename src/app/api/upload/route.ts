@@ -1,10 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
-import { eq, count } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { parse } from "csv-parse/sync";
 import { v4 as uuidv4 } from "uuid";
-import { PLAN_LIMITS } from "@/lib/constants";
 import { ratelimit } from "@/lib/rate-limit";
 import { trackGamification } from "@/lib/gamification/track";
 import { useCredits, addCredits } from "@/lib/credits/use-credits";
@@ -63,21 +62,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // 1+2. Obtener plan y contar productos en paralelo
-    const [subscription, totalProducts] = await Promise.all([
-      db.select({ plan: schema.subscriptions.plan })
-        .from(schema.subscriptions)
-        .where(eq(schema.subscriptions.userId, userId))
-        .limit(1),
-      db.select({ count: count() })
-        .from(schema.listings)
-        .where(eq(schema.listings.userId, userId)),
-    ]);
+    // 1. Obtener plan del usuario
+    const subscription = await db.select({ plan: schema.subscriptions.plan })
+      .from(schema.subscriptions)
+      .where(eq(schema.subscriptions.userId, userId))
+      .limit(1);
 
     const userPlan = subscription.length > 0 ? subscription[0].plan : "free";
-    if (!(userPlan in PLAN_LIMITS)) log.warn({ userId, plan: userPlan }, "Unknown plan, defaulting to free limit");
-    const planLimit = PLAN_LIMITS[userPlan as keyof typeof PLAN_LIMITS] ?? PLAN_LIMITS.free;
-    const currentCount = totalProducts[0]?.count || 0;
 
     // 3. Parsear el CSV
     const formData = await req.formData();
@@ -127,21 +118,8 @@ export async function POST(req: Request) {
       );
     }
 
-    // 5. Verificar límite de productos
+    // 5. Credit check: require 1 credit per product before generating
     const newProductsCount = records.length;
-    const totalAfterUpload = currentCount + newProductsCount;
-
-    if (totalAfterUpload > planLimit) {
-      return NextResponse.json({
-        error: `Has superado el límite de tu plan (${userPlan}). Límite: ${planLimit} productos. Actualmente tienes ${currentCount} y estás subiendo ${newProductsCount}.`,
-        limit: planLimit,
-        current: currentCount,
-        attempting: newProductsCount,
-        plan: userPlan,
-      }, { status: 403 });
-    }
-
-    // 5b. Credit check: require 1 credit per product before generating
     // eslint-disable-next-line react-hooks/rules-of-hooks
     const creditResult = await useCredits(
       userId,
@@ -203,7 +181,6 @@ export async function POST(req: Request) {
       count: listings.length,
       batchId: batchId,
       plan: userPlan,
-      remaining: planLimit === Infinity ? null : planLimit - totalAfterUpload,
       remainingCredits: creditResult.remainingCredits,
       ...(warnings.length > 0 && { warnings }),
     });
