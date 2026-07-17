@@ -3,6 +3,7 @@
 import { useUser } from "@clerk/nextjs";
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useUserPlan } from "@/lib/hooks/useUserPlan";
+import { calcHealthScore } from "@/lib/listings/health-score";
 import VoiceProfileManager from "@/components/VoiceProfileManager";
 import InfoTooltip from "@/components/InfoTooltip";
 import GamificationWidget from "@/components/GamificationWidget";
@@ -37,33 +38,8 @@ interface ListingRow {
   qualityFlags: QualityFlags | null;
 }
 
-function calcHealthScore(listing: ListingRow): number {
-  if (listing.status !== "COMPLETED") return 0;
-  let score = 0;
-  if (listing.generatedTitle) {
-    score += 20;
-    const len = listing.generatedTitle.length;
-    if (len >= 60 && len <= 100) score += 15;
-    else if (len >= 40) score += 8;
-  }
-  if (listing.generatedBullets) {
-    if (listing.generatedBullets.length >= 4) score += 20;
-    else if (listing.generatedBullets.length >= 2) score += 10;
-  }
-  if (listing.generatedDescription) {
-    if (listing.generatedDescription.length >= 200) score += 20;
-    else if (listing.generatedDescription.length >= 100) score += 10;
-  }
-  if (listing.primaryKeyword) score += 10;
-  if (listing.hookType) score += 5;
-  if (listing.generatedTitleB) score += 5;
-  if (listing.qualityFlags?.no_trademarks) score += 3;
-  if (listing.qualityFlags?.hook_differentiated) score += 2;
-  return Math.min(100, score);
-}
-
 function getHealthLabel(score: number): { label: string; color: string } {
-  if (score >= 90) return { label: "Excelente", color: "text-green-700 bg-green-100" };
+  if (score >= 85) return { label: "Excelente", color: "text-green-700 bg-green-100" };
   if (score >= 70) return { label: "Bueno", color: "text-teal-700 bg-teal-100" };
   if (score >= 50) return { label: "Regular", color: "text-yellow-700 bg-yellow-100" };
   return { label: "Mejorable", color: "text-orange-700 bg-orange-100" };
