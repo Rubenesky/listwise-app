@@ -7,6 +7,7 @@ import { eq } from "drizzle-orm";
 import { auth } from "@clerk/nextjs/server";
 import ShareButtons from "@/components/ShareButtons";
 import ViewTracker from "@/components/ViewTracker";
+import DescriptionSections from "@/components/DescriptionSections";
 
 export const revalidate = 60; // ISR: revalidate every minute
 
@@ -147,7 +148,7 @@ export default async function SharePage({
                 <h2 className="text-sm font-semibold uppercase tracking-wider text-gray-500 mb-4">
                   Descripción completa
                 </h2>
-                <p className="text-gray-700 leading-relaxed whitespace-pre-line">{description}</p>
+                <DescriptionSections description={description} />
               </div>
             )}
 

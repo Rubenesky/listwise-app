@@ -1,4 +1,4 @@
-export type GenerationMode = "creative" | "professional" | "seo";
+export type GenerationMode = "creative" | "professional" | "seo" | "tecnica";
 export type Marketplace = "amazon" | "etsy" | "shopify" | "general";
 export type PriceSegment = "economy" | "mid" | "premium";
 
@@ -13,21 +13,45 @@ export interface VoiceProfileData {
   brandPromise?: string;
 }
 
-export const MODE_CONFIG: Record<GenerationMode, { label: string; systemPrompt: string; temperature: number }> = {
+export const MODE_CONFIG: Record<GenerationMode, { label: string; systemPrompt: string; temperature: number; creditsPerProduct: number }> = {
   creative: {
     label: "Creativo",
     systemPrompt: `<MODO>CREATIVO: Prioriza la conexión emocional y el lenguaje sensorial. Activa el deseo describiendo la experiencia de uso: textura, sensación, transformación. Usa Future Pacing y Contrast Frame cuando el producto los justifique.</MODO>`,
     temperature: 0.75,
+    creditsPerProduct: 1,
   },
   professional: {
     label: "Profesional",
     systemPrompt: `<MODO>PROFESIONAL: Tono directo y técnico. Datos concretos, especificaciones reales, durabilidad verificable. Sin hipérboles. El comprador racional que compara especificaciones antes de decidir es tu audiencia.</MODO>`,
     temperature: 0.45,
+    creditsPerProduct: 1,
   },
   seo: {
     label: "SEO",
     systemPrompt: `<MODO>SEO: La primary_keyword va en los primeros 40 caracteres del título — primera prioridad absoluta. Incluye 1 sinónimo semántico de la keyword en el primer párrafo de la descripción. Incluye una frase long-tail de 3-5 palabras exactamente como la escribiría un comprador en el buscador antes de comprar.</MODO>`,
     temperature: 0.6,
+    creditsPerProduct: 1,
+  },
+  tecnica: {
+    label: "Ficha Técnica",
+    systemPrompt: `<MODO>FICHA TÉCNICA: Este producto pertenece a una categoría técnica o de fabricación a medida (persianas, mosquiteras, toldos, muebles a medida, instalaciones, etc.) donde el comprador necesita información completa antes de decidir, no solo un gancho emocional.
+
+ANULA la regla general de "DESCRIPCIÓN (2 a 3 párrafos)" de las instrucciones base. En su lugar, el campo "description" debe tener esta estructura EXACTA, con estos marcadores literales de sección (cada uno en su propia línea, precedido de "## "):
+
+[Gancho breve de 1-2 frases, igual de directo que en el modo estándar — sin las palabras prohibidas de apertura.]
+
+## Especificaciones técnicas
+[Lista o párrafo con las especificaciones CONFIRMADAS en los inputs: material, medidas, capacidad, acabado, compatibilidad. No inventes datos no confirmados.]
+
+## Instalación
+[Proceso de instalación, montaje o fabricación a medida. Si no hay datos confirmados sobre el proceso, describe el proceso general esperado para este tipo de producto sin inventar pasos específicos no confirmados.]
+
+## Preguntas frecuentes
+[3-4 preguntas y respuestas breves que un comprador de este producto técnico haría antes de comprar: plazos de fabricación o entrega, garantía, mantenimiento, compatibilidad.]
+
+Objetivo de longitud total del campo "description": 500-700 palabras. El título y los bullets siguen exactamente las mismas reglas que en el resto de modos, sin cambios.</MODO>`,
+    temperature: 0.4,
+    creditsPerProduct: 2,
   },
 };
 

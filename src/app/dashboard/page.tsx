@@ -12,7 +12,7 @@ import OnboardingModal from "@/components/OnboardingModal";
 import PhotoUploader from "@/components/PhotoUploader";
 
 type ListingStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
-type GenerationMode = "creative" | "professional" | "seo";
+type GenerationMode = "creative" | "professional" | "seo" | "tecnica";
 
 interface QualityFlags {
   no_trademarks?: boolean;
@@ -61,6 +61,7 @@ const MODE_LABELS: Record<GenerationMode, string> = {
   creative: "🎨 Creativo",
   professional: "💼 Profesional",
   seo: "📈 SEO",
+  tecnica: "🔧 Ficha Técnica",
 };
 
 export default function DashboardPage() {
@@ -76,7 +77,7 @@ export default function DashboardPage() {
   const [selectedMode, setSelectedMode] = useState<GenerationMode>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("listwise_generation_mode");
-      if (saved === "creative" || saved === "professional" || saved === "seo") return saved;
+      if (saved === "creative" || saved === "professional" || saved === "seo" || saved === "tecnica") return saved;
     }
     return "creative";
   });
@@ -1040,11 +1041,12 @@ export default function DashboardPage() {
             <InfoTooltip content="El modo define el estilo de escritura de la IA. Se aplica a todos los productos del siguiente CSV que subas." />
           </div>
           <div className="flex gap-2 flex-wrap">
-            {(["creative", "professional", "seo"] as GenerationMode[]).map((mode) => {
+            {(["creative", "professional", "seo", "tecnica"] as GenerationMode[]).map((mode) => {
               const modeTooltips: Record<GenerationMode, string> = {
                 creative: "Tono emocional y narrativo. Conecta con las aspiraciones del cliente. Ideal para moda, lifestyle y regalos.",
                 professional: "Tono técnico y formal. Destaca especificaciones y funcionalidad. Ideal para electrónica, herramientas y B2B.",
                 seo: "SEO + GEO: optimizado para buscadores tradicionales (Google) y motores de búsqueda de IA (ChatGPT, Perplexity, Gemini). Incluye palabras clave estratégicas y estructura semántica que los modelos de IA entienden mejor.",
+                tecnica: "Ficha larga y estructurada con especificaciones técnicas, instalación y preguntas frecuentes. Ideal para productos a medida o técnicos (persianas, mosquiteras, muebles a medida, maquinaria). Cuesta 2 créditos por producto.",
               };
               return (
                 <div key={mode} className="flex items-center gap-1">

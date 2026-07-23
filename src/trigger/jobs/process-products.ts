@@ -80,6 +80,8 @@ export const processProductsTask = task({
     const aiConfig = providers[safeProvider];
     log.info({ userId, provider: safeProvider, model: aiConfig.defaultModel }, "Proveedor AI seleccionado");
     const temperature = MODE_CONFIG[safeMode].temperature;
+    // Ficha Técnica produces a much longer, multi-section description
+    const maxTokens = safeMode === "tecnica" ? 3000 : 1600;
 
     // Fetch active voice profile once (before the loop)
     let activeVoiceProfile: VoiceProfileData | null = null;
@@ -155,7 +157,7 @@ export const processProductsTask = task({
                 )},
               ],
               safeProvider,
-              { temperature, max_tokens: 1600, response_format: { type: "json_object" } }
+              { temperature, max_tokens: maxTokens, response_format: { type: "json_object" } }
             );
           },
           { maxAttempts: 3, minTimeoutInMs: 2000, factor: 2 }

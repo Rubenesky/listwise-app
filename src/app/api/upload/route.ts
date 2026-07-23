@@ -7,6 +7,7 @@ import { v4 as uuidv4 } from "uuid";
 import { ratelimit } from "@/lib/rate-limit";
 import { trackGamification } from "@/lib/gamification/track";
 import { useCredits, addCredits } from "@/lib/credits/use-credits";
+import { MODE_CONFIG, type GenerationMode } from "@/lib/ai/prompts";
 import { inArray } from "drizzle-orm";
 import { log } from "@/lib/logger";
 
@@ -118,18 +119,20 @@ export async function POST(req: Request) {
       );
     }
 
-    // 5. Credit check: require 1 credit per product before generating
+    // 5. Credit check: require 1 credit per product (2 for Ficha Técnica, longer generation)
     const newProductsCount = records.length;
+    const creditsPerProduct = MODE_CONFIG[mode as GenerationMode]?.creditsPerProduct ?? 1;
+    const creditsRequired = newProductsCount * creditsPerProduct;
     // eslint-disable-next-line react-hooks/rules-of-hooks
     const creditResult = await useCredits(
       userId,
-      newProductsCount,
+      creditsRequired,
       `Generación de ${newProductsCount} descripción${newProductsCount !== 1 ? "es" : ""}`
     );
     if (!creditResult.success) {
       return NextResponse.json({
-        error: `No tienes suficientes créditos. Necesitas ${newProductsCount} crédito${newProductsCount !== 1 ? "s" : ""} para generar ${newProductsCount} descripción${newProductsCount !== 1 ? "es" : ""}, pero solo tienes ${creditResult.remainingCredits}. Reduce el número de productos o compra más créditos.`,
-        creditsRequired: newProductsCount,
+        error: `No tienes suficientes créditos. Necesitas ${creditsRequired} crédito${creditsRequired !== 1 ? "s" : ""} para generar ${newProductsCount} descripción${newProductsCount !== 1 ? "es" : ""}, pero solo tienes ${creditResult.remainingCredits}. Reduce el número de productos o compra más créditos.`,
+        creditsRequired,
         creditsAvailable: creditResult.remainingCredits,
         insufficientCredits: true,
       }, { status: 402 });
@@ -166,7 +169,7 @@ export async function POST(req: Request) {
       await sendTriggerEvent(userId, batchId, mode, provider, userEmail);
     } catch (triggerError) {
       // Revert credits and mark the just-inserted listings as FAILED
-      await addCredits(userId, newProductsCount, "refund", "Reembolso por error de procesamiento");
+      await addCredits(userId, creditsRequired, "refund", "Reembolso por error de procesamiento");
       if (insertedIds.length > 0) {
         await db.update(schema.listings)
           .set({ status: "FAILED", errorMessage: "Error al iniciar procesamiento. Puedes reintentar desde el dashboard." })
