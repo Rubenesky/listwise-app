@@ -4,7 +4,7 @@ import { listingReadyTemplate } from "@/lib/email/templates";
 import { eq, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { SYSTEM_PROMPT, buildUserPromptWithVoice, MODE_CONFIG, type GenerationMode, type VoiceProfileData, type Marketplace, type PriceSegment } from "@/lib/ai/prompts";
+import { buildSystemPrompt, buildUserPromptWithVoice, MODE_CONFIG, type GenerationMode, type VoiceProfileData, type Marketplace, type PriceSegment } from "@/lib/ai/prompts";
 import { providers, getAIResponse, type AIProvider } from "@/lib/ai/providers";
 import type { GeneratedContent, BatchProcessPayload } from "@/types";
 import { trackGamification } from "@/lib/gamification/track";
@@ -143,7 +143,7 @@ export const processProductsTask = task({
           async () => {
             return await getAIResponse(
               [
-                { role: "system", content: SYSTEM_PROMPT },
+                { role: "system", content: buildSystemPrompt(safeMode) },
                 { role: "user", content: buildUserPromptWithVoice(
                   {
                     productName: safeName,
