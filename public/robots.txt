@@ -41,4 +41,4 @@ User-agent: Bingbot
 Allow: /
 Allow: /pricing
 
-Sitemap: https://listwise.app/sitemap.xml
+Sitemap: https://listwise-app.onrender.com/sitemap.xml

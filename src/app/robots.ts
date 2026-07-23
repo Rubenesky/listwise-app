@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: '/',
       disallow: ['/api/', '/dashboard/', '/sign-in/', '/sign-up/'],
     },
-    sitemap: `${process.env.NEXT_PUBLIC_BASE_URL ?? "https://listwise.app"}/sitemap.xml`,
+    sitemap: `${process.env.NEXT_PUBLIC_BASE_URL ?? "https://listwise-app.onrender.com"}/sitemap.xml`,
   };
 }

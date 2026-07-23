@@ -74,7 +74,7 @@ export async function POST(req: Request) {
       });
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise.app";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise-app.onrender.com";
     const pdfUrl = process.env.LEAD_MAGNET_PDF_URL ?? "";
     const unsubscribeUrl = `${appUrl}/api/leads/unsubscribe?id=${leadId}`;
 

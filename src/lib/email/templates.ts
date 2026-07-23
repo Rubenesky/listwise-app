@@ -11,7 +11,7 @@ const BASE = `
     </div>
     <div style="background:#f9fafb;padding:16px 32px;border-top:1px solid #e5e7eb;">
       <p style="margin:0;color:#9ca3af;font-size:12px;text-align:center;">
-        ListWise &middot; <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise.app"}/dashboard" style="color:#6b7280;text-decoration:none;">dashboard</a> &middot; <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise.app"}/pricing" style="color:#6b7280;text-decoration:none;">planes</a>
+        ListWise &middot; <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise-app.onrender.com"}/dashboard" style="color:#6b7280;text-decoration:none;">dashboard</a> &middot; <a href="${process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise-app.onrender.com"}/pricing" style="color:#6b7280;text-decoration:none;">planes</a>
       </p>
       <p style="margin:8px 0 0;color:#d1d5db;font-size:11px;text-align:center;">
         Para cancelar la suscripci&#xF3;n a estos correos, responde a este email con el asunto <strong>baja</strong>.
@@ -66,7 +66,7 @@ export function welcomeEmailTemplate({ firstName }: { firstName: string }): stri
       </tr>
     </table>
 
-    ${ctaButton("Ir al dashboard →", `${process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise.app"}/dashboard`)}
+    ${ctaButton("Ir al dashboard →", `${process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise-app.onrender.com"}/dashboard`)}
     <p style="margin:4px 0 0;color:#9ca3af;font-size:12px;">&#xBF;Tienes dudas? Responde directamente a este email.</p>
   `);
 }
@@ -92,7 +92,7 @@ export function listingReadyTemplate({ count, productNames }: { count: number; p
         &#x1F4A1; <strong>Siguiente paso:</strong> Usa el Agente de Copywriting para refinar el tono, ajustar keywords o adaptar el listing a un marketplace espec&#xED;fico.
       </p>
     </div>
-    ${ctaButton("Ver mis listings →", "https://listwise.app/dashboard")}
+    ${ctaButton("Ver mis listings →", "https://listwise-app.onrender.com/dashboard")}
   `);
 }
 
@@ -107,7 +107,7 @@ export function creditsLowTemplate({ remaining, plan }: { remaining: number; pla
       ? `<p style="color:#6b7280;font-size:14px;">Como usuario ${escapeHtml(plan)}, puedes comprar packs de cr&#xE9;ditos adicionales desde tu dashboard.</p>`
       : `<p style="color:#6b7280;font-size:14px;">Con el plan Pro o Enterprise obtienes cr&#xE9;ditos adicionales y acceso ilimitado al Agente.</p>`
     }
-    ${ctaButton(isPaid ? "Comprar cr&#xE9;ditos →" : "Ver planes →", "https://listwise.app/pricing")}
+    ${ctaButton(isPaid ? "Comprar cr&#xE9;ditos →" : "Ver planes →", "https://listwise-app.onrender.com/pricing")}
   `);
 }
 
@@ -121,7 +121,7 @@ export function leadMagnetTemplate({
   unsubscribeUrl: string;
 }): string {
   const greeting = name ? `Hola ${escapeHtml(name)},` : "Hola,";
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise.app";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise-app.onrender.com";
   return `
 <div style="font-family:Inter,Arial,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;">
   <div style="background:#f97316;padding:24px 32px;">
@@ -165,7 +165,7 @@ export function leadMagnetTemplate({
   </div>
   <div style="background:#f9fafb;padding:16px 32px;border-top:1px solid #e5e7eb;">
     <p style="margin:0;color:#9ca3af;font-size:12px;text-align:center;">
-      ListWise &middot; <a href="${appUrl}" style="color:#6b7280;text-decoration:none;">listwise.app</a>
+      ListWise &middot; <a href="${appUrl}" style="color:#6b7280;text-decoration:none;">listwise-app.onrender.com</a>
     </p>
     <p style="margin:8px 0 0;color:#d1d5db;font-size:11px;text-align:center;">
       Recibiste este email porque descargaste un recurso gratuito de ListWise.<br>
@@ -176,7 +176,7 @@ export function leadMagnetTemplate({
 }
 
 export function activationNudgeTemplate({ name }: { name?: string }): string {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise.app";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise-app.onrender.com";
   const greeting = name ? `Hola, ${escapeHtml(name)}` : "Hola";
   return wrap(`
     <h2 style="margin:0 0 12px;font-size:20px;color:#111827;">${greeting} &#x1F440;</h2>
@@ -223,7 +223,7 @@ export function activationNudgeTemplate({ name }: { name?: string }): string {
 }
 
 export function reEngagementTemplate({ name }: { name?: string }): string {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise.app";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise-app.onrender.com";
   const greeting = name ? `Hola, ${escapeHtml(name)}` : "Hola";
   return wrap(`
     <h2 style="margin:0 0 12px;font-size:20px;color:#111827;">${greeting} &#x1F44B;</h2>
@@ -247,7 +247,7 @@ export function reEngagementTemplate({ name }: { name?: string }): string {
 }
 
 export function churnPreventionTemplate({ name, plan }: { name?: string; plan: string }): string {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise.app";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://listwise-app.onrender.com";
   const greeting = name ? `Hola, ${escapeHtml(name)}` : "Hola";
   const planLabel = plan === "enterprise" ? "Enterprise" : "Pro";
   return wrap(`
@@ -285,6 +285,6 @@ export function referralRegistrationTemplate({ refereeEmail }: { refereeEmail: s
     <p style="margin:0 0 4px;color:#4b5563;font-size:14px;line-height:1.6;">
       Cuando tu invitado contrate un plan de pago, ganar&#xE1;s recompensas adicionales. Sigue compartiendo tu enlace para acumular m&#xE1;s.
     </p>
-    ${ctaButton("Ver mis referidos &#x2192;", "https://listwise.app/dashboard/referrals")}
+    ${ctaButton("Ver mis referidos &#x2192;", "https://listwise-app.onrender.com/dashboard/referrals")}
   `);
 }

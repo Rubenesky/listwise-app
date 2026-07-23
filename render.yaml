@@ -11,9 +11,9 @@ services:
       - key: NODE_VERSION
         value: 20.12.0
       - key: NEXT_PUBLIC_APP_URL
-        value: https://listwise.app
+        value: https://listwise-app.onrender.com
       - key: NEXT_PUBLIC_BASE_URL
-        value: https://listwise.app
+        value: https://listwise-app.onrender.com
       - key: NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
         sync: false
       - key: CLERK_SECRET_KEY

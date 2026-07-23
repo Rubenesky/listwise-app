@@ -12,9 +12,9 @@ describe("BASE_URL config", () => {
     jest.resetModules();
   });
 
-  it("falls back to https://listwise.app when env var is not set", async () => {
+  it("falls back to https://listwise-app.onrender.com when env var is not set", async () => {
     const { BASE_URL } = await import("@/lib/config");
-    expect(BASE_URL).toBe("https://listwise.app");
+    expect(BASE_URL).toBe("https://listwise-app.onrender.com");
   });
 
   it("uses NEXT_PUBLIC_BASE_URL when set", async () => {

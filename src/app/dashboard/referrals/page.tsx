@@ -97,7 +97,7 @@ export default function ReferralsPage() {
     if (isSignedIn) fetchAll();
   }, [isSignedIn, fetchAll]);
 
-  const appUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://listwise.app";
+  const appUrl = process.env.NEXT_PUBLIC_BASE_URL ?? "https://listwise-app.onrender.com";
 
   const handleClaim = async (rewardId: string) => {
     setClaimingId(rewardId);
