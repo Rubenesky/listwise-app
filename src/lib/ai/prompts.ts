@@ -433,7 +433,11 @@ export function buildUserPromptWithVoice(
   voiceProfile: VoiceProfileData | null
 ): string {
   const base = product.mode === "tecnica" ? buildUserPromptTecnica(product) : buildUserPrompt(product);
-  if (!voiceProfile) return base;
+  // Ficha Técnica is a neutral, informative document, not marketing copy — the
+  // brand voice's tone/vocabulary/suggestions are extracted from example
+  // marketing descriptions and would reintroduce the exact "Imagina"/emotional
+  // patterns this mode explicitly prohibits. Skip voice injection for it.
+  if (!voiceProfile || product.mode === "tecnica") return base;
 
   let voice = `\n\n<VOZ_DE_MARCA>
 Adapta TODO el copy a esta identidad — tono, estructura y vocabulario:

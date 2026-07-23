@@ -1,4 +1,4 @@
-import { MODE_CONFIG, buildSystemPrompt, buildUserPromptTecnica } from "@/lib/ai/prompts";
+import { MODE_CONFIG, buildSystemPrompt, buildUserPromptTecnica, buildUserPromptWithVoice, type VoiceProfileData } from "@/lib/ai/prompts";
 
 describe("MODE_CONFIG", () => {
   it("has all four modes", () => {
@@ -69,5 +69,40 @@ describe("buildUserPromptTecnica", () => {
   it("warns not to invent data when no attributes are confirmed", () => {
     const prompt = buildUserPromptTecnica({ productName: "Mosquitera a medida", category: null, attributes: null });
     expect(prompt).toMatch(/no tiene atributos confirmados/);
+  });
+});
+
+describe("buildUserPromptWithVoice with tecnica mode", () => {
+  // Regression test: real staging generations kept coming back as standard
+  // marketing copy (with "Imagine..." Future Pacing and an unrequested
+  // title_b) even after tecnica mode got its own fully separate prompt. Root
+  // cause: this function still appended the active Voice Profile's
+  // tone/vocabulary/suggestions — extracted from marketing-style example
+  // descriptions — *after* the tecnica prompt, reintroducing exactly the
+  // emotional patterns the dedicated prompt prohibits.
+  const voiceProfile: VoiceProfileData = {
+    tone: "emocional y persuasivo",
+    vocabulary: "aspiracional",
+    sentenceStructure: "frases cortas con Future Pacing",
+    keyWords: ["imagina", "descubre"],
+    brandPersonality: "cercana y entusiasta",
+    suggestions: ["abre con Imagina para conectar emocionalmente"],
+  };
+
+  it("does not append brand-voice guidance for tecnica mode even with an active voice profile", () => {
+    const prompt = buildUserPromptWithVoice(
+      { productName: "Persiana Veneciana Aluminio", category: "Hogar", attributes: null, mode: "tecnica" },
+      voiceProfile
+    );
+    expect(prompt).not.toMatch(/VOZ_DE_MARCA/);
+    expect(prompt).not.toMatch(/Imagina para conectar/);
+  });
+
+  it("still appends brand-voice guidance for other modes", () => {
+    const prompt = buildUserPromptWithVoice(
+      { productName: "Sudadera Oversized", category: "Ropa", attributes: null, mode: "creative" },
+      voiceProfile
+    );
+    expect(prompt).toMatch(/VOZ_DE_MARCA/);
   });
 });
