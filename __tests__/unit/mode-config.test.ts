@@ -1,21 +1,13 @@
-import { MODE_CONFIG, buildSystemPrompt } from "@/lib/ai/prompts";
+import { MODE_CONFIG, buildSystemPrompt, buildUserPromptTecnica } from "@/lib/ai/prompts";
 
 describe("MODE_CONFIG", () => {
   it("has all four modes", () => {
     expect(Object.keys(MODE_CONFIG).sort()).toEqual(["creative", "professional", "seo", "tecnica"]);
   });
 
-  it("tecnica mode exists with a system prompt and temperature", () => {
+  it("tecnica mode exists with a temperature", () => {
     expect(MODE_CONFIG.tecnica.label).toBe("Ficha Técnica");
-    expect(MODE_CONFIG.tecnica.systemPrompt.length).toBeGreaterThan(0);
     expect(typeof MODE_CONFIG.tecnica.temperature).toBe("number");
-  });
-
-  it("tecnica mode overrides the short-description rule", () => {
-    expect(MODE_CONFIG.tecnica.systemPrompt).toMatch(/ANULA/);
-    expect(MODE_CONFIG.tecnica.systemPrompt).toMatch(/## Especificaciones técnicas/);
-    expect(MODE_CONFIG.tecnica.systemPrompt).toMatch(/## Instalación/);
-    expect(MODE_CONFIG.tecnica.systemPrompt).toMatch(/## Preguntas frecuentes/);
   });
 
   it("charges 1 credit per product for creative, professional, and seo", () => {
@@ -30,27 +22,52 @@ describe("MODE_CONFIG", () => {
 });
 
 describe("buildSystemPrompt", () => {
-  // Regression test: the override used to live only in MODE_CONFIG.tecnica's
-  // user-prompt overlay, which the system prompt's own "2 a 3 párrafos" rule
-  // and JSON example silently won against, producing standard short
-  // descriptions even when tecnica mode was correctly selected.
-  it("tecnica mode's system prompt requires the section markers and drops the short-form rule", () => {
+  // Regression test: an earlier attempt kept tecnica mode's override inside the
+  // shared marketing SYSTEM_PROMPT (as a conditionally-swapped block). That
+  // competed against the same prompt's "Imagina" / Future Pacing / Contrast
+  // Frame instructions, repeated and reinforced elsewhere in the same prompt,
+  // and lost — real generations came back as standard short descriptions.
+  // tecnica mode now gets its own fully separate prompt with none of that
+  // marketing machinery to compete against.
+  it("tecnica mode has its own prompt with the section markers and no short-form rule", () => {
     const prompt = buildSystemPrompt("tecnica");
-    expect(prompt).toMatch(/MODO FICHA TÉCNICA/);
     expect(prompt).toMatch(/## Especificaciones técnicas/);
     expect(prompt).toMatch(/## Instalación/);
     expect(prompt).toMatch(/## Preguntas frecuentes/);
     expect(prompt).not.toMatch(/DESCRIPCIÓN \(2 a 3 párrafos\)/);
+    // No emotional-hook machinery that could pull the model back to short-form
+    expect(prompt).not.toMatch(/FUTURE PACING/);
+    expect(prompt).not.toMatch(/CONTRAST FRAME/);
     // The JSON example must model the sectioned shape, not "párrafo1\n\npárrafo2\n\npárrafo3"
     expect(prompt).toMatch(/"description":"gancho\\n\\n## Especificaciones técnicas/);
   });
 
-  it("other modes keep the short-form rule and JSON example unchanged", () => {
+  it("other modes keep the short-form rule, JSON example, and hook machinery unchanged", () => {
     for (const mode of ["creative", "professional", "seo"] as const) {
       const prompt = buildSystemPrompt(mode);
       expect(prompt).toMatch(/DESCRIPCIÓN \(2 a 3 párrafos\)/);
       expect(prompt).toMatch(/"description":"párrafo1\\n\\npárrafo2\\n\\npárrafo3"/);
       expect(prompt).not.toMatch(/## Especificaciones técnicas/);
     }
+  });
+});
+
+describe("buildUserPromptTecnica", () => {
+  it("includes confirmed attributes and skips emotional-hook devices", () => {
+    const prompt = buildUserPromptTecnica({
+      productName: "Persiana Veneciana Aluminio",
+      category: "Hogar",
+      attributes: { material: "aluminio", medidas: "120x150cm" },
+    });
+    expect(prompt).toMatch(/Persiana Veneciana Aluminio/);
+    expect(prompt).toMatch(/aluminio/);
+    expect(prompt).not.toMatch(/Emoción de compra dominante/);
+    expect(prompt).not.toMatch(/Tipo de apertura OBLIGATORIO/);
+    expect(prompt).not.toMatch(/Calibración de tono/);
+  });
+
+  it("warns not to invent data when no attributes are confirmed", () => {
+    const prompt = buildUserPromptTecnica({ productName: "Mosquitera a medida", category: null, attributes: null });
+    expect(prompt).toMatch(/no tiene atributos confirmados/);
   });
 });
