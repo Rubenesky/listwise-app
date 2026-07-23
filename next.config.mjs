@@ -9,7 +9,8 @@ const ContentSecurityPolicy = [
   // instance subdomain. Pin the exact instance subdomain rather than a *.clerk.accounts.dev
   // wildcard: that's Clerk's shared multi-tenant domain, so a wildcard would also
   // allow script-src from any other Clerk customer's instance.
-  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://clerk.listwise.io https://organic-dogfish-54.clerk.accounts.dev",
+  // challenges.cloudflare.com serves Clerk's bot-protection CAPTCHA (Cloudflare Turnstile)
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://clerk.listwise.io https://organic-dogfish-54.clerk.accounts.dev https://challenges.cloudflare.com",
   "style-src 'self' 'unsafe-inline'",
   // Allow images from any HTTPS origin (product images, CDN assets, Clerk avatars)
   "img-src 'self' data: blob: https:",
@@ -17,7 +18,7 @@ const ContentSecurityPolicy = [
   // API calls to Clerk, Stripe, Upstash, Sentry, PostHog, Trigger.dev, Turso
   "connect-src 'self' https:",
   // Clerk OAuth hosted pages need frame-src
-  "frame-src 'self' https://clerk.listwise.io https://organic-dogfish-54.clerk.accounts.dev https://js.stripe.com https://hooks.stripe.com",
+  "frame-src 'self' https://clerk.listwise.io https://organic-dogfish-54.clerk.accounts.dev https://challenges.cloudflare.com https://js.stripe.com https://hooks.stripe.com",
   "frame-ancestors 'none'",
   "object-src 'none'",
   "base-uri 'self'",
