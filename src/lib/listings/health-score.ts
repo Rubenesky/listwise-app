@@ -2,6 +2,8 @@
 // listing's own generated fields. Shared by the dashboard's Health column and
 // the Agent's /api/agent/analyze so both report the exact same score.
 
+import { hasSections } from "./render-sections";
+
 export interface ScoreResult {
   score: number;
   notes: string[];
@@ -69,6 +71,39 @@ export function analyzeDescription(description: string | null): ScoreResult {
   return { score: Math.min(40, score), notes };
 }
 
+// Ficha Técnica descriptions are detected structurally (via the "## " section
+// markers, see render-sections.ts) rather than a stored mode column — no
+// schema change needed. Word-count target and "required sections present"
+// replace the short-mode's Future Pacing / "el resultado" checks, which don't
+// apply to an intentionally neutral, informative document.
+const REQUIRED_TECNICA_SECTIONS = ["especificaciones técnicas", "instalación", "preguntas frecuentes"];
+
+export function analyzeDescriptionTecnica(description: string | null): ScoreResult {
+  if (!description?.trim()) return { score: 0, notes: ["sin descripción generada"] };
+  const words = description.trim().split(/\s+/).length;
+  let score = 0;
+  const notes: string[] = [];
+
+  if (words >= 400 && words <= 750) { score += 20; notes.push(`${words} palabras`); }
+  else if (words < 400) { score += 10; notes.push(`${words} palabras (mín 400 recomendado)`); }
+  else { score += 15; notes.push(`${words} palabras (máx 750 recomendado)`); }
+
+  const lower = description.toLowerCase();
+  const present = REQUIRED_TECNICA_SECTIONS.filter((s) => lower.includes(`## ${s}`));
+  if (present.length === REQUIRED_TECNICA_SECTIONS.length) {
+    score += 20;
+    notes.push("las 3 secciones presentes ✓");
+  } else if (present.length > 0) {
+    score += 10;
+    const missing = REQUIRED_TECNICA_SECTIONS.filter((s) => !present.includes(s));
+    notes.push(`faltan secciones: ${missing.join(", ")}`);
+  } else {
+    notes.push("no se detectan los marcadores de sección '## '");
+  }
+
+  return { score: Math.min(40, score), notes };
+}
+
 export interface HealthScoreListing {
   status?: string;
   generatedTitle: string | null;
@@ -78,9 +113,13 @@ export interface HealthScoreListing {
 
 export function calcHealthScore(listing: HealthScoreListing): number {
   if (listing.status && listing.status !== "COMPLETED") return 0;
+  const description = listing.generatedDescription;
+  const descriptionScore = description && hasSections(description)
+    ? analyzeDescriptionTecnica(description).score
+    : analyzeDescription(description).score;
   return (
     analyzeTitle(listing.generatedTitle).score +
     analyzeBullets(listing.generatedBullets).score +
-    analyzeDescription(listing.generatedDescription).score
+    descriptionScore
   );
 }
