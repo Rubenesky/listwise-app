@@ -636,7 +636,7 @@ export default function DashboardPage() {
 
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="text-sm font-medium text-gray-700">Título A (activo)</label>
+                      <label className="text-sm font-bold text-gray-700">Título A (activo)</label>
                       <button
                         onClick={() => copyToClipboard(editTitle, "modal-title")}
                         className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 transition-colors px-2 py-0.5 rounded hover:bg-blue-50"
@@ -657,7 +657,7 @@ export default function DashboardPage() {
                     <p className="text-xs text-gray-400 mt-1">{editTitle.length}/200 caracteres</p>
                     {selectedListing.generatedTitleB && (
                       <div className="mt-2">
-                        <p className="text-xs text-gray-500 mb-1">Variante B (estrategia opuesta — clic para usar)</p>
+                        <p className="text-xs font-bold text-gray-500 mb-1">Variante B (estrategia opuesta — clic para usar)</p>
                         <div
                           className="w-full border border-dashed border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-600 bg-gray-50 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors"
                           onClick={() => setEditTitle(selectedListing.generatedTitleB!)}
@@ -676,7 +676,7 @@ export default function DashboardPage() {
 
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="text-sm font-medium text-gray-700">Bullet points ({editBullets.length})</label>
+                      <label className="text-sm font-bold text-gray-700">Bullet points ({editBullets.length})</label>
                       <button
                         onClick={() => copyToClipboard(editBullets.map((b, i) => `${i + 1}. ${b}`).join("\n"), "modal-bullets")}
                         className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 transition-colors px-2 py-0.5 rounded hover:bg-blue-50"
@@ -709,7 +709,7 @@ export default function DashboardPage() {
 
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="text-sm font-medium text-gray-700">Descripción</label>
+                      <label className="text-sm font-bold text-gray-700">Descripción</label>
                       <div className="flex items-center gap-1">
                         {editDescriptionHasSections && (
                           <button
