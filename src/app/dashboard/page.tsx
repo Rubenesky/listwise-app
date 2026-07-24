@@ -1426,10 +1426,14 @@ export default function DashboardPage() {
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-1 flex-wrap">
                               <button
-                                onClick={(e) => { e.stopPropagation(); openModal(listing); }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openModal(listing);
+                                  if (listing.status === "COMPLETED") setIsEditingDescription(true);
+                                }}
                                 className="px-2.5 py-1 text-xs text-blue-600 hover:text-blue-800 transition-colors"
                               >
-                                {listing.status === "COMPLETED" ? "Editar" : "Ver"}
+                                {listing.status === "COMPLETED" ? "✏️ Editar" : "Ver"}
                               </button>
                               {listing.status === "COMPLETED" && (
                                 <button
