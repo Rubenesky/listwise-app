@@ -20,3 +20,4 @@ Each file is idempotent (uses `IF NOT EXISTS` / `IF EXISTS` guards) so it is saf
 | File | Description | Status |
 |------|-------------|--------|
 | `0001_indexes_and_cleanup.sql` | Adds composite indexes on `agent_analytics` and `competitor_analyses`; drops dead `agent_credits` table | Pending |
+| `0002_add_generation_mode.sql` | Adds `generation_mode` column to `listings` | Pending — **must run before deploying the code that reads/writes it** |

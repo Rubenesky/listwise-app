@@ -21,6 +21,7 @@ export async function GET(req: Request) {
           productName: schema.listings.productName,
           category: schema.listings.category,
           status: schema.listings.status,
+          generationMode: schema.listings.generationMode,
           generatedTitle: schema.listings.generatedTitle,
           generatedTitleB: schema.listings.generatedTitleB,
           generatedBullets: schema.listings.generatedBullets,

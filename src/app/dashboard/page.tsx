@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useUserPlan } from "@/lib/hooks/useUserPlan";
 import { calcHealthScore } from "@/lib/listings/health-score";
 import { hasSections } from "@/lib/listings/render-sections";
+import { MODE_CONFIG, type GenerationMode } from "@/lib/ai/prompts";
 import DescriptionSections from "@/components/DescriptionSections";
 import VoiceProfileManager from "@/components/VoiceProfileManager";
 import InfoTooltip from "@/components/InfoTooltip";
@@ -14,7 +15,6 @@ import OnboardingModal from "@/components/OnboardingModal";
 import PhotoUploader from "@/components/PhotoUploader";
 
 type ListingStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
-type GenerationMode = "creative" | "professional" | "seo" | "tecnica";
 
 interface QualityFlags {
   no_trademarks?: boolean;
@@ -29,6 +29,7 @@ interface ListingRow {
   productName: string;
   category: string | null;
   status: ListingStatus;
+  generationMode: string | null;
   generatedTitle: string | null;
   generatedTitleB: string | null;
   generatedBullets: string[] | null;
@@ -79,7 +80,7 @@ export default function DashboardPage() {
   const [selectedMode, setSelectedMode] = useState<GenerationMode>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("listwise_generation_mode");
-      if (saved === "creative" || saved === "professional" || saved === "seo" || saved === "tecnica") return saved;
+      if (saved && saved in MODE_CONFIG) return saved as GenerationMode;
     }
     return "creative";
   });
@@ -96,6 +97,7 @@ export default function DashboardPage() {
   const [editBullets, setEditBullets] = useState<string[]>([]);
   const [editDescription, setEditDescription] = useState("");
   const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const editDescriptionHasSections = useMemo(() => hasSections(editDescription), [editDescription]);
   const [saving, setSaving] = useState(false);
   const [sharing, setSharing] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
@@ -709,7 +711,7 @@ export default function DashboardPage() {
                     <div className="flex items-center justify-between mb-1">
                       <label className="text-sm font-medium text-gray-700">Descripción</label>
                       <div className="flex items-center gap-1">
-                        {hasSections(editDescription) && (
+                        {editDescriptionHasSections && (
                           <button
                             onClick={() => setIsEditingDescription((v) => !v)}
                             className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 transition-colors px-2 py-0.5 rounded hover:bg-blue-50"
@@ -729,7 +731,7 @@ export default function DashboardPage() {
                         </button>
                       </div>
                     </div>
-                    {hasSections(editDescription) && !isEditingDescription ? (
+                    {editDescriptionHasSections && !isEditingDescription ? (
                       <div className="p-3 border border-blue-100 rounded-lg bg-blue-50/30 text-sm">
                         <DescriptionSections description={editDescription} />
                       </div>
@@ -1061,12 +1063,12 @@ export default function DashboardPage() {
             <InfoTooltip content="El modo define el estilo de escritura de la IA. Se aplica a todos los productos del siguiente CSV que subas." />
           </div>
           <div className="flex gap-2 flex-wrap">
-            {(["creative", "professional", "seo", "tecnica"] as GenerationMode[]).map((mode) => {
+            {(Object.keys(MODE_CONFIG) as GenerationMode[]).map((mode) => {
               const modeTooltips: Record<GenerationMode, string> = {
                 creative: "Tono emocional y narrativo. Conecta con las aspiraciones del cliente. Ideal para moda, lifestyle y regalos.",
                 professional: "Tono técnico y formal. Destaca especificaciones y funcionalidad. Ideal para electrónica, herramientas y B2B.",
                 seo: "SEO + GEO: optimizado para buscadores tradicionales (Google) y motores de búsqueda de IA (ChatGPT, Perplexity, Gemini). Incluye palabras clave estratégicas y estructura semántica que los modelos de IA entienden mejor.",
-                tecnica: "Ficha larga y estructurada con especificaciones técnicas, instalación y preguntas frecuentes. Ideal para productos a medida o técnicos (persianas, mosquiteras, muebles a medida, maquinaria). Cuesta 2 créditos por producto.",
+                tecnica: `Ficha larga y estructurada con especificaciones técnicas, instalación y preguntas frecuentes. Ideal para productos a medida o técnicos (persianas, mosquiteras, muebles a medida, maquinaria). Cuesta ${MODE_CONFIG.tecnica.creditsPerProduct} créditos por producto.`,
               };
               return (
                 <div key={mode} className="flex items-center gap-1">

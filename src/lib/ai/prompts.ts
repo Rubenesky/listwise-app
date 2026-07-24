@@ -309,6 +309,9 @@ export function buildUserPrompt(product: {
   marketplace?: Marketplace;
   priceSegment?: PriceSegment;
 }): string {
+  if (product.mode === "tecnica") {
+    throw new Error("buildUserPrompt() no soporta mode 'tecnica' — usa buildUserPromptTecnica() en su lugar.");
+  }
   const mode = product.mode && product.mode in MODE_CONFIG ? product.mode : "creative";
   const modeConfig = MODE_CONFIG[mode as GenerationMode];
   const category = product.category || "General";

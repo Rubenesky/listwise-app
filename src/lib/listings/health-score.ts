@@ -2,7 +2,7 @@
 // listing's own generated fields. Shared by the dashboard's Health column and
 // the Agent's /api/agent/analyze so both report the exact same score.
 
-import { hasSections } from "./render-sections";
+import { hasSections, parseDescriptionSections } from "./render-sections";
 
 export interface ScoreResult {
   score: number;
@@ -88,8 +88,10 @@ export function analyzeDescriptionTecnica(description: string | null): ScoreResu
   else if (words < 400) { score += 10; notes.push(`${words} palabras (mín 400 recomendado)`); }
   else { score += 15; notes.push(`${words} palabras (máx 750 recomendado)`); }
 
-  const lower = description.toLowerCase();
-  const present = REQUIRED_TECNICA_SECTIONS.filter((s) => lower.includes(`## ${s}`));
+  const headings = parseDescriptionSections(description)
+    .map((s) => s.heading?.trim().toLowerCase())
+    .filter((h): h is string => !!h);
+  const present = REQUIRED_TECNICA_SECTIONS.filter((s) => headings.includes(s));
   if (present.length === REQUIRED_TECNICA_SECTIONS.length) {
     score += 20;
     notes.push("las 3 secciones presentes ✓");
@@ -106,20 +108,37 @@ export function analyzeDescriptionTecnica(description: string | null): ScoreResu
 
 export interface HealthScoreListing {
   status?: string;
+  generationMode?: string | null;
   generatedTitle: string | null;
   generatedBullets: string[] | null;
   generatedDescription: string | null;
 }
 
+// generationMode is the authoritative signal when present (set on every listing
+// generated after that column was added); hasSections() is a content-sniffing
+// fallback for legacy rows generated before the column existed.
+function isTecnicaDescription(listing: {
+  generationMode?: string | null;
+  generatedDescription?: string | null;
+}): boolean {
+  if (listing.generationMode) return listing.generationMode === "tecnica";
+  return !!listing.generatedDescription && hasSections(listing.generatedDescription);
+}
+
+export function scoreDescription(listing: {
+  generationMode?: string | null;
+  generatedDescription: string | null;
+}): ScoreResult {
+  return isTecnicaDescription(listing)
+    ? analyzeDescriptionTecnica(listing.generatedDescription)
+    : analyzeDescription(listing.generatedDescription);
+}
+
 export function calcHealthScore(listing: HealthScoreListing): number {
   if (listing.status && listing.status !== "COMPLETED") return 0;
-  const description = listing.generatedDescription;
-  const descriptionScore = description && hasSections(description)
-    ? analyzeDescriptionTecnica(description).score
-    : analyzeDescription(description).score;
   return (
     analyzeTitle(listing.generatedTitle).score +
     analyzeBullets(listing.generatedBullets).score +
-    descriptionScore
+    scoreDescription(listing).score
   );
 }

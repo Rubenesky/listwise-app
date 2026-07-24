@@ -76,6 +76,10 @@ export const listings = sqliteTable("listings", {
   targetAudience: text("target_audience"),
   hookType: text("hook_type"),
   qualityFlags: text("quality_flags", { mode: "json" }),
+  // Generation mode used ("creative" | "professional" | "seo" | "tecnica").
+  // Null for listings generated before this column existed — health-score.ts
+  // falls back to content-sniffing (hasSections) for those.
+  generationMode: text("generation_mode"),
 }, (table) => ({
   userIdIdx: index("idx_listings_user_id").on(table.userId),
   userCreatedIdx: index("idx_listings_user_id_created_at").on(table.userId, table.createdAt),

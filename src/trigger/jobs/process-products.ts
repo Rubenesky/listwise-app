@@ -172,6 +172,7 @@ export const processProductsTask = task({
             .update(schema.listings)
             .set({
               status: "COMPLETED",
+              generationMode: safeMode,
               generatedTitle: generated.title,
               generatedTitleB: generated.title_b ?? null,
               generatedBullets: generated.bullets,
