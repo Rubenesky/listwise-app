@@ -13,7 +13,6 @@
     "test:e2e:ui": "playwright test --ui",
     "trigger:dev": "npx trigger.dev@latest dev",
     "trigger:deploy": "npx --yes trigger.dev@4.5.7 deploy",
-    "trigger:deploy:staging": "npx --yes trigger.dev@4.5.7 deploy --env staging",
     "lint": "next lint",
     "lint:fix": "next lint --fix",
     "dev:all": "concurrently \"npm run dev\" \"npm run trigger:dev\""
