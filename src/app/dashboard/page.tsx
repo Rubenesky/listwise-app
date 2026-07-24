@@ -4,6 +4,8 @@ import { useUser } from "@clerk/nextjs";
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useUserPlan } from "@/lib/hooks/useUserPlan";
 import { calcHealthScore } from "@/lib/listings/health-score";
+import { hasSections } from "@/lib/listings/render-sections";
+import DescriptionSections from "@/components/DescriptionSections";
 import VoiceProfileManager from "@/components/VoiceProfileManager";
 import InfoTooltip from "@/components/InfoTooltip";
 import GamificationWidget from "@/components/GamificationWidget";
@@ -715,6 +717,12 @@ export default function DashboardPage() {
                         )}
                       </button>
                     </div>
+                    {hasSections(editDescription) && (
+                      <div className="mb-2 p-3 border border-blue-100 rounded-lg bg-blue-50/30 text-sm">
+                        <p className="text-xs font-medium text-gray-400 uppercase mb-2">Vista previa (Ficha Técnica)</p>
+                        <DescriptionSections description={editDescription} />
+                      </div>
+                    )}
                     <textarea
                       className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
                       rows={9}
