@@ -13,11 +13,11 @@ Migrations in this folder are plain SQL files intended to be run **once**, manua
 turso db shell <DATABASE_NAME> ".read drizzle/0001_indexes_and_cleanup.sql"
 ```
 
-Each file is idempotent (uses `IF NOT EXISTS` / `IF EXISTS` guards) so it is safe to re-run.
+Most files are idempotent (`CREATE TABLE`/`CREATE INDEX` with `IF NOT EXISTS` / `IF EXISTS` guards) so they're safe to re-run. **Exception:** `ALTER TABLE ... ADD COLUMN` does NOT support `IF NOT EXISTS` in SQLite/libSQL — check `PRAGMA table_info(<table>);` first before re-running a column-adding migration, or it will error.
 
 ## Migration log
 
 | File | Description | Status |
 |------|-------------|--------|
 | `0001_indexes_and_cleanup.sql` | Adds composite indexes on `agent_analytics` and `competitor_analyses`; drops dead `agent_credits` table | Pending |
-| `0002_add_generation_mode.sql` | Adds `generation_mode` column to `listings` | Pending — **must run before deploying the code that reads/writes it** |
+| `0002_add_generation_mode.sql` | Adds `generation_mode` column to `listings` | Applied to `listwise-db` on 2026-07-24 |
