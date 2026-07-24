@@ -719,7 +719,7 @@ export default function DashboardPage() {
                     </div>
                     {hasSections(editDescription) ? (
                       <div className="p-3 border border-blue-100 rounded-lg bg-blue-50/30 text-sm">
-                        <p className="text-xs font-medium text-gray-400 uppercase mb-2">Ficha Técnica — usa "🤖 Mejorar" para pedir cambios</p>
+                        <p className="text-xs font-medium text-gray-400 uppercase mb-2">Ficha Técnica — usa “🤖 Mejorar” para pedir cambios</p>
                         <DescriptionSections description={editDescription} />
                       </div>
                     ) : (
