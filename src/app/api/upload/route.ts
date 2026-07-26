@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import { parse } from "csv-parse/sync";
 import { v4 as uuidv4 } from "uuid";
 import { ratelimit } from "@/lib/rate-limit";
+import { ratelimitEnrichedInput } from "@/lib/rate-limit";
 import { trackGamification } from "@/lib/gamification/track";
 import { useCredits, addCredits } from "@/lib/credits/use-credits";
 import { MODE_CONFIG, type GenerationMode } from "@/lib/ai/prompts";
@@ -12,6 +13,7 @@ import { inArray } from "drizzle-orm";
 import { log } from "@/lib/logger";
 
 import { validateRows } from "@/lib/csv/validate-rows";
+import { buildEnrichedSourceRows } from "@/lib/csv/build-enriched-sources";
 
 // ─── Trigger ──────────────────────────────────────────────────────────────────
 
@@ -160,6 +162,19 @@ export async function POST(req: Request) {
 
     log.info({ userId, count: listings.length }, "Listings inserted");
     await db.insert(schema.listings).values(listings);
+
+    // 6b. Fuentes enriquecidas (columna sourceUrl opcional) — validación SSRF
+    // ahora; el fetch + extracción real ocurre en process-products.ts.
+    const enrichedRows = await buildEnrichedSourceRows(
+      records,
+      listings.map((l) => l.id),
+      userId,
+      async () => (await ratelimitEnrichedInput.limit(userId)).success
+    );
+    if (enrichedRows.length > 0) {
+      await db.insert(schema.enrichedSources).values(enrichedRows);
+      log.info({ userId, count: enrichedRows.length }, "Enriched sources queued");
+    }
 
     // 7. Disparar el worker de Trigger.dev
     const batchId = uuidv4();
