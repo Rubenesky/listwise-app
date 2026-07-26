@@ -12,6 +12,7 @@ import InfoTooltip from "@/components/InfoTooltip";
 import GamificationWidget from "@/components/GamificationWidget";
 import CreditsPopover from "@/components/CreditsPopover";
 import OnboardingModal from "@/components/OnboardingModal";
+import EnrichListingModal from "@/components/EnrichListingModal";
 
 type ListingStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
 
@@ -92,6 +93,7 @@ export default function DashboardPage() {
   // Modal state
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
   const selectedListing = listings.find((l) => l.id === selectedListingId) ?? null;
+  const [enrichingListing, setEnrichingListing] = useState<{ id: string; productName: string } | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editBullets, setEditBullets] = useState<string[]>([]);
   const [editDescription, setEditDescription] = useState("");
@@ -1442,6 +1444,15 @@ export default function DashboardPage() {
                               )}
                               {listing.status === "COMPLETED" && (
                                 <button
+                                  onClick={(e) => { e.stopPropagation(); setEnrichingListing({ id: listing.id, productName: listing.productName }); }}
+                                  className="px-2.5 py-1 text-xs text-teal-600 hover:text-teal-800 font-medium transition-colors"
+                                  title="Enriquecer con PDF de proveedor"
+                                >
+                                  📎 Enriquecer
+                                </button>
+                              )}
+                              {listing.status === "COMPLETED" && (
+                                <button
                                   onClick={(e) => { e.stopPropagation(); handleShare(listing.id); }}
                                   disabled={sharing === listing.id}
                                   className="px-2 py-1 text-xs text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
@@ -1564,6 +1575,18 @@ export default function DashboardPage() {
         </div>
 
       </div>
+
+      {enrichingListing && (
+        <EnrichListingModal
+          listingId={enrichingListing.id}
+          productName={enrichingListing.productName}
+          onClose={() => setEnrichingListing(null)}
+          onSuccess={() => {
+            setEnrichingListing(null);
+            fetchListings(pagination.page);
+          }}
+        />
+      )}
     </>
   );
 }
