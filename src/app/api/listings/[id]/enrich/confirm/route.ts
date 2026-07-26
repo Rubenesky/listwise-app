@@ -62,6 +62,7 @@ export async function POST(
 
     const mode = (listing.generationMode ?? "creative") as GenerationMode;
     const creditsRequired = MODE_CONFIG[mode]?.creditsPerProduct ?? 1;
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     const creditResult = await useCredits(userId, creditsRequired, "Regeneración con fuente enriquecida");
     if (!creditResult.success) {
       return NextResponse.json(
