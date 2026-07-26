@@ -73,6 +73,7 @@
     "@playwright/test": "^1.61.1",
     "@types/jest": "^29.5.14",
     "@types/node": "^22.13.4",
+    "@types/pdf-parse": "1.1.5",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "@types/uuid": "^10.0.0",
