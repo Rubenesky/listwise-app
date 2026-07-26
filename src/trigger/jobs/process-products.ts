@@ -9,6 +9,10 @@ import { providers, getAIResponse, type AIProvider } from "@/lib/ai/providers";
 import type { GeneratedContent, BatchProcessPayload } from "@/types";
 import { trackGamification } from "@/lib/gamification/track";
 import { log } from "@/lib/logger";
+import { fetchAndExtractText } from "@/lib/scraping/extract-text";
+import { detectLanguageMismatch } from "@/lib/text/detect-language";
+import { extractSpecsFromText } from "@/lib/ai/extract-specs";
+import { mergeAttributesWithPrecedence } from "@/lib/listings/merge-attributes";
 
 const qualityFlagsSchema = z.object({
   no_trademarks: z.boolean().optional(),
@@ -139,6 +143,43 @@ export const processProductsTask = task({
         const safeName = product.productName.slice(0, 200).replace(/[<>]/g, "");
         const safeCategory = product.category?.slice(0, 50) ?? null;
 
+        // Fuente enriquecida (URL desde CSV, ver Input Enriquecido): si hay
+        // una fila PENDING para este listing, la procesamos ahora. Fallo aquí
+        // nunca bloquea la generación — solo se pierde el contexto extra.
+        let mergedAttributes = product.attributes as Record<string, string> | null;
+        const [pendingSource] = await db
+          .select()
+          .from(schema.enrichedSources)
+          .where(
+            and(
+              eq(schema.enrichedSources.listingId, product.id),
+              eq(schema.enrichedSources.status, "PENDING")
+            )
+          )
+          .limit(1);
+
+        if (pendingSource) {
+          try {
+            const page = await fetchAndExtractText(pendingSource.sourceRef);
+            const needsTranslation = detectLanguageMismatch(page.text, "es");
+            const specs = await extractSpecsFromText(page.text, product.productName, needsTranslation);
+            await db
+              .update(schema.enrichedSources)
+              .set({ status: "COMPLETED", extractedText: page.text })
+              .where(eq(schema.enrichedSources.id, pendingSource.id));
+            mergedAttributes = mergeAttributesWithPrecedence(mergedAttributes, specs).merged;
+          } catch (sourceError) {
+            log.warn(
+              { userId, listingId: product.id, err: sourceError },
+              "Enriched source fetch/extract failed — continuing without it"
+            );
+            await db
+              .update(schema.enrichedSources)
+              .set({ status: "FAILED", errorMessage: "No se pudo leer la fuente indicada" })
+              .where(eq(schema.enrichedSources.id, pendingSource.id));
+          }
+        }
+
         const response = await retry.onThrow(
           async () => {
             return await getAIResponse(
@@ -148,7 +189,7 @@ export const processProductsTask = task({
                   {
                     productName: safeName,
                     category: safeCategory,
-                    attributes: product.attributes as Record<string, string> | null,
+                    attributes: mergedAttributes,
                     mode: safeMode,
                     marketplace: (product.marketplace as Marketplace | undefined) ?? undefined,
                     priceSegment: (product.priceSegment as PriceSegment | undefined) ?? undefined,
