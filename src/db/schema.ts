@@ -208,6 +208,25 @@ export const competitorAnalyses = sqliteTable("competitor_analyses", {
   listingStatusIdx: index("idx_competitor_analyses_listing_status").on(table.listingId, table.status),
 }));
 
+// Fuentes de contenido adicional (URL o PDF) usadas como contexto extra para
+// la generación — ver docs/superpowers/specs/2026-07-25-input-enriquecido-design.md.
+// Solo se guarda el texto ya extraído, nunca el binario del PDF ni el HTML crudo.
+export const enrichedSources = sqliteTable("enriched_sources", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  listingId: text("listing_id"),
+  sourceType: text("source_type").notNull(), // "url" | "pdf"
+  sourceRef: text("source_ref").notNull(), // URL normalizada, o nombre de archivo original del PDF
+  status: text("status").notNull().default("PENDING"), // PENDING | COMPLETED | FAILED
+  extractedText: text("extracted_text"),
+  errorMessage: text("error_message"),
+  cacheExpiresAt: integer("cache_expires_at"),
+  createdAt: integer("created_at").notNull().default(0),
+}, (table) => ({
+  userIdx: index("idx_enriched_sources_user_id").on(table.userId),
+  listingIdx: index("idx_enriched_sources_listing_id").on(table.listingId),
+}));
+
 export const leads = sqliteTable("leads", {
   id: text("id").primaryKey(),
   email: text("email").notNull(),
