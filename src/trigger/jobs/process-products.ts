@@ -181,10 +181,17 @@ export const processProductsTask = task({
               { userId, listingId: product.id, err: sourceError },
               "Enriched source fetch/extract failed — continuing without it"
             );
-            await db
-              .update(schema.enrichedSources)
-              .set({ status: "FAILED", errorMessage: "No se pudo leer la fuente indicada" })
-              .where(eq(schema.enrichedSources.id, pendingSource.id));
+            try {
+              await db
+                .update(schema.enrichedSources)
+                .set({ status: "FAILED", errorMessage: "No se pudo leer la fuente indicada" })
+                .where(eq(schema.enrichedSources.id, pendingSource.id));
+            } catch (markFailedError) {
+              log.warn(
+                { userId, listingId: product.id, err: markFailedError },
+                "Enriched source FAILED-status write failed — continuing without it"
+              );
+            }
           }
         }
 
