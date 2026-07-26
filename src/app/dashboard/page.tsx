@@ -1018,7 +1018,8 @@ export default function DashboardPage() {
                   Columna requerida:{" "}
                   <code className="bg-gray-100 px-1 rounded">productName</code>. Opciones:{" "}
                   <code className="bg-gray-100 px-1 rounded">category</code>,{" "}
-                  <code className="bg-gray-100 px-1 rounded">attributes</code>
+                  <code className="bg-gray-100 px-1 rounded">attributes</code>,{" "}
+                  <code className="bg-gray-100 px-1 rounded">sourceUrl</code>
                 </p>
               </>
             )}
