@@ -92,6 +92,19 @@ export function validateRows(records: Record<string, string>[]): ValidationResul
         );
       }
     }
+
+    if (record.sourceUrl?.trim()) {
+      try {
+        const parsedUrl = new URL(record.sourceUrl.trim());
+        if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+          warnings.push(
+            `Fila ${row}: sourceUrl debe empezar por http:// o https:// — se ignorará`
+          );
+        }
+      } catch {
+        warnings.push(`Fila ${row}: sourceUrl no es una URL válida — se ignorará`);
+      }
+    }
   }
 
   if (errors.length >= MAX_ERRORS) {

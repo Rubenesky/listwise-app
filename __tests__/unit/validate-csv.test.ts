@@ -122,4 +122,28 @@ describe("validateRows", () => {
     expect(errors.length).toBeLessThanOrEqual(22);
     expect(errors[errors.length - 1]).toContain("y más errores");
   });
+
+  it("warns (does not error) on a malformed sourceUrl", () => {
+    const { errors, warnings } = validateRows([
+      { productName: "Persiana", sourceUrl: "not-a-url" },
+    ]);
+    expect(errors).toEqual([]);
+    expect(warnings.some((w) => w.includes("sourceUrl"))).toBe(true);
+  });
+
+  it("warns on a non-http(s) sourceUrl scheme", () => {
+    const { errors, warnings } = validateRows([
+      { productName: "Persiana", sourceUrl: "ftp://example.com/file" },
+    ]);
+    expect(errors).toEqual([]);
+    expect(warnings.some((w) => w.includes("sourceUrl"))).toBe(true);
+  });
+
+  it("accepts a valid https sourceUrl without warnings", () => {
+    const { errors, warnings } = validateRows([
+      { productName: "Persiana", sourceUrl: "https://proveedor.com/ficha" },
+    ]);
+    expect(errors).toEqual([]);
+    expect(warnings).toEqual([]);
+  });
 });
