@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { validateUrlSSRF } from "@/lib/security/ssrf";
 
 export interface ExtractedPage {
   title: string;
@@ -29,7 +30,14 @@ export function extractTextFromHtml(html: string): ExtractedPage {
 }
 
 export async function fetchAndExtractText(url: string): Promise<ExtractedPage> {
-  const res = await fetch(url, {
+  const validation = await validateUrlSSRF(url);
+  if (!validation.ok) {
+    throw new Error(validation.error || "URL validation failed");
+  }
+
+  const normalizedUrl = validation.normalized || url;
+
+  const res = await fetch(normalizedUrl, {
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     headers: { "User-Agent": "Mozilla/5.0 (compatible; ListWiseBot/1.0)" },
   });
