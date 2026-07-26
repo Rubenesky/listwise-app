@@ -147,16 +147,24 @@ export const processProductsTask = task({
         // una fila PENDING para este listing, la procesamos ahora. Fallo aquí
         // nunca bloquea la generación — solo se pierde el contexto extra.
         let mergedAttributes = product.attributes as Record<string, string> | null;
-        const [pendingSource] = await db
-          .select()
-          .from(schema.enrichedSources)
-          .where(
-            and(
-              eq(schema.enrichedSources.listingId, product.id),
-              eq(schema.enrichedSources.status, "PENDING")
+        let pendingSource: (typeof schema.enrichedSources.$inferSelect) | undefined;
+        try {
+          [pendingSource] = await db
+            .select()
+            .from(schema.enrichedSources)
+            .where(
+              and(
+                eq(schema.enrichedSources.listingId, product.id),
+                eq(schema.enrichedSources.status, "PENDING")
+              )
             )
-          )
-          .limit(1);
+            .limit(1);
+        } catch (lookupError) {
+          log.warn(
+            { userId, listingId: product.id, err: lookupError },
+            "Enriched source lookup failed — continuing without it"
+          );
+        }
 
         if (pendingSource) {
           try {
