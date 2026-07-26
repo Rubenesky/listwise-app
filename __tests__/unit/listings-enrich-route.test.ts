@@ -1,0 +1,114 @@
+// __tests__/unit/listings-enrich-route.test.ts
+import { POST, GET } from "@/app/api/listings/[id]/enrich/route";
+
+jest.mock("@clerk/nextjs/server", () => ({ auth: jest.fn() }));
+jest.mock("@/lib/rate-limit", () => ({
+  ratelimitEnrichedInput: { limit: jest.fn() },
+}));
+jest.mock("@/lib/pdf/extract-text", () => ({ extractTextFromPdf: jest.fn() }));
+jest.mock("@/lib/text/detect-language", () => ({ detectLanguageMismatch: jest.fn().mockReturnValue(false) }));
+jest.mock("@/lib/ai/extract-specs", () => ({ extractSpecsFromText: jest.fn() }));
+
+const mockListingSelect = jest.fn();
+const mockSourceInsert = jest.fn();
+jest.mock("@/db", () => ({
+  db: {
+    select: () => ({ from: () => ({ where: () => ({ limit: mockListingSelect }) }) }),
+    insert: () => ({ values: mockSourceInsert }),
+  },
+  schema: { listings: {}, enrichedSources: {} },
+}));
+
+import { auth } from "@clerk/nextjs/server";
+import { ratelimitEnrichedInput } from "@/lib/rate-limit";
+import { extractTextFromPdf } from "@/lib/pdf/extract-text";
+import { extractSpecsFromText } from "@/lib/ai/extract-specs";
+
+function makeRequest(file: File | null): Request {
+  const fd = new FormData();
+  if (file) fd.append("file", file);
+  return new Request("http://localhost/api/listings/listing-1/enrich", { method: "POST", body: fd });
+}
+
+function makeGetRequest(): Request {
+  return new Request("http://localhost/api/listings/listing-1/enrich", { method: "GET" });
+}
+
+function makeParams(id = "listing-1") {
+  return { params: Promise.resolve({ id }) };
+}
+
+describe("POST /api/listings/[id]/enrich", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (auth as unknown as jest.Mock).mockResolvedValue({ userId: "user-1" });
+    (ratelimitEnrichedInput.limit as jest.Mock).mockResolvedValue({ success: true });
+    mockListingSelect.mockResolvedValue([{ id: "listing-1", productName: "Persiana", attributes: { color: "blanco" } }]);
+    mockSourceInsert.mockResolvedValue(undefined);
+  });
+
+  it("returns 401 when not authenticated", async () => {
+    (auth as unknown as jest.Mock).mockResolvedValue({ userId: null });
+    const res = await POST(makeRequest(new File(["x"], "f.pdf", { type: "application/pdf" })), makeParams());
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 429 when the rate limit is exceeded", async () => {
+    (ratelimitEnrichedInput.limit as jest.Mock).mockResolvedValue({ success: false });
+    const res = await POST(makeRequest(new File(["x"], "f.pdf", { type: "application/pdf" })), makeParams());
+    expect(res.status).toBe(429);
+  });
+
+  it("returns 400 for a non-PDF file", async () => {
+    const res = await POST(makeRequest(new File(["x"], "f.png", { type: "image/png" })), makeParams());
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 422 with scannedPdf flag when the PDF has no extractable text", async () => {
+    (extractTextFromPdf as jest.Mock).mockResolvedValue({ hasText: false, text: "", numPages: 2 });
+    const res = await POST(makeRequest(new File(["x"], "f.pdf", { type: "application/pdf" })), makeParams());
+    const body = await res.json();
+    expect(res.status).toBe(422);
+    expect(body.scannedPdf).toBe(true);
+    expect(body.error).toContain("imagen escaneada");
+  });
+
+  it("returns merged specs and conflicts on success", async () => {
+    (extractTextFromPdf as jest.Mock).mockResolvedValue({ hasText: true, text: "texto del pdf", numPages: 1 });
+    (extractSpecsFromText as jest.Mock).mockResolvedValue({ material: "aluminio", color: "gris" });
+    const res = await POST(makeRequest(new File(["x"], "f.pdf", { type: "application/pdf" })), makeParams());
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.extractedSpecs).toEqual({ material: "aluminio", color: "blanco" });
+    expect(body.conflicts).toEqual([{ key: "color", manualValue: "blanco", extractedValue: "gris" }]);
+    expect(mockSourceInsert).toHaveBeenCalled();
+  });
+});
+
+describe("GET /api/listings/[id]/enrich (cached-source lookup)", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (auth as unknown as jest.Mock).mockResolvedValue({ userId: "user-1" });
+  });
+
+  it("returns found=false when there is no cached source", async () => {
+    mockListingSelect
+      .mockResolvedValueOnce([{ id: "listing-1", productName: "Persiana", attributes: { color: "blanco" } }])
+      .mockResolvedValueOnce([]);
+    const res = await GET(makeGetRequest(), makeParams());
+    const body = await res.json();
+    expect(body.found).toBe(false);
+  });
+
+  it("returns found=true with re-merged specs when a non-expired COMPLETED source exists", async () => {
+    mockListingSelect
+      .mockResolvedValueOnce([{ id: "listing-1", productName: "Persiana", attributes: { color: "blanco" } }])
+      .mockResolvedValueOnce([{ id: "source-1", extractedText: "aluminio 120x80" }]);
+    (extractSpecsFromText as jest.Mock).mockResolvedValue({ material: "aluminio" });
+    const res = await GET(makeGetRequest(), makeParams());
+    const body = await res.json();
+    expect(body.found).toBe(true);
+    expect(body.sourceId).toBe("source-1");
+    expect(body.extractedSpecs).toEqual({ material: "aluminio", color: "blanco" });
+  });
+});
