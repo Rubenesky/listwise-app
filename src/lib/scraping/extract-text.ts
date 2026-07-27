@@ -9,6 +9,7 @@ export interface ExtractedPage {
 const MAX_TEXT_CHARS = 10000;
 const FETCH_TIMEOUT_MS = 10000;
 const MAX_HTML_BYTES = 2 * 1024 * 1024; // 2MB
+const MAX_REDIRECTS = 3;
 
 export function extractTextFromHtml(html: string): ExtractedPage {
   const $ = cheerio.load(html);
@@ -35,27 +36,53 @@ export async function fetchAndExtractText(url: string): Promise<ExtractedPage> {
     throw new Error(validation.error || "URL validation failed");
   }
 
-  const normalizedUrl = validation.normalized || url;
+  let currentUrl = validation.normalized || url;
 
-  const res = await fetch(normalizedUrl, {
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    headers: { "User-Agent": "Mozilla/5.0 (compatible; ListWiseBot/1.0)" },
-  });
-  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  for (let attempt = 0; attempt <= MAX_REDIRECTS; attempt++) {
+    const res = await fetch(currentUrl, {
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+      headers: { "User-Agent": "Mozilla/5.0 (compatible; ListWiseBot/1.0)" },
+      redirect: "manual",
+    });
 
-  const reader = res.body?.getReader();
-  if (!reader) throw new Error("No response body");
+    if (res.status >= 300 && res.status < 400) {
+      if (attempt >= MAX_REDIRECTS) throw new Error("Too many redirects");
+      const location = res.headers.get("location");
+      if (!location) throw new Error("Redirect response missing Location header");
 
-  let received = 0;
-  const chunks: Uint8Array[] = [];
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    received += value.length;
-    if (received > MAX_HTML_BYTES) throw new Error("Response too large");
-    chunks.push(value);
+      const nextUrl = new URL(location, currentUrl).href;
+      const redirectValidation = await validateUrlSSRF(nextUrl);
+      if (!redirectValidation.ok) {
+        throw new Error(redirectValidation.error || "URL validation failed");
+      }
+
+      currentUrl = redirectValidation.normalized || nextUrl;
+      continue;
+    }
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+    const contentType = res.headers.get("content-type") ?? "";
+    if (!contentType.includes("text/html") && !contentType.includes("application/xhtml")) {
+      throw new Error("Response is not HTML");
+    }
+
+    const reader = res.body?.getReader();
+    if (!reader) throw new Error("No response body");
+
+    let received = 0;
+    const chunks: Uint8Array[] = [];
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      received += value.length;
+      if (received > MAX_HTML_BYTES) throw new Error("Response too large");
+      chunks.push(value);
+    }
+
+    const html = Buffer.concat(chunks).toString("utf-8");
+    return extractTextFromHtml(html);
   }
 
-  const html = Buffer.concat(chunks).toString("utf-8");
-  return extractTextFromHtml(html);
+  throw new Error("Too many redirects");
 }
