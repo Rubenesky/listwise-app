@@ -11,9 +11,15 @@ jest.mock("@/lib/ai/extract-specs", () => ({ extractSpecsFromText: jest.fn() }))
 
 const mockListingSelect = jest.fn();
 const mockSourceInsert = jest.fn();
+// `where()` supports both call shapes used by the route: the listings query
+// does `.where().limit()`, while the enrichedSources cached-source query does
+// `.where().orderBy().limit()`. Exposing `where`/`orderBy` as jest.fn()s lets
+// tests assert on the exact conditions/ordering passed to the query builder.
+const mockOrderBy = jest.fn((_orderBy?: unknown) => ({ limit: mockListingSelect }));
+const mockWhere = jest.fn((_condition?: unknown) => ({ limit: mockListingSelect, orderBy: mockOrderBy }));
 jest.mock("@/db", () => ({
   db: {
-    select: () => ({ from: () => ({ where: () => ({ limit: mockListingSelect }) }) }),
+    select: () => ({ from: () => ({ where: mockWhere }) }),
     insert: () => ({ values: mockSourceInsert }),
   },
   schema: { listings: {}, enrichedSources: {} },
@@ -23,6 +29,8 @@ import { auth } from "@clerk/nextjs/server";
 import { ratelimitEnrichedInput } from "@/lib/rate-limit";
 import { extractTextFromPdf } from "@/lib/pdf/extract-text";
 import { extractSpecsFromText } from "@/lib/ai/extract-specs";
+import { eq, and, gt, desc } from "drizzle-orm";
+import { schema } from "@/db";
 
 function makeRequest(file: File | null): Request {
   const fd = new FormData();
@@ -89,6 +97,27 @@ describe("GET /api/listings/[id]/enrich (cached-source lookup)", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     (auth as unknown as jest.Mock).mockResolvedValue({ userId: "user-1" });
+    (ratelimitEnrichedInput.limit as jest.Mock).mockResolvedValue({ success: true });
+  });
+
+  it("returns 401 when not authenticated", async () => {
+    (auth as unknown as jest.Mock).mockResolvedValue({ userId: null });
+    const res = await GET(makeGetRequest(), makeParams());
+    expect(res.status).toBe(401);
+    expect(ratelimitEnrichedInput.limit).not.toHaveBeenCalled();
+  });
+
+  it("returns 429 when the rate limit is exceeded, before touching the DB or calling the LLM", async () => {
+    (ratelimitEnrichedInput.limit as jest.Mock).mockResolvedValue({ success: false });
+    const res = await GET(makeGetRequest(), makeParams());
+    const body = await res.json();
+    expect(res.status).toBe(429);
+    expect(body.error).toContain("Límite diario");
+    // No listing lookup, no cached-source lookup, no LLM call should happen
+    // once the rate limit has rejected the request.
+    expect(mockListingSelect).not.toHaveBeenCalled();
+    expect(mockWhere).not.toHaveBeenCalled();
+    expect(extractSpecsFromText).not.toHaveBeenCalled();
   });
 
   it("returns found=false when there is no cached source", async () => {
@@ -110,5 +139,45 @@ describe("GET /api/listings/[id]/enrich (cached-source lookup)", () => {
     expect(body.found).toBe(true);
     expect(body.sourceId).toBe("source-1");
     expect(body.extractedSpecs).toEqual({ material: "aluminio", color: "blanco" });
+  });
+
+  it("filters the cached-source query to sourceType 'pdf' and orders by most-recent createdAt descending", async () => {
+    // Fix Date.now() so the `gt(cacheExpiresAt, now)` condition we reconstruct
+    // below is byte-identical to the one the route builds internally.
+    const fixedNowMs = 1_700_000_000_000;
+    const dateNowSpy = jest.spyOn(Date, "now").mockReturnValue(fixedNowMs);
+
+    try {
+      mockListingSelect
+        .mockResolvedValueOnce([{ id: "listing-1", productName: "Persiana", attributes: { color: "blanco" } }])
+        .mockResolvedValueOnce([{ id: "source-1", extractedText: "aluminio 120x80" }]);
+      (extractSpecsFromText as jest.Mock).mockResolvedValue({ material: "aluminio" });
+
+      await GET(makeGetRequest(), makeParams());
+
+      // First `.where(...)` call is the listings lookup, second is the
+      // enrichedSources cached-source lookup — assert on the second.
+      expect(mockWhere).toHaveBeenCalledTimes(2);
+      const actualSourceCondition = mockWhere.mock.calls[1][0];
+      const expectedNowSeconds = Math.floor(fixedNowMs / 1000);
+      const expectedSourceCondition = and(
+        eq(schema.enrichedSources.listingId, "listing-1"),
+        eq(schema.enrichedSources.userId, "user-1"),
+        eq(schema.enrichedSources.status, "COMPLETED"),
+        eq(schema.enrichedSources.sourceType, "pdf"),
+        gt(schema.enrichedSources.cacheExpiresAt, expectedNowSeconds)
+      );
+      // Structural equality against a condition tree built the same way the
+      // route builds it — this fails if the sourceType filter is dropped,
+      // reordered, or the wrong column/value is used.
+      expect(actualSourceCondition).toEqual(expectedSourceCondition);
+
+      // `.orderBy(...)` must be called exactly once, with createdAt descending,
+      // so the most-recent matching source wins when multiple rows qualify.
+      expect(mockOrderBy).toHaveBeenCalledTimes(1);
+      expect(mockOrderBy).toHaveBeenCalledWith(desc(schema.enrichedSources.createdAt));
+    } finally {
+      dateNowSpy.mockRestore();
+    }
   });
 });

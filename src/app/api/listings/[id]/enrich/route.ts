@@ -2,7 +2,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
-import { eq, and, gt } from "drizzle-orm";
+import { eq, and, gt, desc } from "drizzle-orm";
 import { v4 as uuidv4 } from "uuid";
 import { ratelimitEnrichedInput } from "@/lib/rate-limit";
 import { extractTextFromPdf } from "@/lib/pdf/extract-text";
@@ -26,6 +26,14 @@ export async function GET(
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
+    const { success } = await ratelimitEnrichedInput.limit(userId);
+    if (!success) {
+      return NextResponse.json(
+        { error: "Límite diario de fuentes enriquecidas alcanzado (10/día). Inténtalo mañana." },
+        { status: 429 }
+      );
+    }
+
     const { id } = await params;
     const [listing] = await db
       .select({ id: schema.listings.id, productName: schema.listings.productName, attributes: schema.listings.attributes })
@@ -43,9 +51,11 @@ export async function GET(
           eq(schema.enrichedSources.listingId, id),
           eq(schema.enrichedSources.userId, userId),
           eq(schema.enrichedSources.status, "COMPLETED"),
+          eq(schema.enrichedSources.sourceType, "pdf"),
           gt(schema.enrichedSources.cacheExpiresAt, now)
         )
       )
+      .orderBy(desc(schema.enrichedSources.createdAt))
       .limit(1);
 
     if (!cached || !cached.extractedText) {
