@@ -80,7 +80,7 @@ export default function EnrichListingModal({ listingId, productName, onClose, on
   }
 
   async function handleConfirm() {
-    if (!preview || !consent) return;
+    if (!preview || (!reusedCachedSource && !consent)) return;
     setStatus("confirming");
     setError(null);
     try {
