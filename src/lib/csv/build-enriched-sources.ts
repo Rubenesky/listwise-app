@@ -16,13 +16,13 @@ export interface EnrichedSourceInsertRow {
 
 const THIRTY_DAYS_SECONDS = 30 * 24 * 60 * 60;
 
-// Extracted as a pure function (no db import) so it's unit-testable without
-// mocking Drizzle — the upload route calls this, then inserts the result.
 export interface BuildEnrichedSourceRowsResult {
   rows: EnrichedSourceInsertRow[];
   warnings: string[];
 }
 
+// Extracted as a pure function (no db import) so it's unit-testable without
+// mocking Drizzle — the upload route calls this, then inserts the result.
 export async function buildEnrichedSourceRows(
   records: ({ sourceUrl?: string } & Record<string, unknown>)[],
   listingIds: string[],
