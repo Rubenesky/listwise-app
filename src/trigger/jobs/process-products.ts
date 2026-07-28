@@ -135,6 +135,29 @@ export const processProductsTask = task({
       .set({ status: "PROCESSING" })
       .where(inArray(schema.listings.id, listingIds));
 
+    // Batch-fetch all PENDING enriched sources for this batch's listings in
+    // ONE query, instead of querying per-product inside the loop below.
+    const pendingSourcesByListingId = new Map<string, typeof schema.enrichedSources.$inferSelect>();
+    try {
+      const pendingSourceRows = await db
+        .select()
+        .from(schema.enrichedSources)
+        .where(
+          and(
+            inArray(schema.enrichedSources.listingId, listingIds),
+            eq(schema.enrichedSources.status, "PENDING")
+          )
+        );
+      for (const row of pendingSourceRows) {
+        if (row.listingId) pendingSourcesByListingId.set(row.listingId, row);
+      }
+    } catch (lookupError) {
+      log.warn(
+        { userId, err: lookupError },
+        "Batch enriched source lookup failed — continuing without it"
+      );
+    }
+
     let totalProcessed = 0;
     const succeededListings: typeof pendingListings = [];
 
@@ -147,24 +170,7 @@ export const processProductsTask = task({
         // una fila PENDING para este listing, la procesamos ahora. Fallo aquí
         // nunca bloquea la generación — solo se pierde el contexto extra.
         let mergedAttributes = product.attributes as Record<string, string> | null;
-        let pendingSource: (typeof schema.enrichedSources.$inferSelect) | undefined;
-        try {
-          [pendingSource] = await db
-            .select()
-            .from(schema.enrichedSources)
-            .where(
-              and(
-                eq(schema.enrichedSources.listingId, product.id),
-                eq(schema.enrichedSources.status, "PENDING")
-              )
-            )
-            .limit(1);
-        } catch (lookupError) {
-          log.warn(
-            { userId, listingId: product.id, err: lookupError },
-            "Enriched source lookup failed — continuing without it"
-          );
-        }
+        const pendingSource = pendingSourcesByListingId.get(product.id);
 
         if (pendingSource) {
           try {
