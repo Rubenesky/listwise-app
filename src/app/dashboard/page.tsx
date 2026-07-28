@@ -39,6 +39,8 @@ interface ListingRow {
   primaryKeyword: string | null;
   hookType: string | null;
   qualityFlags: QualityFlags | null;
+  enrichmentStatus: string | null;
+  enrichmentError: string | null;
 }
 
 function getHealthLabel(score: number): { label: string; color: string } {
@@ -1384,6 +1386,12 @@ export default function DashboardPage() {
                             </button>
                             {listing.userRating === 1 && <span className="text-xs">👍</span>}
                             {listing.userRating === -1 && <span className="text-xs">👎</span>}
+                            {listing.enrichmentStatus === "COMPLETED" && (
+                              <span className="text-xs" title="Fuente URL del CSV usada correctamente">📎✅</span>
+                            )}
+                            {listing.enrichmentStatus === "FAILED" && (
+                              <span className="text-xs" title={listing.enrichmentError ?? "No se pudo leer la fuente indicada"}>📎⚠️</span>
+                            )}
                           </td>
                           <td className="px-4 py-4">{getStatusBadge(listing.status)}</td>
                           <td className="px-4 py-4">
