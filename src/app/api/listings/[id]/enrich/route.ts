@@ -26,14 +26,6 @@ export async function GET(
     const { userId } = await auth();
     if (!userId) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
-    const { success } = await ratelimitEnrichedInput.limit(userId);
-    if (!success) {
-      return NextResponse.json(
-        { error: "Límite diario de fuentes enriquecidas alcanzado (10/día). Inténtalo mañana." },
-        { status: 429 }
-      );
-    }
-
     const { id } = await params;
     const [listing] = await db
       .select({ id: schema.listings.id, productName: schema.listings.productName, attributes: schema.listings.attributes })
@@ -60,6 +52,17 @@ export async function GET(
 
     if (!cached || !cached.extractedText) {
       return NextResponse.json({ found: false });
+    }
+
+    // Only meter the rate limiter on the branch that actually costs an LLM
+    // call (below) — checking it earlier would burn shared quota just for
+    // opening the modal, even when there's nothing cached to re-merge.
+    const { success } = await ratelimitEnrichedInput.limit(userId);
+    if (!success) {
+      return NextResponse.json(
+        { error: "Límite diario de fuentes enriquecidas alcanzado (10/día). Inténtalo mañana." },
+        { status: 429 }
+      );
     }
 
     // Re-run the (cheap) structured extraction against the *current* listing

@@ -107,26 +107,37 @@ describe("GET /api/listings/[id]/enrich (cached-source lookup)", () => {
     expect(ratelimitEnrichedInput.limit).not.toHaveBeenCalled();
   });
 
-  it("returns 429 when the rate limit is exceeded, before touching the DB or calling the LLM", async () => {
+  it("returns 429 when the rate limit is exceeded, only after a cached source is found, and never calls the LLM", async () => {
+    // A cached source WAS found — this is the only branch that reaches the
+    // rate limiter now, since it's the only branch that would go on to call
+    // extractSpecsFromText.
+    mockListingSelect
+      .mockResolvedValueOnce([{ id: "listing-1", productName: "Persiana", attributes: { color: "blanco" } }])
+      .mockResolvedValueOnce([{ id: "source-1", extractedText: "aluminio 120x80" }]);
     (ratelimitEnrichedInput.limit as jest.Mock).mockResolvedValue({ success: false });
+
     const res = await GET(makeGetRequest(), makeParams());
     const body = await res.json();
     expect(res.status).toBe(429);
     expect(body.error).toContain("Límite diario");
-    // No listing lookup, no cached-source lookup, no LLM call should happen
-    // once the rate limit has rejected the request.
-    expect(mockListingSelect).not.toHaveBeenCalled();
-    expect(mockWhere).not.toHaveBeenCalled();
+    // The listing lookup and cached-source lookup DO happen (they run before
+    // the rate limiter now), but the LLM call must still be skipped.
+    expect(mockListingSelect).toHaveBeenCalledTimes(2);
     expect(extractSpecsFromText).not.toHaveBeenCalled();
   });
 
-  it("returns found=false when there is no cached source", async () => {
+  it("returns found=false when there is no cached source, without ever touching the rate limiter", async () => {
     mockListingSelect
       .mockResolvedValueOnce([{ id: "listing-1", productName: "Persiana", attributes: { color: "blanco" } }])
       .mockResolvedValueOnce([]);
     const res = await GET(makeGetRequest(), makeParams());
     const body = await res.json();
     expect(body.found).toBe(false);
+    // No LLM call happens on this path either, so the rate limiter — which
+    // only meters the branch that's about to call extractSpecsFromText —
+    // must never be invoked here.
+    expect(ratelimitEnrichedInput.limit).not.toHaveBeenCalled();
+    expect(extractSpecsFromText).not.toHaveBeenCalled();
   });
 
   it("returns found=true with re-merged specs when a non-expired COMPLETED source exists", async () => {
