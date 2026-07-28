@@ -165,7 +165,7 @@ export async function POST(req: Request) {
 
     // 6b. Fuentes enriquecidas (columna sourceUrl opcional) — validación SSRF
     // ahora; el fetch + extracción real ocurre en process-products.ts.
-    const enrichedRows = await buildEnrichedSourceRows(
+    const { rows: enrichedRows, warnings: enrichedWarnings } = await buildEnrichedSourceRows(
       records,
       listings.map((l) => l.id),
       userId,
@@ -175,6 +175,7 @@ export async function POST(req: Request) {
       await db.insert(schema.enrichedSources).values(enrichedRows);
       log.info({ userId, count: enrichedRows.length }, "Enriched sources queued");
     }
+    warnings.push(...enrichedWarnings);
 
     // 7. Disparar el worker de Trigger.dev
     const batchId = uuidv4();
