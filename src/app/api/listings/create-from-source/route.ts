@@ -11,12 +11,21 @@ import { log } from "@/lib/logger";
 
 const bodySchema = z.object({
   productName: z.string().min(1).max(500),
-  category: z.string().min(1),
-  attributes: z.record(z.string()).optional(),
+  category: z.string().min(1).max(100),
+  attributes: z
+    .record(z.string())
+    .optional()
+    .refine(
+      (attrs) =>
+        !attrs ||
+        (Object.keys(attrs).length <= 20 &&
+          Object.values(attrs).every((value) => value.length <= 200)),
+      { message: "attributes debe tener máximo 20 claves y valores de máximo 200 caracteres" }
+    ),
   primaryKeyword: z.string().optional(),
   mode: z.string(),
-  marketplace: z.string().optional(),
-  priceSegment: z.string().optional(),
+  marketplace: z.enum(["amazon", "etsy", "shopify", "general"]).optional(),
+  priceSegment: z.enum(["economy", "mid", "premium"]).optional(),
 });
 
 export async function POST(req: Request) {

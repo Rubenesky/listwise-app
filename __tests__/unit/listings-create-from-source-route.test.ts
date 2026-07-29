@@ -85,4 +85,50 @@ describe("POST /api/listings/create-from-source", () => {
     expect(addCredits).toHaveBeenCalledWith("user-1", 1, "refund", expect.any(String));
     expect(mockUpdate).toHaveBeenCalled();
   });
+
+  it("returns 400 when attributes has too many keys", async () => {
+    const tooManyAttrs: Record<string, string> = {};
+    for (let i = 0; i < 21; i++) {
+      tooManyAttrs[`key${i}`] = "value";
+    }
+    const res = await POST(makeRequest({ ...validBody, attributes: tooManyAttrs }));
+    expect(res.status).toBe(400);
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when an attribute value is oversized", async () => {
+    const res = await POST(
+      makeRequest({ ...validBody, attributes: { material: "a".repeat(201) } })
+    );
+    expect(res.status).toBe(400);
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when category exceeds the max length", async () => {
+    const res = await POST(makeRequest({ ...validBody, category: "a".repeat(101) }));
+    expect(res.status).toBe(400);
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 for an unrecognized marketplace value", async () => {
+    const res = await POST(makeRequest({ ...validBody, marketplace: "not-a-real-marketplace" }));
+    expect(res.status).toBe(400);
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 for an unrecognized priceSegment value", async () => {
+    const res = await POST(makeRequest({ ...validBody, priceSegment: "luxury" }));
+    expect(res.status).toBe(400);
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
+
+  it("accepts a valid, known marketplace/priceSegment and creates the listing", async () => {
+    const res = await POST(
+      makeRequest({ ...validBody, marketplace: "amazon", priceSegment: "premium" })
+    );
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(mockInsert).toHaveBeenCalled();
+  });
 });
