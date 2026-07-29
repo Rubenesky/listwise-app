@@ -13,6 +13,7 @@ import GamificationWidget from "@/components/GamificationWidget";
 import CreditsPopover from "@/components/CreditsPopover";
 import OnboardingModal from "@/components/OnboardingModal";
 import EnrichListingModal from "@/components/EnrichListingModal";
+import CreateFromSourceForm from "@/components/CreateFromSourceForm";
 
 type ListingStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
 
@@ -1053,6 +1054,13 @@ export default function DashboardPage() {
             </div>
           </div>
         </div>
+
+        <CreateFromSourceForm
+          selectedMode={selectedMode}
+          marketplace={marketplace}
+          priceSegment={priceSegment}
+          onListingCreated={() => fetchListings()}
+        />
 
         {/* Mode selector */}
         <div className="mode-selector">
