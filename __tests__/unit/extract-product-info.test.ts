@@ -77,4 +77,49 @@ describe("extractProductInfoFromText", () => {
     const promptSent = mockGetAIResponse.mock.calls[0][0][0].content as string;
     expect(promptSent.toLowerCase()).toContain("producto principal");
   });
+
+  it("keeps only the first 20 attribute keys when the model returns more than 20", async () => {
+    const tooManyAttrs: Record<string, string> = {};
+    for (let i = 0; i < 30; i++) {
+      tooManyAttrs[`key${i}`] = `value${i}`;
+    }
+    mockGetAIResponse.mockResolvedValue({
+      choices: [{
+        message: {
+          content: JSON.stringify({
+            productName: "Producto X",
+            category: "hogar",
+            attributes: tooManyAttrs,
+            primaryKeyword: "producto x",
+            confidence: 0.5,
+          }),
+        },
+      }],
+    });
+    const result = await extractProductInfoFromText("texto");
+    expect(Object.keys(result?.attributes ?? {})).toHaveLength(20);
+    expect(result?.attributes.key0).toBe("value0");
+    expect(result?.attributes.key19).toBe("value19");
+    expect(result?.attributes.key20).toBeUndefined();
+  });
+
+  it("truncates an oversized attribute value to 200 chars", async () => {
+    const longValue = "a".repeat(250);
+    mockGetAIResponse.mockResolvedValue({
+      choices: [{
+        message: {
+          content: JSON.stringify({
+            productName: "Producto X",
+            category: "hogar",
+            attributes: { material: longValue },
+            primaryKeyword: "producto x",
+            confidence: 0.5,
+          }),
+        },
+      }],
+    });
+    const result = await extractProductInfoFromText("texto");
+    expect(result?.attributes.material).toHaveLength(200);
+    expect(result?.attributes.material).toBe("a".repeat(200));
+  });
 });

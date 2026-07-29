@@ -24,8 +24,14 @@ const bodySchema = z.object({
     ),
   primaryKeyword: z.string().optional(),
   mode: z.string(),
-  marketplace: z.enum(["amazon", "etsy", "shopify", "general"]).optional(),
-  priceSegment: z.enum(["economy", "mid", "premium"]).optional(),
+  marketplace: z
+    .union([z.enum(["amazon", "etsy", "shopify", "general"]), z.literal("")])
+    .optional()
+    .transform((v) => (v ? v : undefined)),
+  priceSegment: z
+    .union([z.enum(["economy", "mid", "premium"]), z.literal("")])
+    .optional()
+    .transform((v) => (v ? v : undefined)),
 });
 
 export async function POST(req: Request) {

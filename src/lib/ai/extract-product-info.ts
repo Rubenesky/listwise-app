@@ -52,7 +52,8 @@ export async function extractProductInfoFromText(text: string): Promise<ProductI
     const attributes: Record<string, string> = {};
     if (parsed.attributes && typeof parsed.attributes === "object") {
       for (const [key, value] of Object.entries(parsed.attributes)) {
-        if (typeof value === "string" && value.trim()) attributes[key] = value.trim();
+        if (Object.keys(attributes).length >= 20) break;
+        if (typeof value === "string" && value.trim()) attributes[key] = value.trim().slice(0, 200);
       }
     }
 

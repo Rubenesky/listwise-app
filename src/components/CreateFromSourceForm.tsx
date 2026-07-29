@@ -98,14 +98,17 @@ export default function CreateFromSourceForm({ selectedMode, marketplace, priceS
       const data = await res.json();
       if (!res.ok) {
         setError(data.error ?? "No se pudo crear el producto.");
-        setState("error");
+        setState("preview");
         return;
+      }
+      if (typeof data.remainingCredits === "number") {
+        window.dispatchEvent(new CustomEvent("credits-update", { detail: { credits: data.remainingCredits } }));
       }
       reset();
       onListingCreated();
     } catch {
       setError("Error de red. Inténtalo de nuevo.");
-      setState("error");
+      setState("preview");
     }
   }
 

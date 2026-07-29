@@ -131,4 +131,20 @@ describe("POST /api/listings/create-from-source", () => {
     expect(body.success).toBe(true);
     expect(mockInsert).toHaveBeenCalled();
   });
+
+  it("accepts an empty-string priceSegment and marketplace (dashboard's default 'Sin especificar' state) and creates the listing", async () => {
+    const res = await POST(
+      makeRequest({ ...validBody, marketplace: "", priceSegment: "" })
+    );
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(mockInsert).toHaveBeenCalled();
+  });
+
+  it("still rejects a genuinely invalid priceSegment string", async () => {
+    const res = await POST(makeRequest({ ...validBody, priceSegment: "nonsense" }));
+    expect(res.status).toBe(400);
+    expect(mockInsert).not.toHaveBeenCalled();
+  });
 });
