@@ -1,4 +1,4 @@
-export type GenerationMode = "creative" | "professional" | "seo";
+export type GenerationMode = "creative" | "professional" | "seo" | "tecnica";
 export type Marketplace = "amazon" | "etsy" | "shopify" | "general";
 export type PriceSegment = "economy" | "mid" | "premium";
 
@@ -13,21 +13,35 @@ export interface VoiceProfileData {
   brandPromise?: string;
 }
 
-export const MODE_CONFIG: Record<GenerationMode, { label: string; systemPrompt: string; temperature: number }> = {
+export const MODE_CONFIG: Record<GenerationMode, { label: string; systemPrompt: string; temperature: number; creditsPerProduct: number }> = {
   creative: {
     label: "Creativo",
     systemPrompt: `<MODO>CREATIVO: Prioriza la conexión emocional y el lenguaje sensorial. Activa el deseo describiendo la experiencia de uso: textura, sensación, transformación. Usa Future Pacing y Contrast Frame cuando el producto los justifique.</MODO>`,
     temperature: 0.75,
+    creditsPerProduct: 1,
   },
   professional: {
     label: "Profesional",
     systemPrompt: `<MODO>PROFESIONAL: Tono directo y técnico. Datos concretos, especificaciones reales, durabilidad verificable. Sin hipérboles. El comprador racional que compara especificaciones antes de decidir es tu audiencia.</MODO>`,
     temperature: 0.45,
+    creditsPerProduct: 1,
   },
   seo: {
     label: "SEO",
     systemPrompt: `<MODO>SEO: La primary_keyword va en los primeros 40 caracteres del título — primera prioridad absoluta. Incluye 1 sinónimo semántico de la keyword en el primer párrafo de la descripción. Incluye una frase long-tail de 3-5 palabras exactamente como la escribiría un comprador en el buscador antes de comprar.</MODO>`,
     temperature: 0.6,
+    creditsPerProduct: 1,
+  },
+  tecnica: {
+    label: "Ficha Técnica",
+    // Vestigial: tecnica mode uses its own dedicated SYSTEM_PROMPT_TECNICA and
+    // buildUserPromptTecnica instead of this overlay (see buildSystemPrompt /
+    // buildUserPromptWithVoice) — sharing the marketing prompt's "Imagina" /
+    // Future Pacing machinery actively worked against the structured-sections
+    // requirement, so this mode was split into a fully separate prompt path.
+    systemPrompt: "Ficha técnica larga y estructurada — ver SYSTEM_PROMPT_TECNICA.",
+    temperature: 0.4,
+    creditsPerProduct: 2,
   },
 };
 
@@ -230,6 +244,63 @@ Responde SIEMPRE con JSON válido exactamente con estos campos. Nada de texto fu
 {"title":"...","title_b":"Estrategia OPUESTA a title: si title es benefit-lead entonces title_b es keyword-lead; si title es emocional entonces title_b es técnico y específico","bullets":["..."],"description":"párrafo1\\n\\npárrafo2\\n\\npárrafo3","primary_keyword":"2-4 palabras como las escribiría el comprador en el buscador","target_audience":"2-3 palabras describiendo el comprador ideal","hook_type":"scene|question|bold|benefit","quality_flags":{"no_trademarks":true,"title_in_range":true,"bullets_concise":true,"attrs_real":true,"hook_differentiated":true}}
 `;
 
+// Fully separate from SYSTEM_PROMPT on purpose: sharing the marketing prompt's
+// emotional-hook machinery (Future Pacing, Contrast Frame, "Imagina" openers,
+// the 3-paragraph narrative structure repeated in PROCESO_ANTES_DE_ESCRIBIR and
+// TÉCNICAS DE ALTO IMPACTO) actively pulled generations back toward the short
+// marketing shape even when explicitly told to override it — the override
+// competed against many reinforcing signals and lost. This prompt has none of
+// that: it only knows one structure.
+export const SYSTEM_PROMPT_TECNICA = `
+<PERSONA>
+Eres un redactor técnico especializado en fichas de producto para catálogos de productos técnicos y a medida (persianas, mosquiteras, toldos, muebles a medida, maquinaria, instalaciones). Tu objetivo es que el comprador tenga toda la información que necesita para decidir con confianza, sin tener que preguntar por email o teléfono antes de comprar. No escribes copy de marketing — escribes documentación de producto clara y completa.
+</PERSONA>
+
+<REGLAS>
+TÍTULO — entre 60 y 100 caracteres:
+- Fórmula: [Nombre del producto] + [Material/Técnica confirmada] + [Medida o contexto de uso si está confirmado]
+- Solo datos confirmados en los inputs, nunca inventados.
+
+BULLETS — SIEMPRE entre 4 y 6:
+- Formato: "BENEFICIO EN MAYÚSCULAS: detalle específico que lo explica" — máximo 15 palabras.
+- El bullet más diferencial va primero. Solo datos confirmados.
+
+DESCRIPCIÓN — el campo "description" debe ser un único string de 500 a 700 palabras con esta estructura EXACTA. Usa estos marcadores de sección LITERALES, cada uno en su propia línea, precedidos de "## ". Son OBLIGATORIOS: no los omitas, no los sustituyas por negrita ni mayúsculas, escríbelos exactamente así:
+
+[Gancho de 1-2 frases presentando el producto de forma directa y profesional. NUNCA empieces con "Este", "Presentamos", "Descubre", "Imagina" o el nombre del producto repetido. Nada de lenguaje de venta emocional aquí — es una presentación informativa.]
+
+## Especificaciones técnicas
+[Especificaciones CONFIRMADAS en los inputs: material, medidas, capacidad, acabado, compatibilidad. No inventes datos no confirmados — si falta un dato, indica que se recomienda confirmar con el fabricante.]
+
+## Instalación
+[Proceso de instalación, montaje o fabricación a medida. Si no hay datos confirmados sobre el proceso, describe el proceso general esperado para este tipo de producto sin inventar pasos específicos no confirmados.]
+
+## Preguntas frecuentes
+[3-4 preguntas y respuestas breves que un comprador de este producto técnico haría antes de comprar: plazos de fabricación o entrega, garantía, mantenimiento, compatibilidad. Cierra la última respuesta con una frase breve orientada a la acción.]
+
+PROHIBIDO en todo el texto: "Imagina", Future Pacing, Contrast Frame, o cualquier técnica de venta emocional. Este modo informa con precisión, no persuade emocionalmente.
+
+REGISTRO: Profesional, claro y directo — como una ficha técnica bien escrita, no como un anuncio.
+</REGLAS>
+
+<AUTOVERIFICACION>
+ANTES DE ESCRIBIR EL JSON, verifica internamente — NO lo incluyas en la respuesta:
+1. ¿Hay trademark de tercero? → Elimínalo.
+2. ¿El título tiene entre 60 y 100 caracteres? → Ajústalo.
+3. ¿Hay entre 4 y 6 bullets, cada uno con datos confirmados? → Corrígelo si no.
+4. ¿Has inventado algún material, medida o característica NO confirmada en los inputs? → Elimínala.
+5. ¿La descripción tiene el gancho seguido de las 3 secciones "## Especificaciones técnicas", "## Instalación" y "## Preguntas frecuentes", cada una en su propia línea, con 500-700 palabras en total? → Si falta alguna sección o el marcador "## " exacto, corrígelo antes de escribir el JSON.
+6. ¿Aparece "Imagina" o lenguaje de venta emocional en la descripción? → Elimínalo por completo, reescribe en tono informativo.
+</AUTOVERIFICACION>
+
+Responde SIEMPRE con JSON válido exactamente con estos campos. Nada de texto fuera del JSON:
+{"title":"...","bullets":["..."],"description":"gancho\\n\\n## Especificaciones técnicas\\n...\\n\\n## Instalación\\n...\\n\\n## Preguntas frecuentes\\n...","primary_keyword":"2-4 palabras como las escribiría el comprador en el buscador","target_audience":"2-3 palabras describiendo el comprador ideal","quality_flags":{"no_trademarks":true,"title_in_range":true,"bullets_concise":true,"attrs_real":true,"hook_differentiated":true}}
+`;
+
+export function buildSystemPrompt(mode: GenerationMode): string {
+  return mode === "tecnica" ? SYSTEM_PROMPT_TECNICA : SYSTEM_PROMPT;
+}
+
 export function buildUserPrompt(product: {
   productName: string;
   category?: string | null;
@@ -238,6 +309,9 @@ export function buildUserPrompt(product: {
   marketplace?: Marketplace;
   priceSegment?: PriceSegment;
 }): string {
+  if (product.mode === "tecnica") {
+    throw new Error("buildUserPrompt() no soporta mode 'tecnica' — usa buildUserPromptTecnica() en su lugar.");
+  }
   const mode = product.mode && product.mode in MODE_CONFIG ? product.mode : "creative";
   const modeConfig = MODE_CONFIG[mode as GenerationMode];
   const category = product.category || "General";
@@ -333,12 +407,40 @@ Calibración de tono para ${category} (referencia — NO copies, adapta al produ
   return prompt;
 }
 
+// Leaner counterpart to buildUserPrompt for tecnica mode — deliberately skips
+// the emotional archetype, prescriptive hook type, and category calibration
+// example, since those are marketing-copy devices that pull the model back
+// toward the short narrative shape this mode replaces.
+export function buildUserPromptTecnica(product: {
+  productName: string;
+  category?: string | null;
+  attributes?: Record<string, string> | null;
+}): string {
+  const category = product.category || "General";
+  let prompt = `Producto: ${product.productName}\n`;
+  prompt += `Categoría: ${category}\n`;
+
+  if (product.attributes && Object.keys(product.attributes).length > 0) {
+    prompt += `Atributos confirmados: ${JSON.stringify(product.attributes)}\n`;
+    prompt += `IMPORTANTE: usa SOLO estos atributos en "## Especificaciones técnicas". No inventes materiales, medidas ni características no confirmadas.\n`;
+  } else {
+    prompt += `ATENCIÓN: este producto no tiene atributos confirmados. En "## Especificaciones técnicas" indica que se recomienda confirmar medidas y materiales exactos con el fabricante, y describe el proceso de instalación de forma general para este tipo de producto sin inventar datos.\n`;
+  }
+
+  prompt += `\nEscribe el JSON completo siguiendo exactamente la estructura de secciones indicada en las instrucciones.`;
+  return prompt;
+}
+
 export function buildUserPromptWithVoice(
   product: Parameters<typeof buildUserPrompt>[0],
   voiceProfile: VoiceProfileData | null
 ): string {
-  const base = buildUserPrompt(product);
-  if (!voiceProfile) return base;
+  const base = product.mode === "tecnica" ? buildUserPromptTecnica(product) : buildUserPrompt(product);
+  // Ficha Técnica is a neutral, informative document, not marketing copy — the
+  // brand voice's tone/vocabulary/suggestions are extracted from example
+  // marketing descriptions and would reintroduce the exact "Imagina"/emotional
+  // patterns this mode explicitly prohibits. Skip voice injection for it.
+  if (!voiceProfile || product.mode === "tecnica") return base;
 
   let voice = `\n\n<VOZ_DE_MARCA>
 Adapta TODO el copy a esta identidad — tono, estructura y vocabulario:

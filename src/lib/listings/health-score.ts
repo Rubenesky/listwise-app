@@ -2,6 +2,8 @@
 // listing's own generated fields. Shared by the dashboard's Health column and
 // the Agent's /api/agent/analyze so both report the exact same score.
 
+import { hasSections, parseDescriptionSections } from "./render-sections";
+
 export interface ScoreResult {
   score: number;
   notes: string[];
@@ -69,11 +71,67 @@ export function analyzeDescription(description: string | null): ScoreResult {
   return { score: Math.min(40, score), notes };
 }
 
+// Ficha Técnica descriptions are detected structurally (via the "## " section
+// markers, see render-sections.ts) rather than a stored mode column — no
+// schema change needed. Word-count target and "required sections present"
+// replace the short-mode's Future Pacing / "el resultado" checks, which don't
+// apply to an intentionally neutral, informative document.
+const REQUIRED_TECNICA_SECTIONS = ["especificaciones técnicas", "instalación", "preguntas frecuentes"];
+
+export function analyzeDescriptionTecnica(description: string | null): ScoreResult {
+  if (!description?.trim()) return { score: 0, notes: ["sin descripción generada"] };
+  const words = description.trim().split(/\s+/).length;
+  let score = 0;
+  const notes: string[] = [];
+
+  if (words >= 400 && words <= 750) { score += 20; notes.push(`${words} palabras`); }
+  else if (words < 400) { score += 10; notes.push(`${words} palabras (mín 400 recomendado)`); }
+  else { score += 15; notes.push(`${words} palabras (máx 750 recomendado)`); }
+
+  const headings = parseDescriptionSections(description)
+    .map((s) => s.heading?.trim().toLowerCase())
+    .filter((h): h is string => !!h);
+  const present = REQUIRED_TECNICA_SECTIONS.filter((s) => headings.includes(s));
+  if (present.length === REQUIRED_TECNICA_SECTIONS.length) {
+    score += 20;
+    notes.push("las 3 secciones presentes ✓");
+  } else if (present.length > 0) {
+    score += 10;
+    const missing = REQUIRED_TECNICA_SECTIONS.filter((s) => !present.includes(s));
+    notes.push(`faltan secciones: ${missing.join(", ")}`);
+  } else {
+    notes.push("no se detectan los marcadores de sección '## '");
+  }
+
+  return { score: Math.min(40, score), notes };
+}
+
 export interface HealthScoreListing {
   status?: string;
+  generationMode?: string | null;
   generatedTitle: string | null;
   generatedBullets: string[] | null;
   generatedDescription: string | null;
+}
+
+// generationMode is the authoritative signal when present (set on every listing
+// generated after that column was added); hasSections() is a content-sniffing
+// fallback for legacy rows generated before the column existed.
+function isTecnicaDescription(listing: {
+  generationMode?: string | null;
+  generatedDescription?: string | null;
+}): boolean {
+  if (listing.generationMode) return listing.generationMode === "tecnica";
+  return !!listing.generatedDescription && hasSections(listing.generatedDescription);
+}
+
+export function scoreDescription(listing: {
+  generationMode?: string | null;
+  generatedDescription: string | null;
+}): ScoreResult {
+  return isTecnicaDescription(listing)
+    ? analyzeDescriptionTecnica(listing.generatedDescription)
+    : analyzeDescription(listing.generatedDescription);
 }
 
 export function calcHealthScore(listing: HealthScoreListing): number {
@@ -81,6 +139,6 @@ export function calcHealthScore(listing: HealthScoreListing): number {
   return (
     analyzeTitle(listing.generatedTitle).score +
     analyzeBullets(listing.generatedBullets).score +
-    analyzeDescription(listing.generatedDescription).score
+    scoreDescription(listing).score
   );
 }

@@ -4,14 +4,18 @@ import { useUser } from "@clerk/nextjs";
 import { useEffect, useState, useCallback, useRef, useMemo } from "react";
 import { useUserPlan } from "@/lib/hooks/useUserPlan";
 import { calcHealthScore } from "@/lib/listings/health-score";
+import { hasSections } from "@/lib/listings/render-sections";
+import { MODE_CONFIG, type GenerationMode } from "@/lib/ai/prompts";
+import DescriptionSections from "@/components/DescriptionSections";
 import VoiceProfileManager from "@/components/VoiceProfileManager";
 import InfoTooltip from "@/components/InfoTooltip";
 import GamificationWidget from "@/components/GamificationWidget";
 import CreditsPopover from "@/components/CreditsPopover";
 import OnboardingModal from "@/components/OnboardingModal";
+import EnrichListingModal from "@/components/EnrichListingModal";
+import CreateFromSourceForm from "@/components/CreateFromSourceForm";
 
 type ListingStatus = "PENDING" | "PROCESSING" | "COMPLETED" | "FAILED";
-type GenerationMode = "creative" | "professional" | "seo";
 
 interface QualityFlags {
   no_trademarks?: boolean;
@@ -26,6 +30,7 @@ interface ListingRow {
   productName: string;
   category: string | null;
   status: ListingStatus;
+  generationMode: string | null;
   generatedTitle: string | null;
   generatedTitleB: string | null;
   generatedBullets: string[] | null;
@@ -35,6 +40,8 @@ interface ListingRow {
   primaryKeyword: string | null;
   hookType: string | null;
   qualityFlags: QualityFlags | null;
+  enrichmentStatus: string | null;
+  enrichmentError: string | null;
 }
 
 function getHealthLabel(score: number): { label: string; color: string } {
@@ -60,6 +67,7 @@ const MODE_LABELS: Record<GenerationMode, string> = {
   creative: "🎨 Creativo",
   professional: "💼 Profesional",
   seo: "📈 SEO",
+  tecnica: "🔧 Ficha Técnica",
 };
 
 export default function DashboardPage() {
@@ -75,7 +83,7 @@ export default function DashboardPage() {
   const [selectedMode, setSelectedMode] = useState<GenerationMode>(() => {
     if (typeof window !== "undefined") {
       const saved = localStorage.getItem("listwise_generation_mode");
-      if (saved === "creative" || saved === "professional" || saved === "seo") return saved;
+      if (saved && saved in MODE_CONFIG) return saved as GenerationMode;
     }
     return "creative";
   });
@@ -88,9 +96,12 @@ export default function DashboardPage() {
   // Modal state
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
   const selectedListing = listings.find((l) => l.id === selectedListingId) ?? null;
+  const [enrichingListing, setEnrichingListing] = useState<{ id: string; productName: string } | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editBullets, setEditBullets] = useState<string[]>([]);
   const [editDescription, setEditDescription] = useState("");
+  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const editDescriptionHasSections = useMemo(() => hasSections(editDescription), [editDescription]);
   const [saving, setSaving] = useState(false);
   const [sharing, setSharing] = useState<string | null>(null);
   const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
@@ -352,6 +363,7 @@ export default function DashboardPage() {
     setEditTitle(listing.generatedTitle ?? "");
     setEditBullets(listing.generatedBullets ?? []);
     setEditDescription(listing.generatedDescription ?? "");
+    setIsEditingDescription(false);
   };
 
   const closeModal = () => setSelectedListingId(null);
@@ -628,7 +640,7 @@ export default function DashboardPage() {
 
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="text-sm font-medium text-gray-700">Título A (activo)</label>
+                      <label className="text-sm font-bold text-gray-700">Título A (activo)</label>
                       <button
                         onClick={() => copyToClipboard(editTitle, "modal-title")}
                         className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 transition-colors px-2 py-0.5 rounded hover:bg-blue-50"
@@ -649,7 +661,7 @@ export default function DashboardPage() {
                     <p className="text-xs text-gray-400 mt-1">{editTitle.length}/200 caracteres</p>
                     {selectedListing.generatedTitleB && (
                       <div className="mt-2">
-                        <p className="text-xs text-gray-500 mb-1">Variante B (estrategia opuesta — clic para usar)</p>
+                        <p className="text-xs font-bold text-gray-500 mb-1">Variante B (estrategia opuesta — clic para usar)</p>
                         <div
                           className="w-full border border-dashed border-gray-300 rounded-lg px-3 py-2 text-sm text-gray-600 bg-gray-50 cursor-pointer hover:bg-blue-50 hover:border-blue-300 transition-colors"
                           onClick={() => setEditTitle(selectedListing.generatedTitleB!)}
@@ -668,7 +680,7 @@ export default function DashboardPage() {
 
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="text-sm font-medium text-gray-700">Bullet points ({editBullets.length})</label>
+                      <label className="text-sm font-bold text-gray-700">Bullet points ({editBullets.length})</label>
                       <button
                         onClick={() => copyToClipboard(editBullets.map((b, i) => `${i + 1}. ${b}`).join("\n"), "modal-bullets")}
                         className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 transition-colors px-2 py-0.5 rounded hover:bg-blue-50"
@@ -701,24 +713,40 @@ export default function DashboardPage() {
 
                   <div>
                     <div className="flex items-center justify-between mb-1">
-                      <label className="text-sm font-medium text-gray-700">Descripción</label>
-                      <button
-                        onClick={() => copyToClipboard(editDescription, "modal-desc")}
-                        className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 transition-colors px-2 py-0.5 rounded hover:bg-blue-50"
-                      >
-                        {copiedField === "modal-desc" ? (
-                          <><svg className="w-3 h-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg> Copiado</>
-                        ) : (
-                          <><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg> Copiar</>
+                      <label className="text-sm font-bold text-gray-700">Descripción</label>
+                      <div className="flex items-center gap-1">
+                        {editDescriptionHasSections && (
+                          <button
+                            onClick={() => setIsEditingDescription((v) => !v)}
+                            className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 transition-colors px-2 py-0.5 rounded hover:bg-blue-50"
+                          >
+                            {isEditingDescription ? "🔍 Ver" : "✏️ Editar"}
+                          </button>
                         )}
-                      </button>
+                        <button
+                          onClick={() => copyToClipboard(editDescription, "modal-desc")}
+                          className="flex items-center gap-1 text-xs text-gray-400 hover:text-blue-600 transition-colors px-2 py-0.5 rounded hover:bg-blue-50"
+                        >
+                          {copiedField === "modal-desc" ? (
+                            <><svg className="w-3 h-3 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" /></svg> Copiado</>
+                          ) : (
+                            <><svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg> Copiar</>
+                          )}
+                        </button>
+                      </div>
                     </div>
-                    <textarea
-                      className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
-                      rows={9}
-                      value={editDescription}
-                      onChange={(e) => setEditDescription(e.target.value)}
-                    />
+                    {editDescriptionHasSections && !isEditingDescription ? (
+                      <div className="p-3 border border-blue-100 rounded-lg bg-blue-50/30 text-sm">
+                        <DescriptionSections description={editDescription} />
+                      </div>
+                    ) : (
+                      <textarea
+                        className="w-full border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none"
+                        rows={9}
+                        value={editDescription}
+                        onChange={(e) => setEditDescription(e.target.value)}
+                      />
+                    )}
                   </div>
                 </div>
               )}
@@ -995,7 +1023,8 @@ export default function DashboardPage() {
                   Columna requerida:{" "}
                   <code className="bg-gray-100 px-1 rounded">productName</code>. Opciones:{" "}
                   <code className="bg-gray-100 px-1 rounded">category</code>,{" "}
-                  <code className="bg-gray-100 px-1 rounded">attributes</code>
+                  <code className="bg-gray-100 px-1 rounded">attributes</code>,{" "}
+                  <code className="bg-gray-100 px-1 rounded">sourceUrl</code>
                 </p>
               </>
             )}
@@ -1026,6 +1055,13 @@ export default function DashboardPage() {
           </div>
         </div>
 
+        <CreateFromSourceForm
+          selectedMode={selectedMode}
+          marketplace={marketplace}
+          priceSegment={priceSegment}
+          onListingCreated={() => fetchListings()}
+        />
+
         {/* Mode selector */}
         <div className="mode-selector">
           <div className="flex items-center gap-1.5 mb-2">
@@ -1033,11 +1069,12 @@ export default function DashboardPage() {
             <InfoTooltip content="El modo define el estilo de escritura de la IA. Se aplica a todos los productos del siguiente CSV que subas." />
           </div>
           <div className="flex gap-2 flex-wrap">
-            {(["creative", "professional", "seo"] as GenerationMode[]).map((mode) => {
+            {(Object.keys(MODE_CONFIG) as GenerationMode[]).map((mode) => {
               const modeTooltips: Record<GenerationMode, string> = {
                 creative: "Tono emocional y narrativo. Conecta con las aspiraciones del cliente. Ideal para moda, lifestyle y regalos.",
                 professional: "Tono técnico y formal. Destaca especificaciones y funcionalidad. Ideal para electrónica, herramientas y B2B.",
                 seo: "SEO + GEO: optimizado para buscadores tradicionales (Google) y motores de búsqueda de IA (ChatGPT, Perplexity, Gemini). Incluye palabras clave estratégicas y estructura semántica que los modelos de IA entienden mejor.",
+                tecnica: `Ficha larga y estructurada con especificaciones técnicas, instalación y preguntas frecuentes. Ideal para productos a medida o técnicos (persianas, mosquiteras, muebles a medida, maquinaria). Cuesta ${MODE_CONFIG.tecnica.creditsPerProduct} créditos por producto.`,
               };
               return (
                 <div key={mode} className="flex items-center gap-1">
@@ -1357,6 +1394,12 @@ export default function DashboardPage() {
                             </button>
                             {listing.userRating === 1 && <span className="text-xs">👍</span>}
                             {listing.userRating === -1 && <span className="text-xs">👎</span>}
+                            {listing.enrichmentStatus === "COMPLETED" && (
+                              <span className="text-xs" title="Fuente URL del CSV usada correctamente">📎✅</span>
+                            )}
+                            {listing.enrichmentStatus === "FAILED" && (
+                              <span className="text-xs" title={listing.enrichmentError ?? "No se pudo leer la fuente indicada"}>📎⚠️</span>
+                            )}
                           </td>
                           <td className="px-4 py-4">{getStatusBadge(listing.status)}</td>
                           <td className="px-4 py-4">
@@ -1397,10 +1440,14 @@ export default function DashboardPage() {
                           <td className="px-4 py-4">
                             <div className="flex items-center gap-1 flex-wrap">
                               <button
-                                onClick={(e) => { e.stopPropagation(); openModal(listing); }}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openModal(listing);
+                                  if (listing.status === "COMPLETED") setIsEditingDescription(true);
+                                }}
                                 className="px-2.5 py-1 text-xs text-blue-600 hover:text-blue-800 transition-colors"
                               >
-                                {listing.status === "COMPLETED" ? "Editar" : "Ver"}
+                                {listing.status === "COMPLETED" ? "✏️ Editar" : "Ver"}
                               </button>
                               {listing.status === "COMPLETED" && (
                                 <button
@@ -1409,6 +1456,15 @@ export default function DashboardPage() {
                                   title="Mejorar con el Agente de IA"
                                 >
                                   🤖 Mejorar
+                                </button>
+                              )}
+                              {listing.status === "COMPLETED" && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); setEnrichingListing({ id: listing.id, productName: listing.productName }); }}
+                                  className="px-2.5 py-1 text-xs text-teal-600 hover:text-teal-800 font-medium transition-colors"
+                                  title="Enriquecer con PDF de proveedor"
+                                >
+                                  📎 Enriquecer
                                 </button>
                               )}
                               {listing.status === "COMPLETED" && (
@@ -1535,6 +1591,18 @@ export default function DashboardPage() {
         </div>
 
       </div>
+
+      {enrichingListing && (
+        <EnrichListingModal
+          listingId={enrichingListing.id}
+          productName={enrichingListing.productName}
+          onClose={() => setEnrichingListing(null)}
+          onSuccess={() => {
+            setEnrichingListing(null);
+            fetchListings(pagination.page);
+          }}
+        />
+      )}
     </>
   );
 }

@@ -55,3 +55,11 @@ export const ratelimitLeads = new Ratelimit({
   analytics: false,
   prefix: "@upstash/ratelimit/leads",
 });
+
+// Input Enriquecido (URL en CSV o PDF por listing): 10 solicitudes/día por usuario
+export const ratelimitEnrichedInput = new Ratelimit({
+  redis,
+  limiter: Ratelimit.fixedWindow(10, "24 h"),
+  analytics: false,
+  prefix: "@upstash/ratelimit/enriched-input",
+});

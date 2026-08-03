@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
-import { eq, desc, count } from "drizzle-orm";
+import { eq, desc, count, and, inArray } from "drizzle-orm";
 import { log } from "@/lib/logger";
 
 export async function GET(req: Request) {
@@ -21,6 +21,7 @@ export async function GET(req: Request) {
           productName: schema.listings.productName,
           category: schema.listings.category,
           status: schema.listings.status,
+          generationMode: schema.listings.generationMode,
           generatedTitle: schema.listings.generatedTitle,
           generatedTitleB: schema.listings.generatedTitleB,
           generatedBullets: schema.listings.generatedBullets,
@@ -45,8 +46,43 @@ export async function GET(req: Request) {
 
     const total = totalResult?.count ?? 0;
 
+    // Batch-fetch CSV sourceUrl enrichment status for this page's listings in
+    // ONE query (mirrors the inArray + Map pattern in
+    // src/trigger/jobs/process-products.ts's enriched-source lookup).
+    const listingIds = listings.map((l) => l.id);
+    const enrichmentByListingId = new Map<string, { status: string; errorMessage: string | null }>();
+    if (listingIds.length > 0) {
+      const enrichmentRows = await db
+        .select({
+          listingId: schema.enrichedSources.listingId,
+          status: schema.enrichedSources.status,
+          errorMessage: schema.enrichedSources.errorMessage,
+        })
+        .from(schema.enrichedSources)
+        .where(
+          and(
+            inArray(schema.enrichedSources.listingId, listingIds),
+            eq(schema.enrichedSources.sourceType, "url")
+          )
+        );
+      for (const row of enrichmentRows) {
+        if (row.listingId) {
+          enrichmentByListingId.set(row.listingId, { status: row.status, errorMessage: row.errorMessage });
+        }
+      }
+    }
+
+    const listingsWithEnrichment = listings.map((listing) => {
+      const enrichment = enrichmentByListingId.get(listing.id);
+      return {
+        ...listing,
+        enrichmentStatus: enrichment?.status ?? null,
+        enrichmentError: enrichment?.errorMessage ?? null,
+      };
+    });
+
     return NextResponse.json({
-      listings,
+      listings: listingsWithEnrichment,
       pagination: {
         page,
         limit,

@@ -5,44 +5,16 @@ import { eq } from "drizzle-orm";
 import { parse } from "csv-parse/sync";
 import { v4 as uuidv4 } from "uuid";
 import { ratelimit } from "@/lib/rate-limit";
+import { ratelimitEnrichedInput } from "@/lib/rate-limit";
 import { trackGamification } from "@/lib/gamification/track";
 import { useCredits, addCredits } from "@/lib/credits/use-credits";
+import { MODE_CONFIG, type GenerationMode } from "@/lib/ai/prompts";
 import { inArray } from "drizzle-orm";
 import { log } from "@/lib/logger";
 
 import { validateRows } from "@/lib/csv/validate-rows";
-
-// ─── Trigger ──────────────────────────────────────────────────────────────────
-
-async function sendTriggerEvent(userId: string, batchId: string, mode: string, provider = "groq", userEmail?: string) {
-  const response = await fetch("https://api.trigger.dev/api/v1/tasks/process-batch/trigger", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.TRIGGER_SECRET_KEY}`,
-    },
-    body: JSON.stringify({
-      payload: {
-        userId,
-        batchId,
-        mode,
-        provider,
-        userEmail,
-      },
-    }),
-  });
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    log.error({ status: response.status, body: errorText }, "Trigger event failed");
-    if (response.status === 429) {
-      throw new Error("RATE_LIMIT");
-    }
-    throw new Error("TRIGGER_FAILED");
-  }
-
-  return response.json();
-}
+import { buildEnrichedSourceRows } from "@/lib/csv/build-enriched-sources";
+import { sendTriggerEvent } from "@/lib/trigger/send-batch-event";
 
 export async function POST(req: Request) {
   try {
@@ -118,18 +90,20 @@ export async function POST(req: Request) {
       );
     }
 
-    // 5. Credit check: require 1 credit per product before generating
+    // 5. Credit check: require 1 credit per product (2 for Ficha Técnica, longer generation)
     const newProductsCount = records.length;
+    const creditsPerProduct = MODE_CONFIG[mode as GenerationMode]?.creditsPerProduct ?? 1;
+    const creditsRequired = newProductsCount * creditsPerProduct;
     // eslint-disable-next-line react-hooks/rules-of-hooks
     const creditResult = await useCredits(
       userId,
-      newProductsCount,
+      creditsRequired,
       `Generación de ${newProductsCount} descripción${newProductsCount !== 1 ? "es" : ""}`
     );
     if (!creditResult.success) {
       return NextResponse.json({
-        error: `No tienes suficientes créditos. Necesitas ${newProductsCount} crédito${newProductsCount !== 1 ? "s" : ""} para generar ${newProductsCount} descripción${newProductsCount !== 1 ? "es" : ""}, pero solo tienes ${creditResult.remainingCredits}. Reduce el número de productos o compra más créditos.`,
-        creditsRequired: newProductsCount,
+        error: `No tienes suficientes créditos. Necesitas ${creditsRequired} crédito${creditsRequired !== 1 ? "s" : ""} para generar ${newProductsCount} descripción${newProductsCount !== 1 ? "es" : ""}, pero solo tienes ${creditResult.remainingCredits}. Reduce el número de productos o compra más créditos.`,
+        creditsRequired,
         creditsAvailable: creditResult.remainingCredits,
         insufficientCredits: true,
       }, { status: 402 });
@@ -158,6 +132,20 @@ export async function POST(req: Request) {
     log.info({ userId, count: listings.length }, "Listings inserted");
     await db.insert(schema.listings).values(listings);
 
+    // 6b. Fuentes enriquecidas (columna sourceUrl opcional) — validación SSRF
+    // ahora; el fetch + extracción real ocurre en process-products.ts.
+    const { rows: enrichedRows, warnings: enrichedWarnings } = await buildEnrichedSourceRows(
+      records,
+      listings.map((l) => l.id),
+      userId,
+      async () => (await ratelimitEnrichedInput.limit(userId)).success
+    );
+    if (enrichedRows.length > 0) {
+      await db.insert(schema.enrichedSources).values(enrichedRows);
+      log.info({ userId, count: enrichedRows.length }, "Enriched sources queued");
+    }
+    warnings.push(...enrichedWarnings);
+
     // 7. Disparar el worker de Trigger.dev
     const batchId = uuidv4();
     const insertedIds = listings.map((l) => l.id);
@@ -166,7 +154,7 @@ export async function POST(req: Request) {
       await sendTriggerEvent(userId, batchId, mode, provider, userEmail);
     } catch (triggerError) {
       // Revert credits and mark the just-inserted listings as FAILED
-      await addCredits(userId, newProductsCount, "refund", "Reembolso por error de procesamiento");
+      await addCredits(userId, creditsRequired, "refund", "Reembolso por error de procesamiento");
       if (insertedIds.length > 0) {
         await db.update(schema.listings)
           .set({ status: "FAILED", errorMessage: "Error al iniciar procesamiento. Puedes reintentar desde el dashboard." })

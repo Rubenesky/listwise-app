@@ -4,11 +4,15 @@ import { listingReadyTemplate } from "@/lib/email/templates";
 import { eq, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { SYSTEM_PROMPT, buildUserPromptWithVoice, MODE_CONFIG, type GenerationMode, type VoiceProfileData, type Marketplace, type PriceSegment } from "@/lib/ai/prompts";
+import { buildSystemPrompt, buildUserPromptWithVoice, MODE_CONFIG, type GenerationMode, type VoiceProfileData, type Marketplace, type PriceSegment } from "@/lib/ai/prompts";
 import { providers, getAIResponse, type AIProvider } from "@/lib/ai/providers";
 import type { GeneratedContent, BatchProcessPayload } from "@/types";
 import { trackGamification } from "@/lib/gamification/track";
 import { log } from "@/lib/logger";
+import { fetchAndExtractText } from "@/lib/scraping/extract-text";
+import { detectLanguageMismatch } from "@/lib/text/detect-language";
+import { extractSpecsFromText } from "@/lib/ai/extract-specs";
+import { mergeAttributesWithPrecedence } from "@/lib/listings/merge-attributes";
 
 const qualityFlagsSchema = z.object({
   no_trademarks: z.boolean().optional(),
@@ -80,6 +84,8 @@ export const processProductsTask = task({
     const aiConfig = providers[safeProvider];
     log.info({ userId, provider: safeProvider, model: aiConfig.defaultModel }, "Proveedor AI seleccionado");
     const temperature = MODE_CONFIG[safeMode].temperature;
+    // Ficha Técnica produces a much longer, multi-section description
+    const maxTokens = safeMode === "tecnica" ? 3000 : 1600;
 
     // Fetch active voice profile once (before the loop)
     let activeVoiceProfile: VoiceProfileData | null = null;
@@ -129,6 +135,29 @@ export const processProductsTask = task({
       .set({ status: "PROCESSING" })
       .where(inArray(schema.listings.id, listingIds));
 
+    // Batch-fetch all PENDING enriched sources for this batch's listings in
+    // ONE query, instead of querying per-product inside the loop below.
+    const pendingSourcesByListingId = new Map<string, typeof schema.enrichedSources.$inferSelect>();
+    try {
+      const pendingSourceRows = await db
+        .select()
+        .from(schema.enrichedSources)
+        .where(
+          and(
+            inArray(schema.enrichedSources.listingId, listingIds),
+            eq(schema.enrichedSources.status, "PENDING")
+          )
+        );
+      for (const row of pendingSourceRows) {
+        if (row.listingId) pendingSourcesByListingId.set(row.listingId, row);
+      }
+    } catch (lookupError) {
+      log.warn(
+        { userId, err: lookupError },
+        "Batch enriched source lookup failed — continuing without it"
+      );
+    }
+
     let totalProcessed = 0;
     const succeededListings: typeof pendingListings = [];
 
@@ -137,16 +166,51 @@ export const processProductsTask = task({
         const safeName = product.productName.slice(0, 200).replace(/[<>]/g, "");
         const safeCategory = product.category?.slice(0, 50) ?? null;
 
+        // Fuente enriquecida (URL desde CSV, ver Input Enriquecido): si hay
+        // una fila PENDING para este listing, la procesamos ahora. Fallo aquí
+        // nunca bloquea la generación — solo se pierde el contexto extra.
+        let mergedAttributes = product.attributes as Record<string, string> | null;
+        const pendingSource = pendingSourcesByListingId.get(product.id);
+
+        if (pendingSource) {
+          try {
+            const page = await fetchAndExtractText(pendingSource.sourceRef);
+            const needsTranslation = detectLanguageMismatch(page.text, "es");
+            const specs = await extractSpecsFromText(page.text, product.productName, needsTranslation);
+            await db
+              .update(schema.enrichedSources)
+              .set({ status: "COMPLETED", extractedText: page.text })
+              .where(eq(schema.enrichedSources.id, pendingSource.id));
+            mergedAttributes = mergeAttributesWithPrecedence(mergedAttributes, specs).merged;
+          } catch (sourceError) {
+            log.warn(
+              { userId, listingId: product.id, err: sourceError },
+              "Enriched source fetch/extract failed — continuing without it"
+            );
+            try {
+              await db
+                .update(schema.enrichedSources)
+                .set({ status: "FAILED", errorMessage: "No se pudo leer la fuente indicada" })
+                .where(eq(schema.enrichedSources.id, pendingSource.id));
+            } catch (markFailedError) {
+              log.warn(
+                { userId, listingId: product.id, err: markFailedError },
+                "Enriched source FAILED-status write failed — continuing without it"
+              );
+            }
+          }
+        }
+
         const response = await retry.onThrow(
           async () => {
             return await getAIResponse(
               [
-                { role: "system", content: SYSTEM_PROMPT },
+                { role: "system", content: buildSystemPrompt(safeMode) },
                 { role: "user", content: buildUserPromptWithVoice(
                   {
                     productName: safeName,
                     category: safeCategory,
-                    attributes: product.attributes as Record<string, string> | null,
+                    attributes: mergedAttributes,
                     mode: safeMode,
                     marketplace: (product.marketplace as Marketplace | undefined) ?? undefined,
                     priceSegment: (product.priceSegment as PriceSegment | undefined) ?? undefined,
@@ -155,7 +219,7 @@ export const processProductsTask = task({
                 )},
               ],
               safeProvider,
-              { temperature, max_tokens: 1600, response_format: { type: "json_object" } }
+              { temperature, max_tokens: maxTokens, response_format: { type: "json_object" } }
             );
           },
           { maxAttempts: 3, minTimeoutInMs: 2000, factor: 2 }
@@ -170,6 +234,7 @@ export const processProductsTask = task({
             .update(schema.listings)
             .set({
               status: "COMPLETED",
+              generationMode: safeMode,
               generatedTitle: generated.title,
               generatedTitleB: generated.title_b ?? null,
               generatedBullets: generated.bullets,

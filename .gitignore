@@ -44,3 +44,6 @@ Thumbs.db
 
 # Isolated worktrees for subagent-driven feature development
 .worktrees/
+
+# clerk configuration (can include secrets)
+/.clerk/

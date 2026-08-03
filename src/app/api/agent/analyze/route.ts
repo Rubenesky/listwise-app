@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { eq, and } from "drizzle-orm";
 import { log } from "@/lib/logger";
-import { analyzeTitle, analyzeBullets, analyzeDescription } from "@/lib/listings/health-score";
+import { analyzeTitle, analyzeBullets, scoreDescription } from "@/lib/listings/health-score";
 
 export async function GET(req: Request) {
   try {
@@ -28,7 +28,7 @@ export async function GET(req: Request) {
 
     const titleA = analyzeTitle(listing.generatedTitle);
     const bulletsA = analyzeBullets(bullets);
-    const descA = analyzeDescription(listing.generatedDescription);
+    const descA = scoreDescription(listing);
     const total = titleA.score + bulletsA.score + descA.score;
 
     const attrStr = JSON.stringify(listing.attributes ?? {}).toLowerCase();

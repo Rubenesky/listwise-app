@@ -45,6 +45,7 @@ const nextConfig = {
     "openai",
     "cheerio",
     "@libsql/client",
+    "pdf-parse",
     // Pino uses worker threads for transports — keep external so
     // node_modules paths (lib/worker.js) resolve correctly at runtime
     "pino",

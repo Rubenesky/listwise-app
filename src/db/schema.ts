@@ -76,6 +76,10 @@ export const listings = sqliteTable("listings", {
   targetAudience: text("target_audience"),
   hookType: text("hook_type"),
   qualityFlags: text("quality_flags", { mode: "json" }),
+  // Generation mode used ("creative" | "professional" | "seo" | "tecnica").
+  // Null for listings generated before this column existed — health-score.ts
+  // falls back to content-sniffing (hasSections) for those.
+  generationMode: text("generation_mode"),
 }, (table) => ({
   userIdIdx: index("idx_listings_user_id").on(table.userId),
   userCreatedIdx: index("idx_listings_user_id_created_at").on(table.userId, table.createdAt),
@@ -202,6 +206,25 @@ export const competitorAnalyses = sqliteTable("competitor_analyses", {
   userIdx: index("idx_competitor_analyses_user_id").on(table.userId),
   urlCacheIdx: index("idx_competitor_analyses_url").on(table.url, table.cacheExpiresAt),
   listingStatusIdx: index("idx_competitor_analyses_listing_status").on(table.listingId, table.status),
+}));
+
+// Fuentes de contenido adicional (URL o PDF) usadas como contexto extra para
+// la generación — ver docs/superpowers/specs/2026-07-25-input-enriquecido-design.md.
+// Solo se guarda el texto ya extraído, nunca el binario del PDF ni el HTML crudo.
+export const enrichedSources = sqliteTable("enriched_sources", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  listingId: text("listing_id"),
+  sourceType: text("source_type").notNull(), // "url" | "pdf"
+  sourceRef: text("source_ref").notNull(), // URL normalizada, o nombre de archivo original del PDF
+  status: text("status").notNull().default("PENDING"), // PENDING | COMPLETED | FAILED
+  extractedText: text("extracted_text"),
+  errorMessage: text("error_message"),
+  cacheExpiresAt: integer("cache_expires_at"),
+  createdAt: integer("created_at").notNull().default(0),
+}, (table) => ({
+  userIdx: index("idx_enriched_sources_user_id").on(table.userId),
+  listingIdx: index("idx_enriched_sources_listing_id").on(table.listingId),
 }));
 
 export const leads = sqliteTable("leads", {
