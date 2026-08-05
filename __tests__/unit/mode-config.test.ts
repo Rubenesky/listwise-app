@@ -42,12 +42,26 @@ describe("buildSystemPrompt", () => {
     expect(prompt).toMatch(/"description":"gancho\\n\\n## Especificaciones técnicas/);
   });
 
-  it("other modes keep the short-form rule, JSON example, and hook machinery unchanged", () => {
+  it("other modes keep the short-form rule and hook machinery unchanged", () => {
     for (const mode of ["creative", "professional", "seo"] as const) {
       const prompt = buildSystemPrompt(mode);
       expect(prompt).toMatch(/DESCRIPCIÓN \(2 a 3 párrafos\)/);
-      expect(prompt).toMatch(/"description":"párrafo1\\n\\npárrafo2\\n\\npárrafo3"/);
       expect(prompt).not.toMatch(/## Especificaciones técnicas/);
+    }
+  });
+
+  // Regression test: a real staging generation echoed the JSON format example
+  // literally ("párrafo1", "párrafo2", "párrafo3" as actual paragraph text,
+  // and "BENEFICIO EN MAYÚSCULAS:" as an actual bullet) instead of treating it
+  // as a placeholder to substitute. The example strings looked like real
+  // content the model could copy rather than a template to fill in.
+  it("marks the JSON example's description and bullet format as placeholders, not literal text to echo", () => {
+    for (const mode of ["creative", "professional", "seo"] as const) {
+      const prompt = buildSystemPrompt(mode);
+      expect(prompt).not.toMatch(/"description":"párrafo1\\n\\npárrafo2\\n\\npárrafo3"/);
+      expect(prompt).toMatch(/"description":"<párrafo 1>\\n\\n<párrafo 2>\\n\\n<párrafo 3>"/);
+      expect(prompt).not.toMatch(/"BENEFICIO EN MAYÚSCULAS: detalle específico que lo explica"/);
+      expect(prompt).toMatch(/"<BENEFICIO EN MAYÚSCULAS>: <detalle específico que lo explica>"/);
     }
   });
 });
