@@ -71,6 +71,25 @@ describe("extractProductInfoFromText", () => {
     expect(result?.confidence).toBe(1);
   });
 
+  // Regression test: buildUserPrompt's category-specific lookup tables
+  // (EMOTIONAL_ARCHETYPE, REQUIRED_HOOK_TYPE, CATEGORY_CALIBRATION,
+  // categoryGuides — all in prompts.ts) are keyed by Title-Case Spanish
+  // strings ("Ropa", "Deportes", "Electrónica"...). This prompt used to ask
+  // for lowercase categories ("ropa", "deportes"), which silently missed
+  // every one of those lookups — including CATEGORY_CALIBRATION's concrete
+  // bullet-format example — for every URL/PDF-sourced generation. Confirmed
+  // via real staging generations: a CSV-sourced "Deportes" listing scored
+  // 73/100 with correctly-formatted bullets; the same product type sourced
+  // from a URL (category "deportes") scored 43/100 with no bullet
+  // formatting at all.
+  it("asks for Title-Case category values matching buildUserPrompt's lookup tables, not lowercase", async () => {
+    mockGetAIResponse.mockResolvedValue({ choices: [{ message: { content: "{}" } }] });
+    await extractProductInfoFromText("texto");
+    const promptSent = mockGetAIResponse.mock.calls[0][0][0].content as string;
+    expect(promptSent).toContain("Deportes");
+    expect(promptSent).not.toMatch(/una de: ropa,/);
+  });
+
   it("includes anti-noise instruction in the prompt about identifying the main product", async () => {
     mockGetAIResponse.mockResolvedValue({ choices: [{ message: { content: "{}" } }] });
     await extractProductInfoFromText("texto de una página con productos relacionados");
