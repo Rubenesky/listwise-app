@@ -3,9 +3,10 @@ import { log } from "@/lib/logger";
 
 const MAX_INPUT_CHARS = 8000;
 
-// Deliberately a cheap, separate call (Groq's small model) that reduces raw
-// source text to confirmed key-value specs — the raw text itself never
-// reaches the main generation prompt (see design spec, decision #2).
+// Deliberately a cheap, separate call that reduces raw source text to
+// confirmed key-value specs — the raw text itself never reaches the main
+// generation prompt (see design spec, decision #2). Uses Gemini (billed
+// plan) rather than Groq (free-tier daily quota became a real constraint).
 export async function extractSpecsFromText(
   rawText: string,
   productName: string,
@@ -24,7 +25,7 @@ export async function extractSpecsFromText(
   try {
     const response = await getAIResponse(
       [{ role: "user", content: prompt }],
-      "groq",
+      "gemini",
       { temperature: 0.1, response_format: { type: "json_object" } }
     );
     const completion = response as { choices: { message: { content: string | null } }[] };

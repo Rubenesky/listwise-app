@@ -44,4 +44,12 @@ describe("extractSpecsFromText", () => {
     const promptSent = mockGetAIResponse.mock.calls[0][0][0].content as string;
     expect(promptSent).toContain("traduce");
   });
+
+  // Switched from Groq to Gemini: Gemini's API key is on a billed plan, Groq's
+  // free-tier daily quota was a real constraint once usage grew.
+  it("uses gemini as the AI provider, not groq", async () => {
+    mockGetAIResponse.mockResolvedValue({ choices: [{ message: { content: "{}" } }] });
+    await extractSpecsFromText("texto", "Producto", false);
+    expect(mockGetAIResponse.mock.calls[0][1]).toBe("gemini");
+  });
 });

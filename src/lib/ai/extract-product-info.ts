@@ -40,7 +40,7 @@ export async function extractProductInfoFromText(text: string): Promise<ProductI
   try {
     const response = await getAIResponse(
       [{ role: "user", content: prompt }],
-      "groq",
+      "gemini",
       { temperature: 0.2, response_format: { type: "json_object" } }
     );
     const completion = response as { choices: { message: { content: string | null } }[] };

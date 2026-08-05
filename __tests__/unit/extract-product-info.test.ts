@@ -111,6 +111,14 @@ describe("extractProductInfoFromText", () => {
     expect(result?.attributes.key20).toBeUndefined();
   });
 
+  // Switched from Groq to Gemini: Gemini's API key is on a billed plan, Groq's
+  // free-tier daily quota was a real constraint once usage grew.
+  it("uses gemini as the AI provider, not groq", async () => {
+    mockGetAIResponse.mockResolvedValue({ choices: [{ message: { content: "{}" } }] });
+    await extractProductInfoFromText("texto");
+    expect(mockGetAIResponse.mock.calls[0][1]).toBe("gemini");
+  });
+
   it("truncates an oversized attribute value to 200 chars", async () => {
     const longValue = "a".repeat(250);
     mockGetAIResponse.mockResolvedValue({
