@@ -184,8 +184,8 @@ TÍTULO — entre 60 y 80 caracteres, máximo 100. Nunca menos de 60:
 - El título diferencia, no solo describe. El comprador está comparando opciones.
 
 BULLETS — SIEMPRE entre 4 y 6. Nunca menos de 4:
-- Formato A: "<BENEFICIO EN MAYÚSCULAS>: <detalle específico que lo explica>" — máximo 15 palabras. Los textos entre < > son placeholders a sustituir por contenido real, NUNCA los copies literalmente.
-- Formato B: "Verbo de beneficio + beneficio concreto + contexto de uso" — máximo 15 palabras
+- Formato A: escribe el beneficio principal EN MAYÚSCULAS al inicio del bullet, seguido de dos puntos y un detalle específico que lo explica — máximo 15 palabras. Ejemplo de un producto CUALQUIERA, solo para ilustrar el formato — el contenido real debe ser sobre ESTE producto, nunca copies este ejemplo: "BATERÍA DE 12H: dura toda una jornada de senderismo sin recargar".
+- Formato B: verbo de beneficio + beneficio concreto + contexto de uso — máximo 15 palabras
 - El bullet más diferencial va PRIMERO. Cada bullet pasa el so-what test: si la respuesta obvia es "¿y qué?", reescríbelo con más especificidad.
 - Sin relleno. Sin repetir el mismo beneficio con otras palabras entre bullets.
 - Si los atributos no alcanzan para 4 bullets distintos, añade: (a) el contexto de uso ideal, (b) para quién es ideal y para quién no, o (c) la consecuencia emocional del beneficio principal.
@@ -241,7 +241,7 @@ ANTES DE ESCRIBIR EL JSON, verifica internamente — NO lo incluyas en la respue
 </AUTOVERIFICACION>
 
 Responde SIEMPRE con JSON válido exactamente con estos campos. Nada de texto fuera del JSON:
-{"title":"...","title_b":"Estrategia OPUESTA a title: si title es benefit-lead entonces title_b es keyword-lead; si title es emocional entonces title_b es técnico y específico","bullets":["..."],"description":"<párrafo 1>\\n\\n<párrafo 2>\\n\\n<párrafo 3>","primary_keyword":"2-4 palabras como las escribiría el comprador en el buscador","target_audience":"2-3 palabras describiendo el comprador ideal","hook_type":"scene|question|bold|benefit","quality_flags":{"no_trademarks":true,"title_in_range":true,"bullets_concise":true,"attrs_real":true,"hook_differentiated":true}}
+{"title":"...","title_b":"Estrategia OPUESTA a title: si title es benefit-lead entonces title_b es keyword-lead; si title es emocional entonces title_b es técnico y específico","bullets":["..."],"description":"string con la descripción completa siguiendo las reglas de la sección DESCRIPCIÓN de arriba (2 a 3 párrafos de prosa real sobre el producto, separados por \\n\\n — sin encabezados, sin numerar los párrafos, sin ninguna etiqueta antes de cada párrafo)","primary_keyword":"2-4 palabras como las escribiría el comprador en el buscador","target_audience":"2-3 palabras describiendo el comprador ideal","hook_type":"scene|question|bold|benefit","quality_flags":{"no_trademarks":true,"title_in_range":true,"bullets_concise":true,"attrs_real":true,"hook_differentiated":true}}
 `;
 
 // Fully separate from SYSTEM_PROMPT on purpose: sharing the marketing prompt's

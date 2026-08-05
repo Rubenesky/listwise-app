@@ -53,15 +53,23 @@ describe("buildSystemPrompt", () => {
   // Regression test: a real staging generation echoed the JSON format example
   // literally ("párrafo1", "párrafo2", "párrafo3" as actual paragraph text,
   // and "BENEFICIO EN MAYÚSCULAS:" as an actual bullet) instead of treating it
-  // as a placeholder to substitute. The example strings looked like real
-  // content the model could copy rather than a template to fill in.
-  it("marks the JSON example's description and bullet format as placeholders, not literal text to echo", () => {
+  // as a placeholder to substitute. An earlier fix wrapped the example in
+  // <angle brackets>, but that wasn't enough — the bracketed text still read
+  // as label-shaped content ("<párrafo 1>") the model could echo in some form
+  // ("párrafo1"). The JSON template's description field now has no
+  // example-shaped text at all, only a prose description of what's expected.
+  // The bullet format example was replaced with a concrete, clearly-unrelated
+  // illustration (a hiking-battery bullet) instead of a fill-in-the-blank
+  // pattern, with an explicit "don't copy this" instruction.
+  it("keeps the JSON example's description field free of example-shaped text, and marks the bullet-format illustration as not-to-copy", () => {
     for (const mode of ["creative", "professional", "seo"] as const) {
       const prompt = buildSystemPrompt(mode);
       expect(prompt).not.toMatch(/"description":"párrafo1\\n\\npárrafo2\\n\\npárrafo3"/);
-      expect(prompt).toMatch(/"description":"<párrafo 1>\\n\\n<párrafo 2>\\n\\n<párrafo 3>"/);
+      expect(prompt).not.toMatch(/"description":"<párrafo 1>\\n\\n<párrafo 2>\\n\\n<párrafo 3>"/);
+      expect(prompt).not.toMatch(/"description":"[^"]*párrafo 1[^"]*párrafo 2/);
       expect(prompt).not.toMatch(/"BENEFICIO EN MAYÚSCULAS: detalle específico que lo explica"/);
-      expect(prompt).toMatch(/"<BENEFICIO EN MAYÚSCULAS>: <detalle específico que lo explica>"/);
+      expect(prompt).not.toMatch(/"<BENEFICIO EN MAYÚSCULAS>: <detalle específico que lo explica>"/);
+      expect(prompt.toLowerCase()).toContain("nunca copies este ejemplo");
     }
   });
 });
