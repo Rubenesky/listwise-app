@@ -11,6 +11,11 @@ const ContentSecurityPolicy = [
   // allow script-src from any other Clerk customer's instance.
   // challenges.cloudflare.com serves Clerk's bot-protection CAPTCHA (Cloudflare Turnstile)
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://clerk.listwise.io https://organic-dogfish-54.clerk.accounts.dev https://challenges.cloudflare.com",
+  // Clerk spins up a Web Worker from a blob: URL for its dev-browser/session-sync
+  // machinery. Without worker-src, browsers fall back to script-src for worker
+  // creation, which doesn't allow blob: — silently blocking Clerk's session
+  // refresh and causing sporadic auth failures with no visible error.
+  "worker-src 'self' blob:",
   "style-src 'self' 'unsafe-inline'",
   // Allow images from any HTTPS origin (product images, CDN assets, Clerk avatars)
   "img-src 'self' data: blob: https:",
