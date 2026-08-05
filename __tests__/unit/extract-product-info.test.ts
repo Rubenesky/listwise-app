@@ -78,6 +78,14 @@ describe("extractProductInfoFromText", () => {
     expect(promptSent.toLowerCase()).toContain("producto principal");
   });
 
+  it("instructs the model to pick the first specifically-named product on a category/listing page instead of synthesizing a generic one", async () => {
+    mockGetAIResponse.mockResolvedValue({ choices: [{ message: { content: "{}" } }] });
+    await extractProductInfoFromText("texto de una página de categoría con varios productos listados");
+    const promptSent = mockGetAIResponse.mock.calls[0][0][0].content as string;
+    expect(promptSent.toLowerCase()).toContain("primer producto");
+    expect(promptSent.toLowerCase()).toContain("no inventes");
+  });
+
   it("keeps only the first 20 attribute keys when the model returns more than 20", async () => {
     const tooManyAttrs: Record<string, string> = {};
     for (let i = 0; i < 30; i++) {

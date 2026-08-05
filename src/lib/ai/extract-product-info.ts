@@ -24,7 +24,12 @@ export async function extractProductInfoFromText(text: string): Promise<ProductI
   const prompt =
     `Eres un experto en ecommerce. A partir de este texto extraído de una página web o un PDF de proveedor, ` +
     `identifica el producto principal descrito (ignora menús de navegación, productos relacionados, reseñas o publicidad — ` +
-    `quédate solo con el producto principal de esta fuente) y devuelve SOLO un JSON válido con esta estructura exacta: ` +
+    `quédate solo con el producto principal de esta fuente). ` +
+    `Si el texto es de una página de categoría o listado con varios productos distintos con nombre propio ` +
+    `(por ejemplo varias líneas tipo "Mosquitera Enrollable Cajón 39mm TotQuality", "Mosquitera Antiviento Irina Premium"), ` +
+    `usa como producto principal el PRIMER producto con nombre específico que aparezca en el texto — ` +
+    `no inventes ni sintetices un producto genérico combinando varios. ` +
+    `Devuelve SOLO un JSON válido con esta estructura exacta: ` +
     `{"productName": string (nombre descriptivo del producto en español, máx 100 chars), ` +
     `"category": string (una de: ropa, electrónica, hogar, deportes, alimentación, belleza, juguetes, mascotas, otro), ` +
     `"attributes": {clave: valor} (máximo 6 atributos clave como material, color, dimensiones, uso, etc., solo datos confirmados en el texto), ` +
