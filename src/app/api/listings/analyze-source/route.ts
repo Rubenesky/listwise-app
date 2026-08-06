@@ -73,6 +73,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ productInfo });
   } catch (error) {
     log.error({ err: error }, "analyze-source error");
+    // The source site itself rejected our fetch (bot protection, WAF, etc.)
+    // — external and outside our control, not a bug in our code. Give the
+    // user an actionable message instead of a generic server-error message.
+    const message = error instanceof Error ? error.message : "";
+    if (/^HTTP 4\d\d$/.test(message)) {
+      return NextResponse.json(
+        {
+          error: "No pudimos acceder a esa página — puede que el sitio bloquee el acceso automatizado. Prueba con otra URL o sube un PDF en su lugar.",
+        },
+        { status: 422 }
+      );
+    }
     return NextResponse.json({ error: "Error al analizar la fuente" }, { status: 500 });
   }
 }

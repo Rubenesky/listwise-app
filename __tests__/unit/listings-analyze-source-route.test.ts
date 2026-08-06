@@ -98,6 +98,29 @@ describe("POST /api/listings/analyze-source", () => {
     expect(extractProductInfoFromText).not.toHaveBeenCalled();
   });
 
+  // Regression: a real staging request to a real site returned HTTP 403 to
+  // Render's IP (the site's bot protection), while the exact same URL
+  // worked fine from a different network — genuinely external, not a bug in
+  // our code. fetchAndExtractText throws Error("HTTP 403") in that case,
+  // which used to fall into the generic catch-all and surface as a vague
+  // 500 "Error al analizar la fuente" with no indication of what happened
+  // or what the user could do about it.
+  it("returns a clear, actionable 422 (not a generic 500) when the source site returns an HTTP 4xx to us", async () => {
+    (validateUrlSSRF as jest.Mock).mockResolvedValue({ ok: true, normalized: "https://example.com/bloqueado" });
+    (fetchAndExtractText as jest.Mock).mockRejectedValue(new Error("HTTP 403"));
+    const res = await POST(makeUrlRequest("https://example.com/bloqueado"));
+    const body = await res.json();
+    expect(res.status).toBe(422);
+    expect(body.error).toMatch(/bloque|acceso/i);
+  });
+
+  it("still returns a generic 500 for a genuinely unexpected error", async () => {
+    (validateUrlSSRF as jest.Mock).mockResolvedValue({ ok: true, normalized: "https://example.com/x" });
+    (fetchAndExtractText as jest.Mock).mockRejectedValue(new Error("something truly unexpected"));
+    const res = await POST(makeUrlRequest("https://example.com/x"));
+    expect(res.status).toBe(500);
+  });
+
   it("returns a clear error when extractProductInfoFromText cannot identify a product", async () => {
     (validateUrlSSRF as jest.Mock).mockResolvedValue({ ok: true, normalized: "https://example.com/x" });
     (fetchAndExtractText as jest.Mock).mockResolvedValue({ title: "", text: "texto irrelevante" });
