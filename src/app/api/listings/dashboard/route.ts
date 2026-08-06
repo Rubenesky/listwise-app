@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { eq, desc, count, and, inArray } from "drizzle-orm";
 import { log } from "@/lib/logger";
+import { computeStatusStats } from "@/lib/listings/status-stats";
 
 export async function GET(req: Request) {
   try {
@@ -14,7 +15,7 @@ export async function GET(req: Request) {
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "20", 10) || 20));
     const offset = (page - 1) * limit;
 
-    const [listings, [totalResult]] = await Promise.all([
+    const [listings, [totalResult], statusRows] = await Promise.all([
       db
         .select({
           id: schema.listings.id,
@@ -42,9 +43,19 @@ export async function GET(req: Request) {
         .select({ count: count() })
         .from(schema.listings)
         .where(eq(schema.listings.userId, userId)),
+
+      // Aggregate status counts across ALL of the user's listings, not just
+      // this page — the dashboard's Completados/Pendientes/Fallidos cards
+      // need the true total, not a count over the ≤20 rows on screen.
+      db
+        .select({ status: schema.listings.status, count: count() })
+        .from(schema.listings)
+        .where(eq(schema.listings.userId, userId))
+        .groupBy(schema.listings.status),
     ]);
 
     const total = totalResult?.count ?? 0;
+    const stats = computeStatusStats(statusRows);
 
     // Batch-fetch CSV sourceUrl enrichment status for this page's listings in
     // ONE query (mirrors the inArray + Map pattern in
@@ -88,6 +99,7 @@ export async function GET(req: Request) {
         limit,
         total,
         totalPages: Math.ceil(total / limit),
+        stats,
       },
     });
   } catch (error) {

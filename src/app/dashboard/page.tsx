@@ -104,7 +104,13 @@ export default function DashboardPage() {
   const editDescriptionHasSections = useMemo(() => hasSections(editDescription), [editDescription]);
   const [saving, setSaving] = useState(false);
   const [sharing, setSharing] = useState<string | null>(null);
-  const [pagination, setPagination] = useState({ page: 1, limit: 20, total: 0, totalPages: 0 });
+  const [pagination, setPagination] = useState({
+    page: 1,
+    limit: 20,
+    total: 0,
+    totalPages: 0,
+    stats: { completed: 0, pendingOrProcessing: 0, failed: 0 },
+  });
   const [checklistDismissed, setChecklistDismissed] = useState(() => {
     if (typeof window !== "undefined") return localStorage.getItem("listwise_checklist_dismissed") === "true";
     return false;
@@ -205,12 +211,20 @@ export default function DashboardPage() {
     return "";
   });
 
-  // Derived stats from listings state
-  const completedCount = listings.filter((l) => l.status === "COMPLETED").length;
-  const pendingOrProcessingCount = listings.filter(
+  // Aggregate stats across ALL of the user's listings (from the API's
+  // GROUP BY query) — not a filter over just the current page's rows, which
+  // undercounts as soon as there's more than one page. Used for the
+  // dashboard's Completados/Pendientes/Fallidos stat cards.
+  const completedCount = pagination.stats.completed;
+  const pendingOrProcessingCount = pagination.stats.pendingOrProcessing;
+  const failedCount = pagination.stats.failed;
+
+  // Page-local count, deliberately NOT the aggregate above — the upload
+  // progress bar tracks completion of the just-uploaded batch, which lives
+  // on the current (most recent) page, not the user's entire history.
+  const pageLocalPendingOrProcessing = listings.filter(
     (l) => l.status === "PENDING" || l.status === "PROCESSING"
   ).length;
-  const failedCount = listings.filter((l) => l.status === "FAILED").length;
 
   // Filtered + sorted listings (memoized to avoid O(n log n) health score calls on every render)
   const filteredListings = useMemo(() => {
@@ -228,7 +242,7 @@ export default function DashboardPage() {
   }, [listings, searchQuery, statusFilter, sortByHealth]);
 
   // Progress bar
-  const processedInBatch = Math.max(0, batchTotal - pendingOrProcessingCount);
+  const processedInBatch = Math.max(0, batchTotal - pageLocalPendingOrProcessing);
   const progressPct = batchTotal > 0 ? Math.round((processedInBatch / batchTotal) * 100) : 0;
 
   const stopPolling = useCallback(() => {
