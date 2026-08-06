@@ -50,7 +50,9 @@ export function analyzeBullets(bullets: string[] | null): ScoreResult {
   return { score: Math.min(35, score), notes };
 }
 
-export function analyzeDescription(description: string | null): ScoreResult {
+const VALID_HOOK_TYPES = ["scene", "question", "bold", "benefit"];
+
+export function analyzeDescription(description: string | null, hookType?: string | null): ScoreResult {
   if (!description?.trim()) return { score: 0, notes: ["sin descripción generada"] };
   const words = description.trim().split(/\s+/).length;
   let score = 0;
@@ -60,10 +62,21 @@ export function analyzeDescription(description: string | null): ScoreResult {
   else if (words < 120) { score += 8; notes.push(`${words} palabras (mín 120)`); }
   else { score += 12; notes.push(`${words} palabras (máx 280)`); }
 
-  const isFormalTone = /^esta |^el diseño|^la composición|^este producto/i.test(description.trim()) && !/imagina|piensa en/i.test(description);
-  if (/imagina|piensa en/i.test(description)) { score += 10; notes.push("Future Pacing ✓"); }
-  else if (isFormalTone) { score += 10; notes.push("Estructura formal ✓"); }
-  else notes.push("falta Future Pacing");
+  // hook_type is the authoritative signal when present (stored on every
+  // listing generated after that column existed) — it recognizes all 4 hook
+  // types the prompt supports (scene/question/bold/benefit). The regex
+  // fallback below only recognized 2 of those (Future Pacing + a narrow
+  // formal-tone pattern), silently scoring 0 for a correctly-executed
+  // scene/question/bold hook. Used only for legacy rows with no hook_type.
+  if (hookType && VALID_HOOK_TYPES.includes(hookType)) {
+    score += 10;
+    notes.push(`gancho "${hookType}" ✓`);
+  } else {
+    const isFormalTone = /^esta |^el diseño|^la composición|^este producto/i.test(description.trim()) && !/imagina|piensa en/i.test(description);
+    if (/imagina|piensa en/i.test(description)) { score += 10; notes.push("Future Pacing ✓"); }
+    else if (isFormalTone) { score += 10; notes.push("Estructura formal ✓"); }
+    else notes.push("falta Future Pacing");
+  }
 
   if (/el resultado/i.test(description)) { score += 10; notes.push("cierre 'El resultado' ✓"); }
   else notes.push("falta cierre 'El resultado'");
@@ -112,6 +125,7 @@ export interface HealthScoreListing {
   generatedTitle: string | null;
   generatedBullets: string[] | null;
   generatedDescription: string | null;
+  hookType?: string | null;
 }
 
 // generationMode is the authoritative signal when present (set on every listing
@@ -128,10 +142,11 @@ function isTecnicaDescription(listing: {
 export function scoreDescription(listing: {
   generationMode?: string | null;
   generatedDescription: string | null;
+  hookType?: string | null;
 }): ScoreResult {
   return isTecnicaDescription(listing)
     ? analyzeDescriptionTecnica(listing.generatedDescription)
-    : analyzeDescription(listing.generatedDescription);
+    : analyzeDescription(listing.generatedDescription, listing.hookType);
 }
 
 export function calcHealthScore(listing: HealthScoreListing): number {
