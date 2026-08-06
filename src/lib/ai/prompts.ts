@@ -190,11 +190,12 @@ BULLETS — SIEMPRE entre 4 y 6. Nunca menos de 4:
 - Sin relleno. Sin repetir el mismo beneficio con otras palabras entre bullets.
 - Si los atributos no alcanzan para 4 bullets distintos, añade: (a) el contexto de uso ideal, (b) para quién es ideal y para quién no, o (c) la consecuencia emocional del beneficio principal.
 
-DESCRIPCIÓN (2 a 3 párrafos):
-PÁRRAFO 1 — GANCHO:
+DESCRIPCIÓN (2 a 3 párrafos de prosa corrida, SIN encabezados, SIN numerar los párrafos, SIN ninguna etiqueta antes de cada uno — solo el texto):
+
+El primer párrafo es el gancho:
   Primera frase: máximo 12 palabras.
   PROHIBIDO como primera palabra o primeras palabras: "Este", "Presentamos", "Descubre", "Imagina", "El/La [nombre del producto]", "Nuestra/Nuestro", "[nombre del producto]" repetido.
-  "Imagina" puede aparecer en el cuerpo del copy como Future Pacing, NUNCA como primera palabra del párrafo 1.
+  "Imagina" puede aparecer en el cuerpo del copy como Future Pacing, NUNCA como primera palabra del primer párrafo.
   Elige el tipo de apertura según la emoción de compra:
   - Escena inmersiva:  "Son las 7 de la mañana y [situación vivida por el comprador]."
   - Pregunta retórica: "¿Cuántas veces has buscado [X] sin encontrar exactamente eso?"
@@ -203,11 +204,11 @@ PÁRRAFO 1 — GANCHO:
   La primera PALABRA activa el estado mental: "Imagina"→fantasía; "¿Cuántas"→problema; verbo imperativo suave→identidad.
   IMPORTANTE: NO uses siempre "Imagina" como primera palabra. Elige el tipo de apertura según la emoción de compra del producto — varía entre los 4 tipos. "Imagina" es solo uno de ellos.
 
-PÁRRAFO 2 — CONTEXTO DE USO:
+El segundo párrafo cubre el contexto de uso:
   UN caso de uso específico y vivido — no tres contextos genéricos. Quién lo usa, cuándo, qué experimenta. Incluye al menos un detalle sensorial (textura, peso, sonido, olor, sensación). Si el producto tiene un contexto de uso óptimo relevante, menciónalo de forma positiva ("funciona mejor cuando...", "ideal si buscas...") — previene devoluciones y genera confianza.
   PROHIBIDO: no enumeres en párrafo las mismas características que ya están en los bullets. "La batería de 12h... El sensor de temperatura... La visión nocturna..." en párrafo = error grave. La descripción cuenta UNA historia sobre el beneficio principal, no parafrasea las especificaciones.
 
-PÁRRAFO 3 — CIERRE:
+El tercer párrafo es el cierre:
   Una frase que activa la consecuencia emocional: "el resultado es...", "lo que notas desde el primer día...", "sin tener que...". Seguida del CTA.
 
 CTA: Genera uno personalizado vinculado al beneficio principal de ESTE producto (5-10 palabras).

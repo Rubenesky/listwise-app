@@ -45,7 +45,7 @@ describe("buildSystemPrompt", () => {
   it("other modes keep the short-form rule and hook machinery unchanged", () => {
     for (const mode of ["creative", "professional", "seo"] as const) {
       const prompt = buildSystemPrompt(mode);
-      expect(prompt).toMatch(/DESCRIPCIÓN \(2 a 3 párrafos\)/);
+      expect(prompt).toMatch(/DESCRIPCIÓN \(2 a 3 párrafos/);
       expect(prompt).not.toMatch(/## Especificaciones técnicas/);
     }
   });
@@ -70,6 +70,22 @@ describe("buildSystemPrompt", () => {
       expect(prompt).not.toMatch(/"BENEFICIO EN MAYÚSCULAS: detalle específico que lo explica"/);
       expect(prompt).not.toMatch(/"<BENEFICIO EN MAYÚSCULAS>: <detalle específico que lo explica>"/);
       expect(prompt.toLowerCase()).toContain("nunca copies este ejemplo");
+    }
+  });
+
+  // Regression: even after the JSON-example fix above, a real generation for
+  // URL 4 (aceite de oliva) came back with a description of literally
+  // "párrafo1\n\npárrafo2\n\npárrafo3" — the labels, with NO content between
+  // them. The JSON example wasn't the source this time: the REGLAS section
+  // itself still had "PÁRRAFO 1 — GANCHO:", "PÁRRAFO 2 — CONTEXTO DE USO:",
+  // "PÁRRAFO 3 — CIERRE:" as ALL-CAPS section headers describing what each
+  // paragraph should cover — instructional text for a human prompt-reader,
+  // but shaped exactly like a literal section label the model could echo.
+  it("does not use ALL-CAPS 'PÁRRAFO N —' section headers anywhere in the description rules", () => {
+    for (const mode of ["creative", "professional", "seo"] as const) {
+      const prompt = buildSystemPrompt(mode);
+      expect(prompt).not.toMatch(/PÁRRAFO \d\s*—/);
+      expect(prompt.toLowerCase()).toContain("sin numerar");
     }
   });
 });
