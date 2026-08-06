@@ -30,7 +30,8 @@ export async function extractProductInfoFromText(text: string): Promise<ProductI
     `usa como producto principal el PRIMER producto con nombre específico que aparezca en el texto — ` +
     `no inventes ni sintetices un producto genérico combinando varios. ` +
     `Devuelve SOLO un JSON válido con esta estructura exacta: ` +
-    `{"productName": string (nombre descriptivo del producto en español, máx 100 chars), ` +
+    `{"productName": string (nombre descriptivo del producto en español, máx 100 chars — NO incluyas la marca o fabricante, ` +
+    `describe el producto de forma genérica, ej. "Zapatilla de Running con Amortiguación" en vez de "Zapatilla Asics Novablast"), ` +
     `"category": string (una de EXACTAMENTE, respetando mayúsculas: Ropa, Electrónica, Hogar, Deportes, Alimentación, Belleza, Juguetes, Mascotas, Otro), ` +
     `"attributes": {clave: valor} (máximo 6 atributos clave como material, color, dimensiones, uso, etc., solo datos confirmados en el texto), ` +
     `"primaryKeyword": string (keyword principal para SEO, 2-4 palabras en español), ` +

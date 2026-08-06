@@ -90,6 +90,23 @@ describe("extractProductInfoFromText", () => {
     expect(promptSent).not.toMatch(/una de: ropa,/);
   });
 
+  // Regression: extractProductInfoFromText's productName is handed straight
+  // to the generation step as "confirmed data" (buildUserPrompt: `Producto:
+  // ${product.productName}`), with no trademark-stripping in between. A real
+  // generation for an Asics running shoe kept "Asics" in the final title
+  // despite the generation prompt's own rule to remove third-party
+  // trademarks — because by the time generation ran, the brand was already
+  // baked into the "confirmed" product name it was told never to invent
+  // beyond. Strip brand names at the source instead of hoping generation
+  // overrides its own confirmed-data instruction.
+  it("instructs the model to exclude third-party manufacturer/brand names from productName", async () => {
+    mockGetAIResponse.mockResolvedValue({ choices: [{ message: { content: "{}" } }] });
+    await extractProductInfoFromText("texto de una página de una zapatilla Asics Novablast");
+    const promptSent = mockGetAIResponse.mock.calls[0][0][0].content as string;
+    expect(promptSent.toLowerCase()).toMatch(/marca|fabricante/);
+    expect(promptSent.toLowerCase()).toContain("no incluyas");
+  });
+
   it("includes anti-noise instruction in the prompt about identifying the main product", async () => {
     mockGetAIResponse.mockResolvedValue({ choices: [{ message: { content: "{}" } }] });
     await extractProductInfoFromText("texto de una página con productos relacionados");
