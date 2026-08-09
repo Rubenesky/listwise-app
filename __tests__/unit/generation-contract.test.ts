@@ -1,4 +1,4 @@
-import { meetsContentContract, generateWithContentRetry, hasVerbatimBulletOverlap, hasVerbatimParagraphOverlap, describeContentContractFailure, truncateAtWordBoundary } from "@/lib/ai/generation-contract";
+import { meetsContentContract, generateWithContentRetry, hasVerbatimBulletOverlap, hasVerbatimSentenceOverlap, hasDuplicateBulletDataPoint, describeContentContractFailure, truncateAtWordBoundary } from "@/lib/ai/generation-contract";
 
 function words(n: number): string {
   return Array(n).fill("palabra").join(" ");
@@ -103,33 +103,80 @@ describe("hasVerbatimBulletOverlap", () => {
 // Regression (retest round 6, URL2/auriculares): once the 120-word retry
 // started working, the SECOND attempt sometimes hit the minimum by
 // self-repeating instead of writing new content — paragraph 3 restated
-// paragraph 1 almost verbatim ("Estos auriculares inalámbricos... ofrecen
-// hasta 30 horas de música sin necesidad de recargar. Conecta a tu
-// dispositivo sin cables a 15 m de distancia gracias al Bluetooth 5.4"
-// appeared in both). hasVerbatimBulletOverlap didn't catch it — it only
-// compares bullets against the description, not the description against
-// itself.
-describe("hasVerbatimParagraphOverlap", () => {
-  it("detects a 6+ word chunk shared verbatim between two paragraphs of the same description", () => {
+// paragraph 1 almost verbatim. The original paragraph-only version of this
+// check (split on \n\n) missed a further case in round 7: URL4's "La
+// zapatilla de running Wave es..." refrain repeated 3 times INSIDE one long
+// single paragraph (no \n\n breaks at all), and URL1's "una prenda que
+// refleje su/tu personalidad y su/tu compromiso con el medio ambiente"
+// echoed twice the same way. Splitting by sentence instead of paragraph
+// catches both: a repeated paragraph is also repeated sentences, so this is
+// a strict generalization, not a parallel check.
+describe("hasVerbatimSentenceOverlap", () => {
+  it("detects a 6+ word chunk shared verbatim across paragraphs", () => {
     const description = [
       "Estos auriculares inalámbricos ofrecen hasta 30 horas de música sin necesidad de recargar en cualquier momento del día.",
       "Usa tus auriculares para hacer ejercicio o trabajar sin interrupciones.",
       "Estos auriculares inalámbricos ofrecen hasta 30 horas de música sin necesidad de recargar, así que nunca te quedarás sin batería.",
     ].join("\n\n");
-    expect(hasVerbatimParagraphOverlap(description)).toBe(true);
+    expect(hasVerbatimSentenceOverlap(description)).toBe(true);
   });
 
-  it("returns false when paragraphs cover different ground", () => {
+  // The round-7 regression this check was specifically added for: a
+  // repeated refrain within a single paragraph, no \n\n anywhere.
+  it("detects a repeated refrain within a single paragraph (no paragraph breaks)", () => {
+    const description =
+      "Son las 5:00 de la mañana y estás listo para entrenar. La zapatilla de running Wave es tu aliada para alcanzar tus metas. " +
+      "Reduce el impacto en cada paso gracias a su amortiguación avanzada. La zapatilla de running Wave es tu herramienta para lograr precisión. " +
+      "Con ella corres más lejos sin fatiga. La zapatilla de running Wave es la elección perfecta para cualquier corredor.";
+    expect(hasVerbatimSentenceOverlap(description)).toBe(true);
+  });
+
+  it("returns false when sentences cover different ground", () => {
     const description = [
       "Son las 6 de la mañana y estás listo para entrenar.",
       "La malla transpirable mantiene tus pies frescos durante todo el recorrido.",
       "El resultado es una carrera sin distracciones, kilómetro tras kilómetro.",
     ].join("\n\n");
-    expect(hasVerbatimParagraphOverlap(description)).toBe(false);
+    expect(hasVerbatimSentenceOverlap(description)).toBe(false);
   });
 
-  it("returns false for a single-paragraph description (nothing to compare)", () => {
-    expect(hasVerbatimParagraphOverlap("Un único párrafo sin saltos de línea dobles en el texto.")).toBe(false);
+  it("returns false for a short description with no repetition", () => {
+    expect(hasVerbatimSentenceOverlap("Un único párrafo sin saltos de línea dobles en el texto.")).toBe(false);
+  });
+});
+
+// Regression (retest round 7, URL2/auriculares): bullet 1 ("BLUETOOTH 5.4:
+// Conecta sin cables a 15 m sin obstáculos") and bullet 4 ("CONEXIÓN DE 15
+// M: Escucha sin cables en cualquier lugar") describe the SAME fact (15m
+// wireless range) with different wording — no literal 6-word overlap, so
+// hasVerbatimBulletOverlap wouldn't catch it. Two different bullets citing
+// the exact same number+unit is a strong, cheap signal that they're
+// covering the same point instead of distinct ones, without needing an AI
+// call to judge meaning.
+describe("hasDuplicateBulletDataPoint", () => {
+  it("detects the same number+unit repeated across two different bullets", () => {
+    const bullets = [
+      "BLUETOOTH 5.4: Conecta sin cables a 15 m sin obstáculos",
+      "BATERÍA DE 30 MAH: Dura hasta 10 horas de reproducción",
+      "MICROFONOS DE CUATRO: Grabaciones de alta calidad para llamadas y chats",
+      "CONEXIÓN DE 15 M: Escucha sin cables en cualquier lugar",
+    ];
+    expect(hasDuplicateBulletDataPoint(bullets)).toBe(true);
+  });
+
+  it("returns false when every bullet cites a distinct data point", () => {
+    const bullets = [
+      "AMORTIGUACIÓN DE 10MM: reduce el impacto en cada paso",
+      "PESO DE 272G: ligereza para corredores exigentes",
+      "DROP DE 8MM: transición natural del talón a la puntera",
+      "SUELA DE 4MM: agarre en superficies húmedas",
+    ];
+    expect(hasDuplicateBulletDataPoint(bullets)).toBe(false);
+  });
+
+  it("returns false for bullets with no numeric data at all", () => {
+    const bullets = ["DISEÑO ÚNICO: árbol en el centro", "MATERIAL SOSTENIBLE: algodón certificado", "COMODIDAD: ajuste relajado", "DURADERA: resiste lavados"];
+    expect(hasDuplicateBulletDataPoint(bullets)).toBe(false);
   });
 });
 
