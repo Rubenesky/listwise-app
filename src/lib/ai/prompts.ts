@@ -192,6 +192,7 @@ BULLETS — SIEMPRE entre 4 y 6. Nunca menos de 4:
 - Si los atributos no alcanzan para 4 bullets distintos, añade: (a) el contexto de uso ideal, (b) para quién es ideal y para quién no, o (c) la consecuencia emocional del beneficio principal.
 
 DESCRIPCIÓN (2 a 3 párrafos de prosa corrida, SIN encabezados, SIN numerar los párrafos, SIN ninguna etiqueta antes de cada uno — solo el texto):
+La descripción completa (los 2-3 párrafos juntos) debe tener AL MENOS 120 palabras. No la des por terminada por debajo de ese mínimo, aunque el producto tenga pocos datos confirmados: desarrolla más el contexto de uso, añade un detalle sensorial adicional, o profundiza en la consecuencia emocional del beneficio principal — nunca inventes especificaciones para alargarla.
 
 El primer párrafo es el gancho:
   Primera frase: máximo 12 palabras.

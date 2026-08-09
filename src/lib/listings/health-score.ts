@@ -28,6 +28,21 @@ export function analyzeTitle(title: string | null): ScoreResult {
   return { score: Math.min(25, score), notes };
 }
 
+const CONCEPTO_FORMAT = /^[A-ZÁÉÍÓÚÑ\s]{2,}:\s/;
+
+// Formato A ("CONCEPTO: detalle") and Formato B (a plain benefit sentence,
+// no fixed punctuation) are both sanctioned by buildSystemPrompt — Formato B
+// is the deliberate fallback for bullets with too little data for Formato
+// A's ALL-CAPS lead-in ("usa el Formato B para ese bullet en vez de forzar
+// el Formato A"). A bullet correctly following Formato B must not score as
+// "wrong format" — it's doing exactly what the prompt asked for.
+function isWellFormattedBullet(b: string): boolean {
+  if (CONCEPTO_FORMAT.test(b)) return true;
+  const trimmed = b.trim();
+  const words = trimmed.split(/\s+/).filter(Boolean);
+  return /^[A-ZÁÉÍÓÚÑ]/.test(trimmed) && words.length >= 4 && words.length <= 18;
+}
+
 export function analyzeBullets(bullets: string[] | null): ScoreResult {
   if (!bullets?.length) return { score: 0, notes: ["sin bullets generados"] };
   const count = bullets.length;
@@ -37,10 +52,10 @@ export function analyzeBullets(bullets: string[] | null): ScoreResult {
   if (count >= 4 && count <= 7) { score += 15; notes.push(`${count} bullets`); }
   else { score += 5; notes.push(`${count} bullets (ideal: 4-7)`); }
 
-  const formatted = bullets.filter((b) => /^[A-ZÁÉÍÓÚÑ\s]{2,}:\s/.test(b));
-  if (formatted.length === count) { score += 20; notes.push("todos con CONCEPTO: ✓"); }
-  else if (formatted.length > 0) { score += 10; notes.push(`${count - formatted.length} sin formato CONCEPTO:`); }
-  else notes.push("ninguno sigue el formato CONCEPTO: descripción");
+  const formatted = bullets.filter(isWellFormattedBullet);
+  if (formatted.length === count) { score += 20; notes.push("todos con formato correcto ✓"); }
+  else if (formatted.length > 0) { score += 10; notes.push(`${count - formatted.length} sin formato correcto`); }
+  else notes.push("ninguno sigue el Formato A o B (ver reglas de bullets)");
 
   // Detect strongest (most data-rich) bullet not in position 0
   const dataRe = /\b\d+\s*(?:%|g\b|kg\b|ml\b|l\b|cm\b|mm\b|m\b|h\b|min\b|€|\$|w\b|mah\b|db\b)/i;
@@ -78,7 +93,13 @@ export function analyzeDescription(description: string | null, hookType?: string
     else notes.push("falta Future Pacing");
   }
 
-  if (/el resultado/i.test(description)) { score += 10; notes.push("cierre 'El resultado' ✓"); }
+  // The CIERRE rule in buildSystemPrompt explicitly offers 3 equivalent
+  // closing patterns ("el resultado es...", "lo que notas desde el primer
+  // día...", "sin tener que..."), but this only ever checked the first —
+  // a closing correctly following the prompt's own second or third example
+  // scored 0 for the closing beat.
+  const CLOSING_PATTERNS = /el resultado|desde el primer día|sin tener que/i;
+  if (CLOSING_PATTERNS.test(description)) { score += 10; notes.push("cierre 'El resultado/primer día/sin tener que' ✓"); }
   else notes.push("falta cierre 'El resultado'");
 
   return { score: Math.min(40, score), notes };

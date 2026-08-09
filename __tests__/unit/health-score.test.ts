@@ -1,4 +1,4 @@
-import { calcHealthScore, analyzeDescriptionTecnica, analyzeDescription } from "@/lib/listings/health-score";
+import { calcHealthScore, analyzeDescriptionTecnica, analyzeDescription, analyzeBullets } from "@/lib/listings/health-score";
 
 const TECNICA_DESCRIPTION = [
   "Gancho breve presentando el producto.",
@@ -31,6 +31,38 @@ describe("analyzeDescriptionTecnica", () => {
     const result = analyzeDescriptionTecnica(partial);
     expect(result.score).toBeLessThan(40);
     expect(result.notes.join(" ")).toMatch(/faltan secciones/);
+  });
+});
+
+describe("analyzeBullets Formato A / Formato B reconciliation", () => {
+  // Regression: buildSystemPrompt's Formato B is a deliberate, sanctioned
+  // fallback for bullets with too little data for Formato A's ALL-CAPS
+  // concept lead-in (see prompts.ts's "usa el Formato B para ese bullet en
+  // vez de forzar el Formato A"). The old detector only recognized Formato
+  // A's exact "CONCEPTO: detalle" shape, so a bullet correctly following
+  // Formato B — exactly what the prompt asked for on a thin-content product
+  // — scored as "not following format" instead of full credit.
+  const FORMATO_A = "CONTROL DE LUZ: ajuste preciso de lamas para cualquier hora del día";
+  const FORMATO_B = "Ajusta la luz de tu salón sin levantarte del sofá";
+
+  it("gives full bullet-format credit when all bullets are Formato A", () => {
+    const result = analyzeBullets([FORMATO_A, FORMATO_A, FORMATO_A, FORMATO_A]);
+    expect(result.notes.join(" ")).toMatch(/todos con formato/i);
+  });
+
+  it("gives full bullet-format credit when all bullets are Formato B", () => {
+    const result = analyzeBullets([FORMATO_B, FORMATO_B, FORMATO_B, FORMATO_B]);
+    expect(result.notes.join(" ")).toMatch(/todos con formato/i);
+  });
+
+  it("gives full credit for a legitimate mix of Formato A and Formato B", () => {
+    const result = analyzeBullets([FORMATO_A, FORMATO_B, FORMATO_A, FORMATO_B]);
+    expect(result.notes.join(" ")).toMatch(/todos con formato/i);
+  });
+
+  it("still withholds credit for bullets that follow neither format (too short, no structure)", () => {
+    const result = analyzeBullets(["ok", "bien", "genial", "vale"]);
+    expect(result.notes.join(" ")).not.toMatch(/todos con formato/i);
   });
 });
 
@@ -68,6 +100,33 @@ describe("analyzeDescription hook_type scoring", () => {
   it("ignores an unrecognized hook_type value and falls back to regex detection", () => {
     const result = analyzeDescription(SHORT_DESCRIPTION, "not-a-real-hook-type");
     expect(result.notes.join(" ")).toMatch(/Future Pacing ✓/);
+  });
+});
+
+describe("analyzeDescription closing-phrase detection", () => {
+  // Regression: the CIERRE rule in prompts.ts explicitly offers 3 equivalent
+  // closing patterns — "el resultado es...", "lo que notas desde el primer
+  // día...", "sin tener que..." — but the scorer only ever checked for the
+  // literal string "el resultado", so a closing that correctly followed the
+  // prompt's own second or third example scored 0 for the closing beat.
+  it("awards the closing bonus for 'el resultado' (already worked)", () => {
+    const result = analyzeDescription("Texto de relleno suficientemente largo. El resultado es una experiencia mejor.");
+    expect(result.notes.join(" ")).toMatch(/cierre .* ✓/);
+  });
+
+  it("awards the closing bonus for 'lo que notas desde el primer día'", () => {
+    const result = analyzeDescription("Texto de relleno suficientemente largo. Lo que notas desde el primer día es la diferencia.");
+    expect(result.notes.join(" ")).toMatch(/cierre .* ✓/);
+  });
+
+  it("awards the closing bonus for 'sin tener que'", () => {
+    const result = analyzeDescription("Texto de relleno suficientemente largo. Disfruta cada día sin tener que preocuparte por nada.");
+    expect(result.notes.join(" ")).toMatch(/cierre .* ✓/);
+  });
+
+  it("does not award the closing bonus when none of the three patterns are present", () => {
+    const result = analyzeDescription("Texto de relleno suficientemente largo. Un cierre genérico sin ningún patrón reconocido.");
+    expect(result.notes.join(" ")).toMatch(/falta cierre/);
   });
 });
 

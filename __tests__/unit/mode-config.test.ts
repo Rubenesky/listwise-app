@@ -106,6 +106,21 @@ describe("buildSystemPrompt", () => {
       expect(prompt.toLowerCase()).toContain("usa el formato b");
     }
   });
+
+  // Regression (audit finding): real generations reliably undershot the
+  // 120-280 word target, landing closer to 80-100 words even on real,
+  // content-rich sources — the single biggest point-loser in health-score.ts
+  // (8/20 instead of 20/20 on word count alone). Soft length guidance
+  // ("2 a 3 párrafos") wasn't a strong enough signal; the rule now restates
+  // the numeric floor explicitly and tells the model how to reach it
+  // (expand context-of-use/sensory detail) instead of stopping early.
+  it("restates the 120-word minimum explicitly, with guidance on how to reach it", () => {
+    for (const mode of ["creative", "professional", "seo"] as const) {
+      const prompt = buildSystemPrompt(mode);
+      expect(prompt).toMatch(/120/);
+      expect(prompt.toLowerCase()).toMatch(/no.*(bajes|quedes).*120|mínimo.*120|al menos 120/);
+    }
+  });
 });
 
 describe("buildUserPromptTecnica", () => {
