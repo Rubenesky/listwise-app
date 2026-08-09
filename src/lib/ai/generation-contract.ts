@@ -5,6 +5,16 @@
 // Zod schema in process-products.ts stays permissive (min 1 bullet) so a
 // contract miss triggers a same-prompt retry instead of an immediate hard
 // failure — see meetsContentContract's caller for the retry loop.
+// Safety-net truncation for when the model exceeds the prompt's own title
+// length rule — cuts at the last word boundary instead of mid-word, so the
+// fallback never produces a visibly broken title.
+export function truncateAtWordBoundary(s: string, maxLen: number): string {
+  if (s.length <= maxLen) return s;
+  const truncated = s.slice(0, maxLen);
+  const lastSpace = truncated.lastIndexOf(" ");
+  return lastSpace > 0 ? truncated.slice(0, lastSpace) : truncated;
+}
+
 const MIN_BULLETS = 4;
 const MIN_DESCRIPTION_WORDS = 120;
 

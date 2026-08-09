@@ -13,7 +13,7 @@ import { fetchAndExtractText } from "@/lib/scraping/extract-text";
 import { detectLanguageMismatch } from "@/lib/text/detect-language";
 import { extractSpecsFromText } from "@/lib/ai/extract-specs";
 import { mergeAttributesWithPrecedence } from "@/lib/listings/merge-attributes";
-import { generateWithContentRetry } from "@/lib/ai/generation-contract";
+import { generateWithContentRetry, truncateAtWordBoundary } from "@/lib/ai/generation-contract";
 
 const qualityFlagsSchema = z.object({
   no_trademarks: z.boolean().optional(),
@@ -24,8 +24,8 @@ const qualityFlagsSchema = z.object({
 }).optional();
 
 const generatedContentSchema = z.object({
-  title: z.string().transform((s) => s.slice(0, 100)),
-  title_b: z.string().transform((s) => s.slice(0, 100)).optional(),
+  title: z.string().transform((s) => truncateAtWordBoundary(s, 100)),
+  title_b: z.string().transform((s) => truncateAtWordBoundary(s, 100)).optional(),
   bullets: z.array(z.string()).min(1).max(10),
   description: z.string().min(1),
   primary_keyword: z.string().max(100).optional(),

@@ -1,8 +1,39 @@
-import { meetsContentContract, generateWithContentRetry, hasVerbatimBulletOverlap } from "@/lib/ai/generation-contract";
+import { meetsContentContract, generateWithContentRetry, hasVerbatimBulletOverlap, truncateAtWordBoundary } from "@/lib/ai/generation-contract";
 
 function words(n: number): string {
   return Array(n).fill("palabra").join(" ");
 }
+
+// Regression (retest round 5, URL4/zapatillas): process-products.ts's Zod
+// schema hard-truncates title with `.slice(0, 100)` as a safety net for when
+// the model exceeds the prompt's own "máximo 100" rule. A real generation
+// exceeded it and got cut mid-word: "...Estabilidad en Carreras Neut" (from
+// "...Neutrales"). The safety net shouldn't produce a broken-looking title —
+// truncate at the last word boundary before the limit instead.
+describe("truncateAtWordBoundary", () => {
+  it("returns the string unchanged when under the limit", () => {
+    expect(truncateAtWordBoundary("Camiseta Algodón Orgánico", 100)).toBe("Camiseta Algodón Orgánico");
+  });
+
+  it("truncates at the last space before the limit instead of mid-word", () => {
+    const title = "Zapatillas de Running con Malla Transpirable y Amortiguación Avanzada | Estabilidad en Carreras Neutrales";
+    const result = truncateAtWordBoundary(title, 100);
+    expect(result.length).toBeLessThanOrEqual(100);
+    expect(result).not.toMatch(/Neut$/);
+    expect(result.endsWith(" ")).toBe(false);
+  });
+
+  it("falls back to a hard cut when there's no space within the limit", () => {
+    const noSpaces = "a".repeat(150);
+    const result = truncateAtWordBoundary(noSpaces, 100);
+    expect(result.length).toBe(100);
+  });
+
+  it("returns the string unchanged when exactly at the limit", () => {
+    const exact = "a".repeat(100);
+    expect(truncateAtWordBoundary(exact, 100)).toBe(exact);
+  });
+});
 
 describe("meetsContentContract", () => {
   it("passes when bullets >= 4 and description >= 120 words", () => {
