@@ -28,6 +28,17 @@ function normalizeForOverlap(s: string): string {
 
 const MIN_OVERLAP_WORDS = 6;
 
+function sharesVerbatimChunk(source: string, target: string, minWords: number): boolean {
+  const targetNorm = normalizeForOverlap(target);
+  if (!targetNorm) return false;
+  const sourceWords = normalizeForOverlap(source).split(" ").filter(Boolean);
+  for (let i = 0; i + minWords <= sourceWords.length; i++) {
+    const chunk = sourceWords.slice(i, i + minWords).join(" ");
+    if (targetNorm.includes(chunk)) return true;
+  }
+  return false;
+}
+
 // Defense-in-depth for the paragraph-2 PROHIBIDO rule in buildSystemPrompt:
 // the prompt-only fix (widened rule + AUTOVERIFICACION example) didn't hold
 // on retest — real generations still restated bullet content verbatim in the
@@ -35,27 +46,54 @@ const MIN_OVERLAP_WORDS = 6;
 // failure actually observed: a long word-for-word chunk shared between a
 // bullet's detail and the description.
 export function hasVerbatimBulletOverlap(bullets: string[], description: string): boolean {
-  const descNorm = normalizeForOverlap(description);
-  if (!descNorm) return false;
-  for (const bullet of bullets) {
+  return bullets.some((bullet) => {
     const colonIdx = bullet.indexOf(":");
     const detail = colonIdx >= 0 ? bullet.slice(colonIdx + 1) : bullet;
-    const words = normalizeForOverlap(detail).split(" ").filter(Boolean);
-    for (let i = 0; i + MIN_OVERLAP_WORDS <= words.length; i++) {
-      const chunk = words.slice(i, i + MIN_OVERLAP_WORDS).join(" ");
-      if (descNorm.includes(chunk)) return true;
+    return sharesVerbatimChunk(detail, description, MIN_OVERLAP_WORDS);
+  });
+}
+
+// Regression: once the 120-word retry started working, a second attempt
+// sometimes hit the minimum by padding — repeating an earlier paragraph
+// almost verbatim later in the same description — rather than writing new
+// content. hasVerbatimBulletOverlap doesn't catch this: it only compares
+// bullets against the description, not the description against itself.
+export function hasVerbatimParagraphOverlap(description: string): boolean {
+  const paragraphs = description.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+  for (let i = 0; i < paragraphs.length; i++) {
+    for (let j = i + 1; j < paragraphs.length; j++) {
+      if (sharesVerbatimChunk(paragraphs[i], paragraphs[j], MIN_OVERLAP_WORDS)) return true;
     }
   }
   return false;
 }
 
-export function meetsContentContract(generated: { bullets: string[]; description: string }): boolean {
+// Named, specific reasons a generation misses the contract — used both to
+// decide whether to retry and to tell the model exactly what to fix on the
+// next attempt (see generateWithContentRetry). Blindly resampling the same
+// prompt on a miss doesn't reliably fix it (real case: a second attempt hit
+// 120 words by self-repeating a paragraph); concrete feedback about what was
+// wrong is the standard fix for LLM retry loops.
+export function describeContentContractFailure(generated: { bullets: string[]; description: string }): string[] {
+  const issues: string[] = [];
   const wordCount = generated.description.trim().split(/\s+/).filter(Boolean).length;
-  return (
-    generated.bullets.length >= MIN_BULLETS &&
-    wordCount >= MIN_DESCRIPTION_WORDS &&
-    !hasVerbatimBulletOverlap(generated.bullets, generated.description)
-  );
+  if (generated.bullets.length < MIN_BULLETS) {
+    issues.push(`solo ${generated.bullets.length} bullets (mínimo ${MIN_BULLETS})`);
+  }
+  if (wordCount < MIN_DESCRIPTION_WORDS) {
+    issues.push(`la descripción tiene ${wordCount} palabras (mínimo ${MIN_DESCRIPTION_WORDS})`);
+  }
+  if (hasVerbatimBulletOverlap(generated.bullets, generated.description)) {
+    issues.push("la descripción repite el texto de un bullet casi literalmente");
+  }
+  if (hasVerbatimParagraphOverlap(generated.description)) {
+    issues.push("dos párrafos de la descripción repiten la misma información entre sí");
+  }
+  return issues;
+}
+
+export function meetsContentContract(generated: { bullets: string[]; description: string }): boolean {
+  return describeContentContractFailure(generated).length === 0;
 }
 
 // Pure, callback-driven retry loop so the orchestration (how many attempts,
@@ -65,14 +103,17 @@ export function meetsContentContract(generated: { bullets: string[]; description
 // result even if it never meets the contract: a listing with imperfect
 // content is better than one that fails outright after using a credit.
 export async function generateWithContentRetry<T extends { bullets: string[]; description: string }>(
-  generate: () => Promise<T>,
+  generate: (feedback?: string) => Promise<T>,
   maxAttempts: number,
-  onRetry?: (attempt: number, result: T) => void
+  onRetry?: (attempt: number, result: T, issues: string[]) => void
 ): Promise<T> {
   let result = await generate();
-  for (let attempt = 1; attempt < maxAttempts && !meetsContentContract(result); attempt++) {
-    onRetry?.(attempt, result);
-    result = await generate();
+  for (let attempt = 1; attempt < maxAttempts; attempt++) {
+    const issues = describeContentContractFailure(result);
+    if (issues.length === 0) break;
+    onRetry?.(attempt, result, issues);
+    const feedback = `Tu intento anterior no cumplió estos requisitos: ${issues.join("; ")}. Genera una versión nueva y genuina para estos mismos campos — no repitas frases de tu intento anterior, ni entre bullets y descripción, ni entre distintos párrafos de la descripción.`;
+    result = await generate(feedback);
   }
   return result;
 }

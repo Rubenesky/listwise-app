@@ -202,23 +202,24 @@ export const processProductsTask = task({
           }
         }
 
-        const callAI = async () => {
+        const callAI = async (feedback?: string) => {
+          const userPrompt = buildUserPromptWithVoice(
+            {
+              productName: safeName,
+              category: safeCategory,
+              attributes: mergedAttributes,
+              mode: safeMode,
+              marketplace: (product.marketplace as Marketplace | undefined) ?? undefined,
+              priceSegment: (product.priceSegment as PriceSegment | undefined) ?? undefined,
+            },
+            activeVoiceProfile
+          );
           const response = await retry.onThrow(
             async () => {
               return await getAIResponse(
                 [
                   { role: "system", content: buildSystemPrompt(safeMode) },
-                  { role: "user", content: buildUserPromptWithVoice(
-                    {
-                      productName: safeName,
-                      category: safeCategory,
-                      attributes: mergedAttributes,
-                      mode: safeMode,
-                      marketplace: (product.marketplace as Marketplace | undefined) ?? undefined,
-                      priceSegment: (product.priceSegment as PriceSegment | undefined) ?? undefined,
-                    },
-                    activeVoiceProfile
-                  )},
+                  { role: "user", content: feedback ? `${userPrompt}\n\n${feedback}` : userPrompt },
                 ],
                 safeProvider,
                 { temperature, max_tokens: maxTokens, response_format: { type: "json_object" } }
@@ -235,12 +236,12 @@ export const processProductsTask = task({
           // the short-form modes (creative/professional/seo) are checked.
           const CONTENT_RETRY_ATTEMPTS = safeMode === "tecnica" ? 1 : 2;
           const generated = await generateWithContentRetry(
-            async () => parseAiResponse(await callAI()),
+            async (feedback) => parseAiResponse(await callAI(feedback)),
             CONTENT_RETRY_ATTEMPTS,
-            (attempt, result) =>
+            (attempt, result, issues) =>
               log.warn(
-                { userId, productId: product.id, attempt, bullets: result.bullets.length },
-                "Generación no cumple el mínimo de bullets/palabras — reintentando"
+                { userId, productId: product.id, attempt, bullets: result.bullets.length, issues },
+                "Generación no cumple el contrato de contenido — reintentando con feedback específico"
               )
           );
           await db

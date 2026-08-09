@@ -1,4 +1,4 @@
-import { meetsContentContract, generateWithContentRetry, hasVerbatimBulletOverlap, truncateAtWordBoundary } from "@/lib/ai/generation-contract";
+import { meetsContentContract, generateWithContentRetry, hasVerbatimBulletOverlap, hasVerbatimParagraphOverlap, describeContentContractFailure, truncateAtWordBoundary } from "@/lib/ai/generation-contract";
 
 function words(n: number): string {
   return Array(n).fill("palabra").join(" ");
@@ -100,6 +100,61 @@ describe("hasVerbatimBulletOverlap", () => {
   });
 });
 
+// Regression (retest round 6, URL2/auriculares): once the 120-word retry
+// started working, the SECOND attempt sometimes hit the minimum by
+// self-repeating instead of writing new content — paragraph 3 restated
+// paragraph 1 almost verbatim ("Estos auriculares inalámbricos... ofrecen
+// hasta 30 horas de música sin necesidad de recargar. Conecta a tu
+// dispositivo sin cables a 15 m de distancia gracias al Bluetooth 5.4"
+// appeared in both). hasVerbatimBulletOverlap didn't catch it — it only
+// compares bullets against the description, not the description against
+// itself.
+describe("hasVerbatimParagraphOverlap", () => {
+  it("detects a 6+ word chunk shared verbatim between two paragraphs of the same description", () => {
+    const description = [
+      "Estos auriculares inalámbricos ofrecen hasta 30 horas de música sin necesidad de recargar en cualquier momento del día.",
+      "Usa tus auriculares para hacer ejercicio o trabajar sin interrupciones.",
+      "Estos auriculares inalámbricos ofrecen hasta 30 horas de música sin necesidad de recargar, así que nunca te quedarás sin batería.",
+    ].join("\n\n");
+    expect(hasVerbatimParagraphOverlap(description)).toBe(true);
+  });
+
+  it("returns false when paragraphs cover different ground", () => {
+    const description = [
+      "Son las 6 de la mañana y estás listo para entrenar.",
+      "La malla transpirable mantiene tus pies frescos durante todo el recorrido.",
+      "El resultado es una carrera sin distracciones, kilómetro tras kilómetro.",
+    ].join("\n\n");
+    expect(hasVerbatimParagraphOverlap(description)).toBe(false);
+  });
+
+  it("returns false for a single-paragraph description (nothing to compare)", () => {
+    expect(hasVerbatimParagraphOverlap("Un único párrafo sin saltos de línea dobles en el texto.")).toBe(false);
+  });
+});
+
+describe("describeContentContractFailure", () => {
+  it("returns no issues for a generation that meets every rule", () => {
+    const bullets = ["CONCEPTO UNO: detalle específico", "CONCEPTO DOS: detalle específico", "CONCEPTO TRES: detalle específico", "CONCEPTO CUATRO: detalle específico"];
+    expect(describeContentContractFailure({ bullets, description: words(120) })).toEqual([]);
+  });
+
+  it("names the specific issue for too few bullets", () => {
+    const issues = describeContentContractFailure({ bullets: ["a", "b", "c"], description: words(150) });
+    expect(issues.some((i) => /3 bullets/.test(i))).toBe(true);
+  });
+
+  it("names the specific issue for a short description", () => {
+    const issues = describeContentContractFailure({ bullets: ["a", "b", "c", "d"], description: words(80) });
+    expect(issues.some((i) => /80 palabras/.test(i))).toBe(true);
+  });
+
+  it("can report multiple issues at once", () => {
+    const issues = describeContentContractFailure({ bullets: ["a", "b"], description: words(50) });
+    expect(issues.length).toBe(2);
+  });
+});
+
 describe("meetsContentContract with verbatim overlap", () => {
   it("fails the contract when bullets/word-count are fine but a bullet is verbatim-duplicated in the description", () => {
     const bullets = [
@@ -154,7 +209,7 @@ describe("generateWithContentRetry", () => {
     expect(generate).toHaveBeenCalledTimes(1);
   });
 
-  it("invokes onRetry with the attempt number and the failing result before retrying", async () => {
+  it("invokes onRetry with the attempt number, the failing result, and the specific issues found", async () => {
     const insufficientResult = { bullets: ["a", "b", "c"], description: words(150) };
     const generate = jest
       .fn()
@@ -162,6 +217,23 @@ describe("generateWithContentRetry", () => {
       .mockResolvedValueOnce({ bullets: ["a", "b", "c", "d"], description: words(150) });
     const onRetry = jest.fn();
     await generateWithContentRetry(generate, 2, onRetry);
-    expect(onRetry).toHaveBeenCalledWith(1, insufficientResult);
+    expect(onRetry).toHaveBeenCalledWith(1, insufficientResult, expect.arrayContaining([expect.stringMatching(/3 bullets/)]));
+  });
+
+  // Regression: retrying with the exact same prompt sometimes made things
+  // WORSE (see hasVerbatimParagraphOverlap above — the model padded word
+  // count by repeating itself). Passing specific, concrete feedback about
+  // what was wrong on the previous attempt is the standard fix for
+  // LLM retry loops that blindly resample the same prompt.
+  it("passes a feedback string describing the specific issues to generate() on retry", async () => {
+    const generate = jest
+      .fn()
+      .mockResolvedValueOnce({ bullets: ["a", "b", "c"], description: words(150) })
+      .mockResolvedValueOnce({ bullets: ["a", "b", "c", "d"], description: words(150) });
+    await generateWithContentRetry(generate, 2);
+    expect(generate).toHaveBeenNthCalledWith(1);
+    const feedbackArg = generate.mock.calls[1][0];
+    expect(feedbackArg).toMatch(/3 bullets/);
+    expect(feedbackArg.toLowerCase()).toMatch(/no repitas/);
   });
 });
