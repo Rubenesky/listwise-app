@@ -1,4 +1,4 @@
-import { MODE_CONFIG, buildSystemPrompt, buildUserPrompt, buildUserPromptTecnica, buildUserPromptWithVoice, type VoiceProfileData } from "@/lib/ai/prompts";
+import { MODE_CONFIG, buildSystemPrompt, buildUserPrompt, buildUserPromptTecnica, buildUserPromptWithVoice, getRequiredHookType, type VoiceProfileData } from "@/lib/ai/prompts";
 
 describe("MODE_CONFIG", () => {
   it("has all four modes", () => {
@@ -152,6 +152,51 @@ describe("buildSystemPrompt", () => {
       expect(prompt).toMatch(/el resultado es[^"]*sin tener que levantarte/i);
       expect(prompt.toLowerCase()).toContain("nunca copies este ejemplo");
     }
+  });
+
+  // Regression (retest round 3): real generations for all 4 retested URLs had
+  // paragraph 2 restate bullet content — sometimes verbatim (URL4's "estabilidad
+  // neutra es adecuada para cualquier ritmo de carrera, desde 4:30 a 5:30
+  // min/km" appeared identically in both a bullet and the description). The
+  // existing PROHIBIDO rule and AUTOVERIFICACION item 12 only illustrated a
+  // telegraphic-list failure shape ("La función X... El componente Y...") —
+  // full-sentence paraphrases of a bullet's content didn't visually match that
+  // example, so the model's own self-check never flagged them. Both are now
+  // widened to cover paraphrase, not just list-shaped repetition, with a
+  // concrete before/after example.
+  it("prohibits paraphrased repetition of bullet content in paragraph 2, not just telegraphic-list repetition, with a before/after example", () => {
+    for (const mode of ["creative", "professional", "seo"] as const) {
+      const prompt = buildSystemPrompt(mode);
+      expect(prompt.toLowerCase()).toMatch(/reformulada con otro verbo|misma información con otras palabras/);
+    }
+  });
+
+  it("the autoverificacion checklist also catches paraphrased (not just list-shaped) bullet repetition", () => {
+    for (const mode of ["creative", "professional", "seo"] as const) {
+      const prompt = buildSystemPrompt(mode);
+      expect(prompt.toLowerCase()).toMatch(/aunque esté reformulada|aunque este reformulada/);
+    }
+  });
+});
+
+describe("getRequiredHookType", () => {
+  // Regression: URL2 (auriculares/Electrónica) opened with a valid "benefit"-
+  // style hook in the actual prose but the JSON's hook_type field came back
+  // missing/invalid, silently losing 10 health-score points for a hook that
+  // was written correctly. REQUIRED_HOOK_TYPE already prescribes the hook
+  // deterministically per category — trust that over the model's self-report
+  // for any category with a prescribed hook, instead of another prompt
+  // reinforcement attempt for a field-tagging gap.
+  it("returns the prescribed hook type for a category with a rule", () => {
+    expect(getRequiredHookType("Electrónica")).toBe("benefit");
+    expect(getRequiredHookType("Ropa")).toBe("bold");
+    expect(getRequiredHookType("Belleza")).toBe("question");
+    expect(getRequiredHookType("Deportes")).toBe("scene");
+  });
+
+  it("returns null for a category with no prescribed hook", () => {
+    expect(getRequiredHookType("Otro")).toBeNull();
+    expect(getRequiredHookType(null)).toBeNull();
   });
 });
 

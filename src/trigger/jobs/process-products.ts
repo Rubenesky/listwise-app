@@ -4,7 +4,7 @@ import { listingReadyTemplate } from "@/lib/email/templates";
 import { eq, and, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/db";
-import { buildSystemPrompt, buildUserPromptWithVoice, MODE_CONFIG, type GenerationMode, type VoiceProfileData, type Marketplace, type PriceSegment } from "@/lib/ai/prompts";
+import { buildSystemPrompt, buildUserPromptWithVoice, getRequiredHookType, MODE_CONFIG, type GenerationMode, type VoiceProfileData, type Marketplace, type PriceSegment } from "@/lib/ai/prompts";
 import { providers, getAIResponse, type AIProvider } from "@/lib/ai/providers";
 import type { GeneratedContent, BatchProcessPayload } from "@/types";
 import { trackGamification } from "@/lib/gamification/track";
@@ -254,7 +254,7 @@ export const processProductsTask = task({
               generatedDescription: generated.description,
               primaryKeyword: generated.primary_keyword ?? null,
               targetAudience: generated.target_audience ?? null,
-              hookType: generated.hook_type ?? null,
+              hookType: getRequiredHookType(safeCategory) ?? generated.hook_type ?? null,
               qualityFlags: generated.quality_flags ?? null,
               promptVersion: "3.0",
               errorMessage: null,

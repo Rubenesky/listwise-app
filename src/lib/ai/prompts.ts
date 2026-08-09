@@ -208,7 +208,7 @@ El primer párrafo es el gancho:
 
 El segundo párrafo cubre el contexto de uso:
   UN caso de uso específico y vivido — no tres contextos genéricos. Quién lo usa, cuándo, qué experimenta. Incluye al menos un detalle sensorial (textura, peso, sonido, olor, sensación). Si el producto tiene un contexto de uso óptimo relevante, menciónalo de forma positiva ("funciona mejor cuando...", "ideal si buscas...") — previene devoluciones y genera confianza.
-  PROHIBIDO: no enumeres en párrafo las mismas características que ya están en los bullets. "La batería de 12h... El sensor de temperatura... La visión nocturna..." en párrafo = error grave. La descripción cuenta UNA historia sobre el beneficio principal, no parafrasea las especificaciones.
+  PROHIBIDO: no menciones en este párrafo ninguna característica, cifra o dato que ya hayas usado en un bullet — ni siquiera reformulada con otro verbo o en otro orden. Esto va más allá de listas telegráficas tipo "La batería de 12h... El sensor de temperatura...": una frase completa que diga lo mismo que un bullet con otras palabras es el mismo error. Ejemplo de error grave: si un bullet dice "BLUETOOTH 5.4: conecta sin cables a 15 m", el párrafo 2 NO puede decir "conecta a tu dispositivo sin cables gracias al Bluetooth 5.4" — es la misma información con otras palabras. La descripción cuenta UNA historia sobre el beneficio principal, no parafrasea las especificaciones.
 
 El tercer párrafo es el cierre:
   Una frase que conecta con lo que el comprador siente al tener ya el beneficio principal resuelto, usando UNO de estos 3 arranques: "el resultado es...", "lo que notas desde el primer día...", "sin tener que...". Ejemplo de cierre para un producto CUALQUIERA, solo para ilustrar la estructura — el contenido real debe ser sobre ESTE producto, nunca copies este ejemplo ni sus palabras: "El resultado es un salón siempre con la luz que necesitas, sin tener que levantarte del sofá." Seguida del CTA.
@@ -240,7 +240,7 @@ ANTES DE ESCRIBIR EL JSON, verifica internamente — NO lo incluyas en la respue
 9. ¿El CTA funcionaría para cualquier producto de esta categoría? Si sí → Personalízalo vinculándolo al beneficio principal de este producto.
 10. ¿"nuestra/nuestro" o "tu [nombre del producto]" aparece más de una vez en la descripción? → Sustituye las repeticiones por pronombres ("ella", "este", "la pieza") o referencias implícitas.
 11. ¿Hay errores de concordancia de género o número? (ej: "es bueno para ti" cuando el sujeto es femenino → "es buena"). → Corrígelos antes de escribir el JSON.
-12. ¿El párrafo 2 de la descripción es una lista de características del producto en forma de frases? (ej: "La función X... El componente Y... La tecnología Z...") → REESCRIBE: cuenta UNA situación concreta vivida por el comprador, no un catálogo.
+12. ¿Alguna frase del párrafo 2 dice lo mismo que un bullet, aunque esté reformulada con otro verbo o en otro orden? (no solo listas telegráficas tipo "La función X... El componente Y..." — también frases completas que repiten la misma información) → REESCRIBE ese párrafo: cuenta UNA situación concreta vivida por el comprador, no un catálogo ni un resumen de los bullets.
 </AUTOVERIFICACION>
 
 Responde SIEMPRE con JSON válido exactamente con estos campos. Nada de texto fuera del JSON:
@@ -302,6 +302,16 @@ Responde SIEMPRE con JSON válido exactamente con estos campos. Nada de texto fu
 
 export function buildSystemPrompt(mode: GenerationMode): string {
   return mode === "tecnica" ? SYSTEM_PROMPT_TECNICA : SYSTEM_PROMPT;
+}
+
+// The hook type is prescribed deterministically per category (see
+// REQUIRED_HOOK_TYPE above) — for those categories it isn't really a choice
+// the model makes, so its self-reported hook_type field doesn't need to be
+// trusted as the source of truth. Callers should prefer this over
+// generated.hook_type when it returns non-null.
+export function getRequiredHookType(category: string | null): string | null {
+  if (!category) return null;
+  return REQUIRED_HOOK_TYPE[category]?.type ?? null;
 }
 
 export function buildUserPrompt(product: {
