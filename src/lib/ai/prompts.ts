@@ -184,8 +184,9 @@ TÍTULO — entre 60 y 80 caracteres, máximo 100. Nunca menos de 60:
 - El título diferencia, no solo describe. El comprador está comparando opciones.
 
 BULLETS — SIEMPRE entre 4 y 6. Nunca menos de 4:
-- Formato A: escribe el beneficio principal EN MAYÚSCULAS al inicio del bullet, seguido de dos puntos y un detalle específico que lo explica — máximo 15 palabras. Ejemplo de un producto CUALQUIERA, solo para ilustrar el formato — el contenido real debe ser sobre ESTE producto, nunca copies este ejemplo: "BATERÍA DE 12H: dura toda una jornada de senderismo sin recargar".
+- Formato A: las primeras 2-4 palabras del bullet, escritas en letras mayúsculas, resumen el punto clave del producto; después dos puntos y una frase que lo desarrolla — máximo 15 palabras en total. Ejemplo de un producto CUALQUIERA, solo para ilustrar el formato — el contenido real debe ser sobre ESTE producto, nunca copies este ejemplo ni sus palabras: "BATERÍA DE 12H: dura toda una jornada de senderismo sin recargar".
 - Formato B: verbo de beneficio + beneficio concreto + contexto de uso — máximo 15 palabras
+- Si el producto no tiene suficientes datos o contexto para un punto clave específico en mayúsculas (fuente con poca información), usa el Formato B para ese bullet en vez de forzar el Formato A.
 - El bullet más diferencial va PRIMERO. Cada bullet pasa el so-what test: si la respuesta obvia es "¿y qué?", reescríbelo con más especificidad.
 - Sin relleno. Sin repetir el mismo beneficio con otras palabras entre bullets.
 - Si los atributos no alcanzan para 4 bullets distintos, añade: (a) el contexto de uso ideal, (b) para quién es ideal y para quién no, o (c) la consecuencia emocional del beneficio principal.

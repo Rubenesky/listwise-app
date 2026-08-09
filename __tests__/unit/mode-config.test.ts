@@ -88,6 +88,24 @@ describe("buildSystemPrompt", () => {
       expect(prompt.toLowerCase()).toContain("sin numerar");
     }
   });
+
+  // Regression: even the reworded (non-bracketed, concrete-example) bullet
+  // format instruction still contained the literal phrase "beneficio
+  // principal EN MAYÚSCULAS" — for a near-empty source (real staging case:
+  // olivammarket.com's page repeats only the product title, no real specs),
+  // the model echoed that meta-descriptive phrase itself as bullet #1's
+  // content ("BENEFICIO EN MAYÚSCULAS: Sin aditivos...") three separate
+  // times across two prior fix attempts, always on the same low-content
+  // source, never on richer sources. Removing the exact "beneficio ...
+  // MAYÚSCULAS" word-adjacency and adding an explicit Formato B fallback for
+  // when there isn't enough substance for a specific all-caps benefit.
+  it("does not phrase the bullet format rule as 'beneficio ... MAYÚSCULAS', and offers Formato B as a fallback for thin content", () => {
+    for (const mode of ["creative", "professional", "seo"] as const) {
+      const prompt = buildSystemPrompt(mode);
+      expect(prompt).not.toMatch(/beneficio principal EN MAYÚSCULAS/i);
+      expect(prompt.toLowerCase()).toContain("usa el formato b");
+    }
+  });
 });
 
 describe("buildUserPromptTecnica", () => {
