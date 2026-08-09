@@ -13,7 +13,7 @@ import { fetchAndExtractText } from "@/lib/scraping/extract-text";
 import { detectLanguageMismatch } from "@/lib/text/detect-language";
 import { extractSpecsFromText } from "@/lib/ai/extract-specs";
 import { mergeAttributesWithPrecedence } from "@/lib/listings/merge-attributes";
-import { meetsContentContract } from "@/lib/ai/generation-contract";
+import { generateWithContentRetry } from "@/lib/ai/generation-contract";
 
 const qualityFlagsSchema = z.object({
   no_trademarks: z.boolean().optional(),
@@ -234,14 +234,15 @@ export const processProductsTask = task({
           // Ficha Técnica has no bullets/word-count contract of this shape — only
           // the short-form modes (creative/professional/seo) are checked.
           const CONTENT_RETRY_ATTEMPTS = safeMode === "tecnica" ? 1 : 2;
-          let generated = parseAiResponse(await callAI());
-          for (let attempt = 1; attempt < CONTENT_RETRY_ATTEMPTS && !meetsContentContract(generated); attempt++) {
-            log.warn(
-              { userId, productId: product.id, attempt, bullets: generated.bullets.length },
-              "Generación no cumple el mínimo de bullets/palabras — reintentando"
-            );
-            generated = parseAiResponse(await callAI());
-          }
+          const generated = await generateWithContentRetry(
+            async () => parseAiResponse(await callAI()),
+            CONTENT_RETRY_ATTEMPTS,
+            (attempt, result) =>
+              log.warn(
+                { userId, productId: product.id, attempt, bullets: result.bullets.length },
+                "Generación no cumple el mínimo de bullets/palabras — reintentando"
+              )
+          );
           await db
             .update(schema.listings)
             .set({

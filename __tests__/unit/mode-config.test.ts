@@ -139,6 +139,20 @@ describe("buildSystemPrompt", () => {
       expect(prompt).not.toMatch(/consecuencia emocional del beneficio principal/i);
     }
   });
+
+  // Regression (10-expert panel, round 2): naming the 3 closing patterns
+  // ("el resultado es...", "lo que notas desde el primer día...", "sin tener
+  // que...") without a concrete example never moved the needle — 0 of 4 real
+  // retested generations used any of them. The bullet Formato A rule only
+  // started working reliably once it got a full illustrative sentence instead
+  // of just a named pattern — applying the same fix to the closing rule.
+  it("gives a concrete example closing sentence, not just the 3 named patterns, with a don't-copy instruction", () => {
+    for (const mode of ["creative", "professional", "seo"] as const) {
+      const prompt = buildSystemPrompt(mode);
+      expect(prompt).toMatch(/el resultado es[^"]*sin tener que levantarte/i);
+      expect(prompt.toLowerCase()).toContain("nunca copies este ejemplo");
+    }
+  });
 });
 
 describe("buildUserPrompt thin-attributes branch", () => {

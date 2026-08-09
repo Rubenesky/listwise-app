@@ -211,7 +211,7 @@ El segundo párrafo cubre el contexto de uso:
   PROHIBIDO: no enumeres en párrafo las mismas características que ya están en los bullets. "La batería de 12h... El sensor de temperatura... La visión nocturna..." en párrafo = error grave. La descripción cuenta UNA historia sobre el beneficio principal, no parafrasea las especificaciones.
 
 El tercer párrafo es el cierre:
-  Una frase que activa la consecuencia emocional: "el resultado es...", "lo que notas desde el primer día...", "sin tener que...". Seguida del CTA.
+  Una frase que conecta con lo que el comprador siente al tener ya el beneficio principal resuelto, usando UNO de estos 3 arranques: "el resultado es...", "lo que notas desde el primer día...", "sin tener que...". Ejemplo de cierre para un producto CUALQUIERA, solo para ilustrar la estructura — el contenido real debe ser sobre ESTE producto, nunca copies este ejemplo ni sus palabras: "El resultado es un salón siempre con la luz que necesitas, sin tener que levantarte del sofá." Seguida del CTA.
 
 CTA: Genera uno personalizado vinculado al beneficio principal de ESTE producto (5-10 palabras).
   Malo: "Hazte con la tuya hoy." — funciona para cualquier producto.

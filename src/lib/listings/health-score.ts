@@ -36,6 +36,15 @@ const CONCEPTO_FORMAT = /^[A-ZÁÉÍÓÚÑ\s]{2,}:\s/;
 // A's ALL-CAPS lead-in ("usa el Formato B para ese bullet en vez de forzar
 // el Formato A"). A bullet correctly following Formato B must not score as
 // "wrong format" — it's doing exactly what the prompt asked for.
+//
+// Known limitation: this is a syntactic check only (capitalized start + word
+// count), not a semantic one. A real regression (auriculares/plastic.es)
+// produced a bullet that was meta-commentary echoing the prompt's own rule
+// text ("La consecuencia emocional de esta autonomía es...") rather than a
+// genuine product benefit — it satisfied this check and would score as
+// well-formatted despite being poor content. Catching that requires judging
+// meaning, which a deterministic, no-AI-call scorer can't do; the fix for
+// that specific echo lives in the prompt (prompts.ts), not here.
 function isWellFormattedBullet(b: string): boolean {
   if (CONCEPTO_FORMAT.test(b)) return true;
   const trimmed = b.trim();
