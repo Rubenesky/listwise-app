@@ -26,6 +26,14 @@ function makePdfRequest(file: File): Request {
   return new Request("http://localhost/api/listings/analyze-source", { method: "POST", body: fd });
 }
 
+// Long enough to pass hasEnoughContent's substantive-content gate (2+
+// distinct lines over 40 chars, 150+ chars total) — represents a real page
+// with actual product information, as opposed to a title-only source.
+const SUBSTANTIVE_TEXT = [
+  "Este producto está fabricado con materiales de primera calidad y un acabado resistente al uso diario.",
+  "Incluye garantía de fabricante y viene listo para instalar sin herramientas adicionales.",
+].join("\n");
+
 describe("POST /api/listings/analyze-source", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -52,7 +60,7 @@ describe("POST /api/listings/analyze-source", () => {
 
   it("analyzes a URL: validates SSRF, fetches, extracts product info", async () => {
     (validateUrlSSRF as jest.Mock).mockResolvedValue({ ok: true, normalized: "https://example.com/producto" });
-    (fetchAndExtractText as jest.Mock).mockResolvedValue({ title: "Producto", text: "texto extraído de la página" });
+    (fetchAndExtractText as jest.Mock).mockResolvedValue({ title: "Producto", text: SUBSTANTIVE_TEXT });
     (extractProductInfoFromText as jest.Mock).mockResolvedValue({
       productName: "Persiana X", category: "hogar", attributes: { material: "aluminio" }, primaryKeyword: "persiana x", confidence: 0.8,
     });
@@ -71,7 +79,7 @@ describe("POST /api/listings/analyze-source", () => {
   });
 
   it("analyzes a PDF: extracts text, extracts product info", async () => {
-    (extractTextFromPdf as jest.Mock).mockResolvedValue({ hasText: true, text: "texto del pdf", numPages: 2 });
+    (extractTextFromPdf as jest.Mock).mockResolvedValue({ hasText: true, text: SUBSTANTIVE_TEXT, numPages: 2 });
     (extractProductInfoFromText as jest.Mock).mockResolvedValue({
       productName: "Mosquitera Y", category: "hogar", attributes: {}, primaryKeyword: "mosquitera y", confidence: 0.6,
     });
@@ -95,6 +103,38 @@ describe("POST /api/listings/analyze-source", () => {
     const body = await res.json();
     expect(res.status).toBe(422);
     expect(body.scannedPdf).toBe(true);
+    expect(extractProductInfoFromText).not.toHaveBeenCalled();
+  });
+
+  // Regression: real staging generation for a source whose page just
+  // repeated the product title (no real description) reliably produced
+  // degenerate output no matter how the generation prompt was worded —
+  // gate insufficient content before the AI call instead of hoping the
+  // model behaves on hopeless input.
+  it("returns a clear 422 for a URL with insufficient real content, without calling extractProductInfoFromText", async () => {
+    (validateUrlSSRF as jest.Mock).mockResolvedValue({ ok: true, normalized: "https://example.com/vacio" });
+    (fetchAndExtractText as jest.Mock).mockResolvedValue({
+      title: "Producto Genérico",
+      text: "Producto Genérico\nPRODUCTO GENÉRICO\nDescripción",
+    });
+    const res = await POST(makeUrlRequest("https://example.com/vacio"));
+    const body = await res.json();
+    expect(res.status).toBe(422);
+    expect(body.error).toBeTruthy();
+    expect(extractProductInfoFromText).not.toHaveBeenCalled();
+  });
+
+  it("returns a clear 422 for a PDF with insufficient real content, without calling extractProductInfoFromText", async () => {
+    (extractTextFromPdf as jest.Mock).mockResolvedValue({
+      hasText: true,
+      text: "Producto Genérico\nPRODUCTO GENÉRICO",
+      numPages: 1,
+    });
+    const file = new File(["contenido"], "vacio.pdf", { type: "application/pdf" });
+    const res = await POST(makePdfRequest(file));
+    const body = await res.json();
+    expect(res.status).toBe(422);
+    expect(body.error).toBeTruthy();
     expect(extractProductInfoFromText).not.toHaveBeenCalled();
   });
 
@@ -123,7 +163,7 @@ describe("POST /api/listings/analyze-source", () => {
 
   it("returns a clear error when extractProductInfoFromText cannot identify a product", async () => {
     (validateUrlSSRF as jest.Mock).mockResolvedValue({ ok: true, normalized: "https://example.com/x" });
-    (fetchAndExtractText as jest.Mock).mockResolvedValue({ title: "", text: "texto irrelevante" });
+    (fetchAndExtractText as jest.Mock).mockResolvedValue({ title: "", text: SUBSTANTIVE_TEXT });
     (extractProductInfoFromText as jest.Mock).mockResolvedValue(null);
     const res = await POST(makeUrlRequest("https://example.com/x"));
     const body = await res.json();

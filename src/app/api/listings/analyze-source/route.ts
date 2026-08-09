@@ -5,6 +5,7 @@ import { ratelimitEnrichedInput } from "@/lib/rate-limit";
 import { fetchAndExtractText } from "@/lib/scraping/extract-text";
 import { extractTextFromPdf } from "@/lib/pdf/extract-text";
 import { extractProductInfoFromText } from "@/lib/ai/extract-product-info";
+import { hasEnoughContent } from "@/lib/text/content-sufficiency";
 import { log } from "@/lib/logger";
 
 const MAX_PDF_BYTES = 5 * 1024 * 1024;
@@ -28,6 +29,7 @@ export async function POST(req: Request) {
     const file = formData.get("file");
 
     let extractedText: string;
+    let extractedTitle = "";
 
     if (typeof url === "string" && url.trim()) {
       const check = await validateUrlSSRF(url.trim());
@@ -36,6 +38,7 @@ export async function POST(req: Request) {
       }
       const page = await fetchAndExtractText(check.normalized!);
       extractedText = page.text;
+      extractedTitle = page.title;
     } else if (file instanceof File) {
       if (file.type !== "application/pdf") {
         return NextResponse.json({ error: "Solo se aceptan archivos PDF" }, { status: 400 });
@@ -60,6 +63,15 @@ export async function POST(req: Request) {
       extractedText = pdf.text;
     } else {
       return NextResponse.json({ error: "Debes indicar una URL o subir un PDF" }, { status: 400 });
+    }
+
+    if (!hasEnoughContent(extractedText, extractedTitle)) {
+      return NextResponse.json(
+        {
+          error: "Esta fuente tiene muy poco contenido real (parece repetir solo el nombre del producto). Prueba con otra URL, sube un PDF con más detalle, o crea el producto manualmente.",
+        },
+        { status: 422 }
+      );
     }
 
     const productInfo = await extractProductInfoFromText(extractedText);
