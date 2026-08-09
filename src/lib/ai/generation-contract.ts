@@ -8,9 +8,44 @@
 const MIN_BULLETS = 4;
 const MIN_DESCRIPTION_WORDS = 120;
 
+function normalizeForOverlap(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}\s]/gu, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const MIN_OVERLAP_WORDS = 6;
+
+// Defense-in-depth for the paragraph-2 PROHIBIDO rule in buildSystemPrompt:
+// the prompt-only fix (widened rule + AUTOVERIFICACION example) didn't hold
+// on retest — real generations still restated bullet content verbatim in the
+// description. This won't catch every paraphrase, but it catches exactly the
+// failure actually observed: a long word-for-word chunk shared between a
+// bullet's detail and the description.
+export function hasVerbatimBulletOverlap(bullets: string[], description: string): boolean {
+  const descNorm = normalizeForOverlap(description);
+  if (!descNorm) return false;
+  for (const bullet of bullets) {
+    const colonIdx = bullet.indexOf(":");
+    const detail = colonIdx >= 0 ? bullet.slice(colonIdx + 1) : bullet;
+    const words = normalizeForOverlap(detail).split(" ").filter(Boolean);
+    for (let i = 0; i + MIN_OVERLAP_WORDS <= words.length; i++) {
+      const chunk = words.slice(i, i + MIN_OVERLAP_WORDS).join(" ");
+      if (descNorm.includes(chunk)) return true;
+    }
+  }
+  return false;
+}
+
 export function meetsContentContract(generated: { bullets: string[]; description: string }): boolean {
   const wordCount = generated.description.trim().split(/\s+/).filter(Boolean).length;
-  return generated.bullets.length >= MIN_BULLETS && wordCount >= MIN_DESCRIPTION_WORDS;
+  return (
+    generated.bullets.length >= MIN_BULLETS &&
+    wordCount >= MIN_DESCRIPTION_WORDS &&
+    !hasVerbatimBulletOverlap(generated.bullets, generated.description)
+  );
 }
 
 // Pure, callback-driven retry loop so the orchestration (how many attempts,

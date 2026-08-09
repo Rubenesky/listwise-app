@@ -45,60 +45,6 @@ export const MODE_CONFIG: Record<GenerationMode, { label: string; systemPrompt: 
   },
 };
 
-// Concise calibration example per category — injected dynamically to eliminate anchoring to one fixed example
-const CATEGORY_CALIBRATION: Record<string, { title: string; hook: string; bullet: string }> = {
-  "Ropa": {
-    title: "Sudadera Oversized Algodón Orgánico 100% | Sin Costuras Laterales",
-    hook: "Hay prendas que te pones y decides que el resto del armario sobra.",
-    bullet: "ALGODÓN ORGÁNICO CERTIFICADO: sin químicos en contacto con tu piel desde el primer día",
-  },
-  "Electrónica": {
-    title: "Auriculares Inalámbricos 40h Batería | Sonido Envolvente sin Cable",
-    hook: "Cuarenta horas. La batería que no te da sustos en mitad de la semana.",
-    bullet: "40H DE AUTONOMÍA REAL: carga completa el domingo, aguanta hasta el viernes sin enchufar",
-  },
-  "Cocina": {
-    title: "Sartén Antiadherente 28cm Sin PFOA | Cocción Uniforme en Toda la Base",
-    hook: "El problema no es cocinar. Es limpiar después.",
-    bullet: "SIN PFOA NI PFAS: superficie libre de químicos tóxicos, segura a alta temperatura",
-  },
-  "Hogar": {
-    title: "Organizador Escritorio Bambú Natural | 5 Compartimentos Ajustables",
-    hook: "Tres minutos. El tiempo que tardas en transformar un escritorio caótico en uno que da ganas de trabajar.",
-    bullet: "BAMBÚ NATURAL: resistente y ligero, no se dobla con el peso de carpetas o libros",
-  },
-  "Deportes": {
-    title: "Zapatillas Trail Running Suela Vibram | Agarre Extremo en Cualquier Terreno",
-    hook: "No todas las zapatillas de trail aguantan el barro, la roca y el asfalto. Estas sí.",
-    bullet: "SUELA VIBRAM MULTITERRENO: grip profesional sin cambiar de calzado según el terreno",
-  },
-  "Belleza": {
-    title: "Sérum Vitamina C 20% Estabilizada | Antimanchas con Resultados desde Semana 2",
-    hook: "¿Cuántos productos llevas probando para las manchas sin ver resultado real?",
-    bullet: "VITAMINA C 20% ESTABILIZADA: máxima concentración sin irritación, apta para piel sensible",
-  },
-  "Mascotas": {
-    title: "Cama Ortopédica Perro Viscoelástica | Lavable a Máquina - Todas las Razas",
-    hook: "Tu perro pasa 14 horas al día durmiendo. Merece algo mejor que el suelo.",
-    bullet: "VISCOELÁSTICA ORTOPÉDICA: distribuye el peso uniformemente, alivia articulaciones y caderas",
-  },
-  "Bebé": {
-    title: "Portabebés Ergonómico Algodón Orgánico | Posición Fisiológica desde 3,5kg",
-    hook: "Dos manos libres. Bebé tranquilo. El equilibrio que buscabas desde el primer día.",
-    bullet: "POSICIÓN FISIOLÓGICA CERTIFICADA: rodillas más altas que las caderas, columna en C natural",
-  },
-  "Accesorios": {
-    title: "Mochila Impermeable 30L Unisex | Compartimento Laptop 15\" Acolchado",
-    hook: "Llueve. Tu mochila dice que no importa.",
-    bullet: "IMPERMEABLE TOTAL: costuras selladas y cremalleras con cubierta, interior seco garantizado",
-  },
-  "Oficina": {
-    title: "Soporte Monitor Ergonómico Ajustable 360° | Libera 40cm de Escritorio",
-    hook: "El cuello lleva aguantando horas de pantalla. Esto lo nota desde el primer día.",
-    bullet: "AJUSTE TOTAL EN 3 EJES: altura, inclinación y rotación sin soltar herramientas",
-  },
-};
-
 // Prescriptive hook type per category — tells the model exactly which opener to use
 // Avoids defaulting to "Imagina" for every product
 const REQUIRED_HOOK_TYPE: Record<string, { type: string; instruction: string }> = {
@@ -359,17 +305,6 @@ export function buildUserPrompt(product: {
   const requiredHook = REQUIRED_HOOK_TYPE[category];
   if (requiredHook) {
     prompt += `\nTipo de apertura OBLIGATORIO para este producto (hook_type: "${requiredHook.type}"):\n${requiredHook.instruction}\nNO uses "Imagina" como primera palabra si el tipo requerido es question, bold o benefit.\n`;
-  }
-
-  // Dynamic calibration example for this category
-  const cal = CATEGORY_CALIBRATION[category];
-  if (cal) {
-    prompt += `
-Calibración de tono para ${category} (referencia — NO copies, adapta al producto real):
-  Título modelo:  "${cal.title}"
-  Gancho modelo:  "${cal.hook}"
-  Bullet modelo:  "${cal.bullet}"
-`;
   }
 
   // Category keyword suggestions — conditional, not mandatory

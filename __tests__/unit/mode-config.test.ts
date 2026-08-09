@@ -200,6 +200,38 @@ describe("getRequiredHookType", () => {
   });
 });
 
+describe("buildUserPrompt category calibration (no literal copyable examples)", () => {
+  // Regression (biggest finding of retest round 4): real generations for
+  // auriculares (Electrónica) and zapatillas (Deportes) copied
+  // CATEGORY_CALIBRATION's hook/bullet fields VERBATIM across multiple
+  // retest rounds and completely different real source URLs — e.g. "Cuarenta
+  // horas. La batería que no te da sustos en mitad de la semana." and "40H DE
+  // AUTONOMÍA REAL: carga completa el domingo, aguanta hasta el viernes sin
+  // enchufar" for Electrónica; "No todas las zapatillas de trail aguantan el
+  // barro, la roca y el asfalto. Estas sí." for Deportes (used as the
+  // CLOSING sentence, not even the hook it was written as). The existing
+  // "(referencia — NO copies, adapta al producto real)" warning did not stop
+  // this. Unlike the prompt's other examples — REQUIRED_HOOK_TYPE's bracketed
+  // placeholders ("[número o dato específico] que cambia [rutina diaria]"),
+  // the bullets section's deliberately-unrelated hiking-battery example —
+  // CATEGORY_CALIBRATION paired a REAL, complete, grammatical sentence with
+  // the SAME category as the real product, making it read as plausible
+  // content instead of an obviously separate illustration. Removed entirely:
+  // hook structure is already covered by REQUIRED_HOOK_TYPE, bullet structure
+  // by the Formato A/B section.
+  it("does not include literal copyable calibration example sentences for any category", () => {
+    const categories = ["Ropa", "Electrónica", "Deportes", "Belleza", "Cocina", "Hogar", "Mascotas", "Bebé", "Accesorios", "Oficina"];
+    for (const category of categories) {
+      const prompt = buildUserPrompt({ productName: "Producto de prueba", category, attributes: { color: "negro" } });
+      expect(prompt).not.toMatch(/Cuarenta horas\. La batería/);
+      expect(prompt).not.toMatch(/No todas las zapatillas de trail/);
+      expect(prompt).not.toMatch(/Título modelo/);
+      expect(prompt).not.toMatch(/Gancho modelo/);
+      expect(prompt).not.toMatch(/Bullet modelo/);
+    }
+  });
+});
+
 describe("buildUserPrompt thin-attributes branch", () => {
   // Same regression as above, but in the zero-confirmed-attributes branch of
   // buildUserPrompt — the exact branch a thin URL-enriched source hits (see

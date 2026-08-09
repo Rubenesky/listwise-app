@@ -1,4 +1,4 @@
-import { meetsContentContract, generateWithContentRetry } from "@/lib/ai/generation-contract";
+import { meetsContentContract, generateWithContentRetry, hasVerbatimBulletOverlap } from "@/lib/ai/generation-contract";
 
 function words(n: number): string {
   return Array(n).fill("palabra").join(" ");
@@ -31,6 +31,57 @@ describe("meetsContentContract", () => {
 
   it("treats 119 words as insufficient", () => {
     expect(meetsContentContract({ bullets: ["a", "b", "c", "d"], description: words(119) })).toBe(false);
+  });
+});
+
+// Regression (retest round 4): the prompt-only fix for bullet/description
+// redundancy (a widened PROHIBIDO rule + AUTOVERIFICACION example) shipped
+// but didn't hold — URL3 and URL4 still restated bullet content in the
+// description, URL4 verbatim ("estabilidad neutra es adecuada para
+// cualquier ritmo de carrera, desde 4:30 a 5:30 min/km" appeared identically
+// in a bullet and the description). Defense-in-depth: this catches the
+// worst case (a long verbatim chunk shared between a bullet and the
+// description) as a hard, testable signal, on top of the prompt-side fix —
+// it won't catch every paraphrase, but it catches exactly the failure
+// actually observed.
+describe("hasVerbatimBulletOverlap", () => {
+  it("detects a 6+ word chunk shared verbatim between a bullet and the description", () => {
+    const bullets = ["ESTABILIDAD NEUTRA: adecuada para cualquier ritmo de carrera, desde 4:30 a 5:30 min/km"];
+    const description = "La estabilidad neutra es adecuada para cualquier ritmo de carrera, desde 4:30 a 5:30 min/km y te permite concentrarte en el entrenamiento.";
+    expect(hasVerbatimBulletOverlap(bullets, description)).toBe(true);
+  });
+
+  it("returns false when the description paraphrases instead of repeating verbatim", () => {
+    const bullets = ["BLUETOOTH 5.4: conecta sin cables a 15 m de distancia"];
+    const description = "Olvídate de los cables: la conexión se mantiene estable incluso a varios metros de tu dispositivo.";
+    expect(hasVerbatimBulletOverlap(bullets, description)).toBe(false);
+  });
+
+  it("does not flag short, incidental word overlap (common words, under the threshold)", () => {
+    const bullets = ["MALLA TRANSPIRABLE: mantiene el pie fresco en cualquier entrenamiento"];
+    const description = "Con esta zapatilla, cada entrenamiento se siente distinto desde el primer kilómetro.";
+    expect(hasVerbatimBulletOverlap(bullets, description)).toBe(false);
+  });
+
+  it("returns false when there are no bullets or an empty description", () => {
+    expect(hasVerbatimBulletOverlap([], "cualquier descripción")).toBe(false);
+    expect(hasVerbatimBulletOverlap(["ALGO: relevante para el caso de prueba aquí"], "")).toBe(false);
+  });
+});
+
+describe("meetsContentContract with verbatim overlap", () => {
+  it("fails the contract when bullets/word-count are fine but a bullet is verbatim-duplicated in the description", () => {
+    const bullets = [
+      "ESTABILIDAD NEUTRA: adecuada para cualquier ritmo de carrera, desde 4:30 a 5:30 min/km",
+      "b",
+      "c",
+      "d",
+    ];
+    const description =
+      words(60) +
+      " la estabilidad neutra es adecuada para cualquier ritmo de carrera, desde 4:30 a 5:30 min/km " +
+      words(60);
+    expect(meetsContentContract({ bullets, description })).toBe(false);
   });
 });
 

@@ -19,7 +19,7 @@ export function analyzeTitle(title: string | null): ScoreResult {
   else if (len < 60) { score += 5; notes.push(`${len} chars (mín 60)`); }
   else { score += 8; notes.push(`${len} chars (máx 200)`); }
 
-  if (/[®©™%]/.test(title)) notes.push("contiene símbolos prohibidos");
+  if (/[®©™]/.test(title)) notes.push("contiene símbolos prohibidos");
   else { score += 5; notes.push("sin símbolos prohibidos"); }
 
   const firstSegment = title.split(/[|·\-–—]/)[0]?.trim() ?? "";
@@ -49,7 +49,13 @@ function isWellFormattedBullet(b: string): boolean {
   if (CONCEPTO_FORMAT.test(b)) return true;
   const trimmed = b.trim();
   const words = trimmed.split(/\s+/).filter(Boolean);
-  return /^[A-ZÁÉÍÓÚÑ]/.test(trimmed) && words.length >= 4 && words.length <= 18;
+  // A bullet leading with a concrete number ("100% ALGODÓN...", "200 g/m²
+  // DE GRAMAJE...") is legitimate, concrete content — not a formatting
+  // defect. Formato A's regex can't match it (digits/units aren't in the
+  // ALL-CAPS-only class), so Formato B is the fallback; it shouldn't require
+  // the first character to be a letter when a leading digit is exactly the
+  // concrete-data-first style the prompt's own TÍTULO rule asks for.
+  return /^[A-ZÁÉÍÓÚÑ0-9]/.test(trimmed) && words.length >= 4 && words.length <= 18;
 }
 
 export function analyzeBullets(bullets: string[] | null): ScoreResult {

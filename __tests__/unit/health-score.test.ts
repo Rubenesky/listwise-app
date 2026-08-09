@@ -1,4 +1,4 @@
-import { calcHealthScore, analyzeDescriptionTecnica, analyzeDescription, analyzeBullets } from "@/lib/listings/health-score";
+import { calcHealthScore, analyzeDescriptionTecnica, analyzeDescription, analyzeBullets, analyzeTitle } from "@/lib/listings/health-score";
 
 const TECNICA_DESCRIPTION = [
   "Gancho breve presentando el producto.",
@@ -14,6 +14,27 @@ const TECNICA_DESCRIPTION = [
 ].join("\n");
 
 const SHORT_DESCRIPTION = "Imagina el mejor producto para tu día a día. El resultado es una experiencia inigualable.";
+
+describe("analyzeTitle symbol penalty", () => {
+  // Regression (retest round 4, URL1): "Camiseta ... 100% Unisex ... | Sin
+  // Químicos" lost 5 points because "%" was bundled into the same forbidden-
+  // symbols regex as ®©™. Unlike trademark/legal symbols, "%" is a legitimate
+  // unit for concrete data — exactly what buildSystemPrompt's TÍTULO rule
+  // asks for ("Solo adjetivos con respaldo concreto: '40h de batería' no
+  // 'batería duradera'"). Penalizing it contradicts the prompt's own
+  // guidance. ®©™ remain penalized — those are genuinely never appropriate.
+  it("does not penalize a percentage sign in the title", () => {
+    const title = "Camiseta Algodón Orgánico 100% Unisex Corta Manga | Sin Químicos";
+    const result = analyzeTitle(title);
+    expect(result.notes.join(" ")).toMatch(/sin símbolos prohibidos/);
+  });
+
+  it("still penalizes trademark/legal symbols", () => {
+    const title = "Auriculares Bluetooth® Inalámbricos con Cancelación de Ruido Activa";
+    const result = analyzeTitle(title);
+    expect(result.notes.join(" ")).toMatch(/contiene símbolos prohibidos/);
+  });
+});
 
 describe("analyzeDescriptionTecnica", () => {
   it("scores full points when all 3 sections are present and word count is in range", () => {
@@ -63,6 +84,25 @@ describe("analyzeBullets Formato A / Formato B reconciliation", () => {
   it("still withholds credit for bullets that follow neither format (too short, no structure)", () => {
     const result = analyzeBullets(["ok", "bien", "genial", "vale"]);
     expect(result.notes.join(" ")).not.toMatch(/todos con formato/i);
+  });
+
+  // Regression (retest round 4, URL1 ropa/organic-choice.es): a real
+  // generation led two bullets with concrete data ("100% ALGODÓN ORGÁNICO
+  // CERTIFICADO: ...", "200 g/m² DE GRAMAJE: ...") — exactly the kind of
+  // "adjetivos con respaldo concreto" copy buildSystemPrompt's TÍTULO rule
+  // asks for. Both failed Formato A (digits/% aren't in the ALL-CAPS
+  // character class) AND the old Formato B check (required the first
+  // character to be an uppercase letter, excluding a leading digit) — so
+  // this health-score-favored copy scored WORSE than generic filler would
+  // have. A bullet leading with a number is legitimate, concrete content.
+  it("gives full format credit for bullets that lead with a concrete number or percentage", () => {
+    const result = analyzeBullets([
+      "100% ALGODÓN ORGÁNICO CERTIFICADO: sin químicos en contacto con tu piel",
+      "200 g/m² DE GRAMAJE: ligero y suave para el verano",
+      "CAMISETA UNISEX: para hombres y mujeres",
+      "MANGA CORTA Y CUELLO REDONDO: diseño clásico y cómodo",
+    ]);
+    expect(result.notes.join(" ")).toMatch(/todos con formato/i);
   });
 });
 
