@@ -13,6 +13,7 @@ import { fetchAndExtractText } from "@/lib/scraping/extract-text";
 import { detectLanguageMismatch } from "@/lib/text/detect-language";
 import { extractSpecsFromText } from "@/lib/ai/extract-specs";
 import { mergeAttributesWithPrecedence } from "@/lib/listings/merge-attributes";
+import { meetsContentContract } from "@/lib/ai/generation-contract";
 
 const qualityFlagsSchema = z.object({
   no_trademarks: z.boolean().optional(),
@@ -201,35 +202,46 @@ export const processProductsTask = task({
           }
         }
 
-        const response = await retry.onThrow(
-          async () => {
-            return await getAIResponse(
-              [
-                { role: "system", content: buildSystemPrompt(safeMode) },
-                { role: "user", content: buildUserPromptWithVoice(
-                  {
-                    productName: safeName,
-                    category: safeCategory,
-                    attributes: mergedAttributes,
-                    mode: safeMode,
-                    marketplace: (product.marketplace as Marketplace | undefined) ?? undefined,
-                    priceSegment: (product.priceSegment as PriceSegment | undefined) ?? undefined,
-                  },
-                  activeVoiceProfile
-                )},
-              ],
-              safeProvider,
-              { temperature, max_tokens: maxTokens, response_format: { type: "json_object" } }
-            );
-          },
-          { maxAttempts: 3, minTimeoutInMs: 2000, factor: 2 }
-        );
-
-        const completion = response as { choices: { message: { content: string | null } }[] };
-        const text = completion.choices[0]?.message?.content || "";
+        const callAI = async () => {
+          const response = await retry.onThrow(
+            async () => {
+              return await getAIResponse(
+                [
+                  { role: "system", content: buildSystemPrompt(safeMode) },
+                  { role: "user", content: buildUserPromptWithVoice(
+                    {
+                      productName: safeName,
+                      category: safeCategory,
+                      attributes: mergedAttributes,
+                      mode: safeMode,
+                      marketplace: (product.marketplace as Marketplace | undefined) ?? undefined,
+                      priceSegment: (product.priceSegment as PriceSegment | undefined) ?? undefined,
+                    },
+                    activeVoiceProfile
+                  )},
+                ],
+                safeProvider,
+                { temperature, max_tokens: maxTokens, response_format: { type: "json_object" } }
+              );
+            },
+            { maxAttempts: 3, minTimeoutInMs: 2000, factor: 2 }
+          );
+          const completion = response as { choices: { message: { content: string | null } }[] };
+          return completion.choices[0]?.message?.content || "";
+        };
 
         try {
-          const generated = parseAiResponse(text);
+          // Ficha Técnica has no bullets/word-count contract of this shape — only
+          // the short-form modes (creative/professional/seo) are checked.
+          const CONTENT_RETRY_ATTEMPTS = safeMode === "tecnica" ? 1 : 2;
+          let generated = parseAiResponse(await callAI());
+          for (let attempt = 1; attempt < CONTENT_RETRY_ATTEMPTS && !meetsContentContract(generated); attempt++) {
+            log.warn(
+              { userId, productId: product.id, attempt, bullets: generated.bullets.length },
+              "Generación no cumple el mínimo de bullets/palabras — reintentando"
+            );
+            generated = parseAiResponse(await callAI());
+          }
           await db
             .update(schema.listings)
             .set({

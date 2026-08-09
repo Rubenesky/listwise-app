@@ -189,10 +189,10 @@ BULLETS — SIEMPRE entre 4 y 6. Nunca menos de 4:
 - Si el producto no tiene suficientes datos o contexto para un punto clave específico en mayúsculas (fuente con poca información), usa el Formato B para ese bullet en vez de forzar el Formato A.
 - El bullet más diferencial va PRIMERO. Cada bullet pasa el so-what test: si la respuesta obvia es "¿y qué?", reescríbelo con más especificidad.
 - Sin relleno. Sin repetir el mismo beneficio con otras palabras entre bullets.
-- Si los atributos no alcanzan para 4 bullets distintos, añade: (a) el contexto de uso ideal, (b) para quién es ideal y para quién no, o (c) la consecuencia emocional del beneficio principal.
+- Si los atributos no alcanzan para 4 bullets distintos, no fuerces datos inventados: escribe bullets adicionales redactados como frases naturales y específicas sobre ESTE producto — por ejemplo una situación de uso concreta, para quién encaja mejor, o por qué se nota el beneficio principal en el día a día. Escribe la frase completa; no repitas estas categorías ni sus palabras como si fueran el contenido del bullet.
 
 DESCRIPCIÓN (2 a 3 párrafos de prosa corrida, SIN encabezados, SIN numerar los párrafos, SIN ninguna etiqueta antes de cada uno — solo el texto):
-La descripción completa (los 2-3 párrafos juntos) debe tener AL MENOS 120 palabras. No la des por terminada por debajo de ese mínimo, aunque el producto tenga pocos datos confirmados: desarrolla más el contexto de uso, añade un detalle sensorial adicional, o profundiza en la consecuencia emocional del beneficio principal — nunca inventes especificaciones para alargarla.
+La descripción completa (los 2-3 párrafos juntos) debe tener AL MENOS 120 palabras. No la des por terminada por debajo de ese mínimo, aunque el producto tenga pocos datos confirmados: desarrolla más el contexto de uso, añade un detalle sensorial adicional, o explica con más profundidad por qué el beneficio principal importa en la práctica — nunca inventes especificaciones para alargarla, y nunca repitas frases ya usadas en los bullets.
 
 El primer párrafo es el gancho:
   Primera frase: máximo 12 palabras.
@@ -233,7 +233,7 @@ ANTES DE ESCRIBIR EL JSON, verifica internamente — NO lo incluyas en la respue
 2. ¿El título tiene menos de 60 chars? → OBLIGATORIO ampliar: (a) añade material o técnica si falta, (b) añade público objetivo ("para Perro Grande", "Mujer XS-XL"), (c) añade beneficio o contexto ("| Sueño Ortopédico", "| Sin PFOA", "| Cocinas Inducción"). No pares hasta superar 60 chars.
 3. ¿El título tiene más de 100 chars? → Acórtalo.
 4. ¿Algún bullet tiene más de 15 palabras? → Acórtalo.
-5. ¿Hay menos de 4 bullets? → AÑADE bullets hasta llegar a 4 mínimo usando: (a) contexto de uso ideal, (b) para quién es ideal y para quién no, (c) consecuencia emocional del beneficio principal. Esto es obligatorio — no puedes entregar menos de 4.
+5. ¿Hay menos de 4 bullets? → AÑADE bullets hasta llegar a 4 mínimo, con el mismo criterio de la sección BULLETS de arriba (situación de uso, para quién encaja, o por qué se nota el beneficio en el día a día) — redactado como una frase natural sobre ESTE producto, nunca como una etiqueta genérica. Esto es obligatorio — no puedes entregar menos de 4.
 6. ¿Has mencionado algún atributo material o característica física NO confirmada en los inputs? → Elimínala y sustitúyela por un beneficio de uso observable.
 7. ¿La descripción empieza con "Imagina", "Nuestra", "Este" o el nombre del producto? → REESCRIBE el gancho con el tipo de apertura indicado en el user prompt (question/scene/bold/benefit). "Imagina" como primera palabra está prohibido.
 8. ¿Cada bullet añade algo único que los otros no dicen? Si no → Elimina el redundante.
@@ -328,7 +328,7 @@ export function buildUserPrompt(product: {
     prompt += `IMPORTANTE: usa SOLO estos atributos. No inventes materiales, medidas, texturas ni características no confirmadas.\n`;
   } else {
     prompt += `ATENCIÓN: este producto no tiene atributos confirmados.\n`;
-    prompt += `Regla estricta: NO inventes materiales ("textura suave", "alta calidad", "materiales premium"), ni dimensiones, ni características físicas no confirmadas. El copy debe basarse ÚNICAMENTE en el nombre del producto y lo que se infiere directamente de él. Para los bullets sin datos, usa: (1) el contexto de uso más obvio, (2) para quién es ideal, (3) la consecuencia emocional del beneficio principal — pero sin inventar propiedades físicas.\n`;
+    prompt += `Regla estricta: NO inventes materiales ("textura suave", "alta calidad", "materiales premium"), ni dimensiones, ni características físicas no confirmadas. El copy debe basarse ÚNICAMENTE en el nombre del producto y lo que se infiere directamente de él. Para los bullets sin datos, redacta frases naturales y específicas sobre ESTE producto — su uso más obvio, para quién encaja mejor, o por qué se nota su beneficio principal en el día a día — sin inventar propiedades físicas y sin repetir estas instrucciones como si fueran el contenido del bullet.\n`;
   }
 
   // Marketplace guidance

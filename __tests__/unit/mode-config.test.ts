@@ -1,4 +1,4 @@
-import { MODE_CONFIG, buildSystemPrompt, buildUserPromptTecnica, buildUserPromptWithVoice, type VoiceProfileData } from "@/lib/ai/prompts";
+import { MODE_CONFIG, buildSystemPrompt, buildUserPrompt, buildUserPromptTecnica, buildUserPromptWithVoice, type VoiceProfileData } from "@/lib/ai/prompts";
 
 describe("MODE_CONFIG", () => {
   it("has all four modes", () => {
@@ -120,6 +120,36 @@ describe("buildSystemPrompt", () => {
       expect(prompt).toMatch(/120/);
       expect(prompt.toLowerCase()).toMatch(/no.*(bajes|quedes).*120|mínimo.*120|al menos 120/);
     }
+  });
+  // Regression (real staging generation, auriculares/plastic.es — a thin-source
+  // URL-enriched product with empty attributes): the bullet-padding fallback
+  // instruction ("añade: (a) contexto de uso ideal, (b) para quién es ideal y
+  // para quién no, (c) la consecuencia emocional del beneficio principal") was
+  // repeated 3 times across the prompt as an enumerated, copyable label. With a
+  // thin source giving the model little real content to write about, it echoed
+  // the label itself as bullet content ("La consecuencia emocional de esta
+  // autonomía es el ahorro de tiempo..."), dropping to 3 bullets total —
+  // violating the explicit "nunca menos de 4" rule. Same root cause as the
+  // earlier "PÁRRAFO N" / "BENEFICIO EN MAYÚSCULAS" echoes, in a spot those
+  // fixes never touched. The phrase is removed everywhere it appeared as a
+  // fallback label; guidance is now prose instructing the model not to echo it.
+  it("does not phrase the bullet-padding fallback as a literal 'consecuencia emocional del beneficio principal' label", () => {
+    for (const mode of ["creative", "professional", "seo"] as const) {
+      const prompt = buildSystemPrompt(mode);
+      expect(prompt).not.toMatch(/consecuencia emocional del beneficio principal/i);
+    }
+  });
+});
+
+describe("buildUserPrompt thin-attributes branch", () => {
+  // Same regression as above, but in the zero-confirmed-attributes branch of
+  // buildUserPrompt — the exact branch a thin URL-enriched source hits (see
+  // extract-product-info.ts's "leave attributes empty for thin sources" rule).
+  // This was the third, most directly-triggered copy of the same literal label.
+  it("does not phrase the no-attributes bullet fallback as a literal 'consecuencia emocional del beneficio principal' label", () => {
+    const prompt = buildUserPrompt({ productName: "Auriculares Inalámbricos", category: "Electrónica", attributes: {} });
+    expect(prompt).toMatch(/no tiene atributos confirmados/);
+    expect(prompt).not.toMatch(/consecuencia emocional del beneficio principal/i);
   });
 });
 
