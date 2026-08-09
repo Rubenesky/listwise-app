@@ -33,7 +33,9 @@ export async function extractProductInfoFromText(text: string): Promise<ProductI
     `{"productName": string (nombre descriptivo del producto en español, máx 100 chars — NO incluyas la marca o fabricante, ` +
     `describe el producto de forma genérica, ej. "Zapatilla de Running con Amortiguación" en vez de "Zapatilla Asics Novablast"), ` +
     `"category": string (una de EXACTAMENTE, respetando mayúsculas: Ropa, Electrónica, Hogar, Deportes, Alimentación, Belleza, Juguetes, Mascotas, Otro), ` +
-    `"attributes": {clave: valor} (máximo 6 atributos clave como material, color, dimensiones, uso, etc., solo datos confirmados en el texto), ` +
+    `"attributes": {clave: valor} (máximo 6 atributos clave como material, color, dimensiones, uso, etc., SOLO datos EXPLÍCITAMENTE mencionados en el texto — ` +
+    `si el texto no menciona especificaciones reales del producto (ej. solo repite el nombre sin más detalle), no inventes atributos plausibles ` +
+    `("producción artesanal", "reciclable", etc. no son válidos si no aparecen en el texto) y deja attributes como un objeto vacío {}), ` +
     `"primaryKeyword": string (keyword principal para SEO, 2-4 palabras en español), ` +
     `"confidence": number (0-1, tu nivel de confianza en que identificaste correctamente el producto principal)}` +
     `\n\nTEXTO:\n${truncated}`;

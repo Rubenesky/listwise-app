@@ -107,6 +107,24 @@ describe("extractProductInfoFromText", () => {
     expect(promptSent.toLowerCase()).toContain("no incluyas");
   });
 
+  // Regression: real staging generation for a near-empty source page (the
+  // site's own "Descripción" just repeated the product title, no real
+  // specs) still came back with fabricated-sounding attributes ("producción
+  // artesanal", "reciclable") not present anywhere in the source text. Once
+  // extraction returns any non-empty attributes, buildUserPrompt takes the
+  // "usa SOLO estos atributos" branch instead of the "sin atributos
+  // confirmados" branch — which already has well-tested sparse-input
+  // handling for the CSV path (no material invention, bullets built from
+  // context-of-use instead). Extraction inventing plausible attributes from
+  // near-nothing skips that proven fallback entirely.
+  it("instructs the model to leave attributes empty rather than invent plausible-sounding ones from thin source text", async () => {
+    mockGetAIResponse.mockResolvedValue({ choices: [{ message: { content: "{}" } }] });
+    await extractProductInfoFromText("texto");
+    const promptSent = mockGetAIResponse.mock.calls[0][0][0].content as string;
+    expect(promptSent.toLowerCase()).toMatch(/no inventes/);
+    expect(promptSent.toLowerCase()).toMatch(/deja.*vac[íi]o|objeto vac[íi]o|\{\}/);
+  });
+
   it("includes anti-noise instruction in the prompt about identifying the main product", async () => {
     mockGetAIResponse.mockResolvedValue({ choices: [{ message: { content: "{}" } }] });
     await extractProductInfoFromText("texto de una página con productos relacionados");
