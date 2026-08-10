@@ -97,12 +97,9 @@ export function hasDuplicateBulletDataPoint(bullets: string[]): boolean {
   return false;
 }
 
-// Named, specific reasons a generation misses the contract — used both to
-// decide whether to retry and to tell the model exactly what to fix on the
-// next attempt (see generateWithContentRetry). Blindly resampling the same
-// prompt on a miss doesn't reliably fix it (real case: a second attempt hit
-// 120 words by self-repeating a paragraph); concrete feedback about what was
-// wrong is the standard fix for LLM retry loops.
+// Named, specific reasons a generation misses the contract — used to rank
+// candidates in generateBestOfN (fewest issues wins when none pass outright)
+// and for observability logging.
 export function describeContentContractFailure(generated: { bullets: string[]; description: string }): string[] {
   const issues: string[] = [];
   const wordCount = generated.description.trim().split(/\s+/).filter(Boolean).length;
@@ -128,24 +125,36 @@ export function meetsContentContract(generated: { bullets: string[]; description
   return describeContentContractFailure(generated).length === 0;
 }
 
-// Pure, callback-driven retry loop so the orchestration (how many attempts,
-// when to stop, what's returned on exhaustion) is unit-testable without
-// pulling in @trigger.dev/sdk, the DB, or the AI provider — none of which
-// this codebase's test suite mocks anywhere else. Always returns the last
-// result even if it never meets the contract: a listing with imperfect
-// content is better than one that fails outright after using a credit.
-export async function generateWithContentRetry<T extends { bullets: string[]; description: string }>(
-  generate: (feedback?: string) => Promise<T>,
-  maxAttempts: number,
-  onRetry?: (attempt: number, result: T, issues: string[]) => void
+// Pure, callback-driven best-of-N so the selection logic (call generate n
+// times, keep whichever meets the contract, fall back to the fewest-issues
+// candidate) is unit-testable without pulling in @trigger.dev/sdk, the DB,
+// or the AI provider — none of which this codebase's test suite mocks
+// anywhere else. Replaced a sequential feedback-driven retry loop: that
+// fixed real bugs (self-padding, missing bullets) but multiplied latency up
+// to 3x in the worst case. Firing N independent candidates via Promise.all
+// costs the same total AI calls but takes ~1x wall-clock time since they
+// run concurrently — generation speed is a stated competitive advantage,
+// so latency isn't a free variable here. No feedback loop needed: the
+// candidates are independent, so the fixes that make individual generations
+// more reliable belong in the base prompt (word-count reinforcement, the
+// CIERRE anti-generic-closing rule), where they help every candidate
+// equally instead of only later sequential ones.
+export async function generateBestOfN<T extends { bullets: string[]; description: string }>(
+  generate: () => Promise<T>,
+  n: number,
+  onAttempt?: (index: number, result: T, issues: string[]) => void
 ): Promise<T> {
-  let result = await generate();
-  for (let attempt = 1; attempt < maxAttempts; attempt++) {
-    const issues = describeContentContractFailure(result);
-    if (issues.length === 0) break;
-    onRetry?.(attempt, result, issues);
-    const feedback = `Tu intento anterior no cumplió estos requisitos: ${issues.join("; ")}. Genera una versión nueva y genuina para estos mismos campos — no repitas frases de tu intento anterior, ni entre bullets y descripción, ni entre distintos párrafos de la descripción.`;
-    result = await generate(feedback);
+  const results = await Promise.all(Array.from({ length: n }, () => generate()));
+  let best = results[0];
+  let bestIssues = describeContentContractFailure(results[0]);
+  onAttempt?.(0, results[0], bestIssues);
+  for (let i = 1; i < results.length; i++) {
+    const issues = describeContentContractFailure(results[i]);
+    onAttempt?.(i, results[i], issues);
+    if (issues.length < bestIssues.length) {
+      best = results[i];
+      bestIssues = issues;
+    }
   }
-  return result;
+  return best;
 }

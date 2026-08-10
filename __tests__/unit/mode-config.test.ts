@@ -154,6 +154,20 @@ describe("buildSystemPrompt", () => {
     }
   });
 
+  // Regression (retest round 8, URL4/zapatillas): the description opened
+  // and closed with near-identical sentences ("La zapatilla de running con
+  // amortiguación y estabilidad..." at both start and end) — a verbatim
+  // bookend that survived 3 retry attempts. Root cause: the CIERRE rule
+  // prescribes 3 specific closing patterns, but doesn't say what NOT to do,
+  // so the model's default fallback (restate product name + category) went
+  // unchallenged. Naming the exact observed failure shape explicitly.
+  it("prohibits closing by restating the product name/category like the hook or title", () => {
+    for (const mode of ["creative", "professional", "seo"] as const) {
+      const prompt = buildSystemPrompt(mode);
+      expect(prompt.toLowerCase()).toMatch(/prohibido cerrar repitiendo el nombre/);
+    }
+  });
+
   // Regression (retest round 3): real generations for all 4 retested URLs had
   // paragraph 2 restate bullet content — sometimes verbatim (URL4's "estabilidad
   // neutra es adecuada para cualquier ritmo de carrera, desde 4:30 a 5:30

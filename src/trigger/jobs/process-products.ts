@@ -13,7 +13,7 @@ import { fetchAndExtractText } from "@/lib/scraping/extract-text";
 import { detectLanguageMismatch } from "@/lib/text/detect-language";
 import { extractSpecsFromText } from "@/lib/ai/extract-specs";
 import { mergeAttributesWithPrecedence } from "@/lib/listings/merge-attributes";
-import { generateWithContentRetry, truncateAtWordBoundary } from "@/lib/ai/generation-contract";
+import { generateBestOfN, truncateAtWordBoundary } from "@/lib/ai/generation-contract";
 
 const qualityFlagsSchema = z.object({
   no_trademarks: z.boolean().optional(),
@@ -202,7 +202,7 @@ export const processProductsTask = task({
           }
         }
 
-        const callAI = async (feedback?: string) => {
+        const callAI = async () => {
           const userPrompt = buildUserPromptWithVoice(
             {
               productName: safeName,
@@ -219,7 +219,7 @@ export const processProductsTask = task({
               return await getAIResponse(
                 [
                   { role: "system", content: buildSystemPrompt(safeMode) },
-                  { role: "user", content: feedback ? `${userPrompt}\n\n${feedback}` : userPrompt },
+                  { role: "user", content: userPrompt },
                 ],
                 safeProvider,
                 { temperature, max_tokens: maxTokens, response_format: { type: "json_object" } }
@@ -234,19 +234,23 @@ export const processProductsTask = task({
         try {
           // Ficha Técnica has no bullets/word-count contract of this shape — only
           // the short-form modes (creative/professional/seo) are checked.
-          // 3 (not 2): retest evidence showed thinner-source categories
-          // (Belleza, Electrónica) sometimes need more than one extra try to
-          // reach 120 genuine words — crema/essensworld.es never crossed 120
-          // in any retest round with only 1 retry available.
-          const CONTENT_RETRY_ATTEMPTS = safeMode === "tecnica" ? 1 : 3;
-          const generated = await generateWithContentRetry(
-            async (feedback) => parseAiResponse(await callAI(feedback)),
-            CONTENT_RETRY_ATTEMPTS,
-            (attempt, result, issues) =>
-              log.warn(
-                { userId, productId: product.id, attempt, bullets: result.bullets.length, issues },
-                "Generación no cumple el contrato de contenido — reintentando con feedback específico"
-              )
+          // 3 parallel candidates (not sequential retries): generation speed
+          // is a stated competitive advantage, so a 3x-latency sequential
+          // retry loop wasn't acceptable even though it improved reliability.
+          // Firing candidates concurrently costs the same total AI calls but
+          // takes ~1x wall-clock time.
+          const CONTENT_CANDIDATES = safeMode === "tecnica" ? 1 : 3;
+          const generated = await generateBestOfN(
+            async () => parseAiResponse(await callAI()),
+            CONTENT_CANDIDATES,
+            (index, result, issues) => {
+              if (issues.length > 0) {
+                log.warn(
+                  { userId, productId: product.id, candidate: index, bullets: result.bullets.length, issues },
+                  "Candidato de generación no cumple el contrato de contenido"
+                );
+              }
+            }
           );
           await db
             .update(schema.listings)

@@ -1,4 +1,4 @@
-import { meetsContentContract, generateWithContentRetry, hasVerbatimBulletOverlap, hasVerbatimSentenceOverlap, hasDuplicateBulletDataPoint, describeContentContractFailure, truncateAtWordBoundary } from "@/lib/ai/generation-contract";
+import { meetsContentContract, generateBestOfN, hasVerbatimBulletOverlap, hasVerbatimSentenceOverlap, hasDuplicateBulletDataPoint, describeContentContractFailure, truncateAtWordBoundary } from "@/lib/ai/generation-contract";
 
 function words(n: number): string {
   return Array(n).fill("palabra").join(" ");
@@ -218,69 +218,58 @@ describe("meetsContentContract with verbatim overlap", () => {
   });
 });
 
-// Regression: the retry orchestration in process-products.ts (call AI, check
-// meetsContentContract, retry once on a miss, accept the last result
-// regardless) had no test coverage — the trigger job itself pulls in
-// @trigger.dev/sdk, the DB, and the AI provider, none of which are mocked
-// anywhere in this codebase's test suite. Extracting the loop as a pure,
-// callback-driven helper makes the retry *decision* testable without adding
-// a new mocking pattern for Trigger.dev jobs.
-describe("generateWithContentRetry", () => {
-  it("calls generate only once when the first result already meets the contract", async () => {
+// Regression (retest round 8): sequential feedback-driven retries fixed real
+// bugs (self-padding, missing bullets) but multiplied latency — up to 3x
+// wall-clock time in the worst case, an unacceptable cost when generation
+// speed is a stated competitive advantage. Replaced with parallel best-of-N:
+// fire N independent candidates at once (same total AI cost, ~1x wall-clock
+// time since they run concurrently) and keep whichever meets the contract,
+// or the one with the fewest issues if none do. No feedback loop needed —
+// the two root-cause prompt fixes from this round (word-count reinforcement,
+// the CIERRE anti-generic-closing rule) now carry that weight instead, so
+// every candidate benefits equally rather than only later sequential ones.
+describe("generateBestOfN", () => {
+  it("calls generate n times and returns a passing candidate when one exists", async () => {
+    const generate = jest
+      .fn()
+      .mockResolvedValueOnce({ bullets: ["a", "b", "c"], description: words(150) })
+      .mockResolvedValueOnce({ bullets: ["a", "b", "c", "d"], description: words(150) });
+    const result = await generateBestOfN(generate, 2);
+    expect(generate).toHaveBeenCalledTimes(2);
+    expect(result.bullets.length).toBe(4);
+  });
+
+  it("calls generate with no arguments (no sequential feedback needed — candidates are independent)", async () => {
     const generate = jest.fn().mockResolvedValue({ bullets: ["a", "b", "c", "d"], description: words(120) });
-    const result = await generateWithContentRetry(generate, 2);
+    await generateBestOfN(generate, 3);
+    for (const call of generate.mock.calls) {
+      expect(call.length).toBe(0);
+    }
+  });
+
+  it("returns the candidate with the fewest issues when none pass", async () => {
+    const worse = { bullets: ["a", "b"], description: words(50) }; // 2 issues
+    const better = { bullets: ["a", "b", "c"], description: words(150) }; // 1 issue
+    const generate = jest.fn().mockResolvedValueOnce(worse).mockResolvedValueOnce(better);
+    const result = await generateBestOfN(generate, 2);
+    expect(result).toBe(better);
+  });
+
+  it("works with n=1 (single candidate, no comparison needed)", async () => {
+    const only = { bullets: ["a", "b", "c", "d"], description: words(120) };
+    const generate = jest.fn().mockResolvedValue(only);
+    const result = await generateBestOfN(generate, 1);
     expect(generate).toHaveBeenCalledTimes(1);
-    expect(result.bullets.length).toBe(4);
+    expect(result).toBe(only);
   });
 
-  it("retries once and returns the second result when the first misses the contract", async () => {
-    const generate = jest
-      .fn()
-      .mockResolvedValueOnce({ bullets: ["a", "b", "c"], description: words(150) })
-      .mockResolvedValueOnce({ bullets: ["a", "b", "c", "d"], description: words(150) });
-    const result = await generateWithContentRetry(generate, 2);
-    expect(generate).toHaveBeenCalledTimes(2);
-    expect(result.bullets.length).toBe(4);
-  });
-
-  it("stops after maxAttempts and returns the last result even if still insufficient", async () => {
-    const generate = jest.fn().mockResolvedValue({ bullets: ["a", "b", "c"], description: words(150) });
-    const result = await generateWithContentRetry(generate, 2);
-    expect(generate).toHaveBeenCalledTimes(2);
-    expect(result.bullets.length).toBe(3); // accepted anyway — no listing left without content
-  });
-
-  it("never retries when maxAttempts is 1, regardless of content sufficiency", async () => {
-    const generate = jest.fn().mockResolvedValue({ bullets: ["a"], description: words(10) });
-    await generateWithContentRetry(generate, 1);
-    expect(generate).toHaveBeenCalledTimes(1);
-  });
-
-  it("invokes onRetry with the attempt number, the failing result, and the specific issues found", async () => {
-    const insufficientResult = { bullets: ["a", "b", "c"], description: words(150) };
-    const generate = jest
-      .fn()
-      .mockResolvedValueOnce(insufficientResult)
-      .mockResolvedValueOnce({ bullets: ["a", "b", "c", "d"], description: words(150) });
-    const onRetry = jest.fn();
-    await generateWithContentRetry(generate, 2, onRetry);
-    expect(onRetry).toHaveBeenCalledWith(1, insufficientResult, expect.arrayContaining([expect.stringMatching(/3 bullets/)]));
-  });
-
-  // Regression: retrying with the exact same prompt sometimes made things
-  // WORSE (see hasVerbatimParagraphOverlap above — the model padded word
-  // count by repeating itself). Passing specific, concrete feedback about
-  // what was wrong on the previous attempt is the standard fix for
-  // LLM retry loops that blindly resample the same prompt.
-  it("passes a feedback string describing the specific issues to generate() on retry", async () => {
-    const generate = jest
-      .fn()
-      .mockResolvedValueOnce({ bullets: ["a", "b", "c"], description: words(150) })
-      .mockResolvedValueOnce({ bullets: ["a", "b", "c", "d"], description: words(150) });
-    await generateWithContentRetry(generate, 2);
-    expect(generate).toHaveBeenNthCalledWith(1);
-    const feedbackArg = generate.mock.calls[1][0];
-    expect(feedbackArg).toMatch(/3 bullets/);
-    expect(feedbackArg.toLowerCase()).toMatch(/no repitas/);
+  it("invokes onAttempt for every candidate with its index and issues", async () => {
+    const first = { bullets: ["a", "b", "c"], description: words(150) };
+    const second = { bullets: ["a", "b", "c", "d"], description: words(150) };
+    const generate = jest.fn().mockResolvedValueOnce(first).mockResolvedValueOnce(second);
+    const onAttempt = jest.fn();
+    await generateBestOfN(generate, 2, onAttempt);
+    expect(onAttempt).toHaveBeenCalledWith(0, first, expect.arrayContaining([expect.stringMatching(/3 bullets/)]));
+    expect(onAttempt).toHaveBeenCalledWith(1, second, []);
   });
 });
