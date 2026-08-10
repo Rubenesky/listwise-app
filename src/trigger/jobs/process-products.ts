@@ -234,7 +234,11 @@ export const processProductsTask = task({
         try {
           // Ficha Técnica has no bullets/word-count contract of this shape — only
           // the short-form modes (creative/professional/seo) are checked.
-          const CONTENT_RETRY_ATTEMPTS = safeMode === "tecnica" ? 1 : 2;
+          // 3 (not 2): retest evidence showed thinner-source categories
+          // (Belleza, Electrónica) sometimes need more than one extra try to
+          // reach 120 genuine words — crema/essensworld.es never crossed 120
+          // in any retest round with only 1 retry available.
+          const CONTENT_RETRY_ATTEMPTS = safeMode === "tecnica" ? 1 : 3;
           const generated = await generateWithContentRetry(
             async (feedback) => parseAiResponse(await callAI(feedback)),
             CONTENT_RETRY_ATTEMPTS,
