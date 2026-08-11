@@ -7,6 +7,10 @@ export interface UseCreditResult {
   success: boolean;
   remainingCredits: number;
   error?: "insufficient" | "user_not_found";
+  // id of the creditTransactions row created for this deduction, when one
+  // happened — callers that may need to prove/reference this specific charge
+  // later (e.g. to verify a refund request) can hold onto it.
+  id?: string;
 }
 
 /**
@@ -43,12 +47,13 @@ export async function useCredits(
     ? sql`agent_credits - ${amount}`
     : sql`max(0, agent_credits - ${amount})`;
 
+  const transactionId = uuidv4();
   await db.transaction(async (tx) => {
     await tx.update(schema.users)
       .set({ agentCredits: deductExpr })
       .where(eq(schema.users.id, userId));
     await tx.insert(schema.creditTransactions).values({
-      id: uuidv4(),
+      id: transactionId,
       userId,
       amount: -amount,
       type: "usage",
@@ -58,7 +63,7 @@ export async function useCredits(
     });
   });
 
-  return { success: true, remainingCredits: Math.max(0, current - amount) };
+  return { success: true, remainingCredits: Math.max(0, current - amount), id: transactionId };
 }
 
 export async function addCredits(

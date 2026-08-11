@@ -752,6 +752,7 @@ export default function AgentChat({ listingId, productName, inline = false, init
       setCredits(chargeData.remainingCredits);
       window.dispatchEvent(new CustomEvent("credits-update", { detail: { credits: chargeData.remainingCredits } }));
     }
+    const chargeId: string | null = typeof chargeData.chargeId === "string" ? chargeData.chargeId : null;
 
     let hardFailure = false;
 
@@ -790,11 +791,11 @@ export default function AgentChat({ listingId, productName, inline = false, init
     // Refund the flat 4-credit charge only on a hard failure — not on early
     // success and not on user cancellation (the fixed fee stands once at
     // least one iteration ran with real cost and value delivered).
-    if (hardFailure) {
+    if (hardFailure && chargeId) {
       await fetch("/api/agent/auto-iterate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "refund" }),
+        body: JSON.stringify({ action: "refund", chargeId }),
       }).catch(() => {});
       setMessages((prev) => [...prev, { role: "assistant", content: "❌ Auto-optimizar falló — se han reembolsado los 4 créditos." }]);
     }
