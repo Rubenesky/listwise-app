@@ -10,9 +10,9 @@ interface UpgradeModalProps {
 }
 
 const PACKS = [
-  { id: "pack_s", label: "20 consultas", price: "0,99 €", desc: "Para empezar" },
-  { id: "pack_m", label: "50 consultas", price: "1,99 €", desc: "Más popular", highlight: true },
-  { id: "pack_l", label: "100 consultas", price: "2,99 €", desc: "Mejor precio/consulta" },
+  { id: "pack_s", label: "20 consultas", price: "1,99 €", desc: "Para empezar" },
+  { id: "pack_m", label: "50 consultas", price: "2,99 €", desc: "Más popular", highlight: true },
+  { id: "pack_l", label: "100 consultas", price: "3,99 €", desc: "Mejor precio/consulta" },
 ];
 
 export default function UpgradeModal({ credits, onClose, onBuy }: UpgradeModalProps) {
@@ -104,7 +104,7 @@ export default function UpgradeModal({ credits, onClose, onBuy }: UpgradeModalPr
                 <Zap className="w-3.5 h-3.5 text-amber-500" />
                 Plan Pro
               </span>
-              <p className="text-xs text-gray-500 mt-0.5">1.500 créditos/mes · Sin límite de productos</p>
+              <p className="text-xs text-gray-500 mt-0.5">1.200 créditos/mes · Sin límite de productos</p>
             </div>
             <span className="font-bold text-amber-700 text-base shrink-0 ml-3">29 €/mes</span>
           </Link>

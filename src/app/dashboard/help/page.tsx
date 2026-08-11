@@ -43,7 +43,7 @@ const FAQ_SECTIONS: FAQSection[] = [
       },
       {
         q: "¿Cómo consigo créditos?",
-        a: "De varias formas: (1) Al registrarte recibes créditos de bienvenida, (2) Con un plan Pro (1.500 créditos) o Enterprise (7.000 créditos), (3) Invitando a otros usuarios — tú y tu invitado recibís 10 créditos al registrarse, y 1 mes gratis de tu plan actual cuando convierten a uno de pago.",
+        a: "De varias formas: (1) Al registrarte recibes créditos de bienvenida, (2) Con un plan Pro (1.200 créditos) o Enterprise (5.000 créditos), (3) Invitando a otros usuarios — tú y tu invitado recibís 10 créditos al registrarse, y 1 mes gratis de tu plan actual cuando convierten a uno de pago.",
       },
       {
         q: "¿Dónde veo mi historial de créditos?",
@@ -167,7 +167,7 @@ const FAQ_SECTIONS: FAQSection[] = [
     items: [
       {
         q: "¿Qué diferencia hay entre los planes?",
-        a: "Plan Free: créditos iniciales limitados, acceso a todas las funciones básicas. Plan Pro (1.500 créditos/mes): ideal para vendedores activos. Plan Enterprise (7.000 créditos/mes): para equipos y catálogos grandes con soporte prioritario.",
+        a: "Plan Free: créditos iniciales limitados, acceso a todas las funciones básicas. Plan Pro (1.200 créditos/mes): ideal para vendedores activos. Plan Enterprise (5.000 créditos/mes): para equipos y catálogos grandes con soporte prioritario.",
       },
       {
         q: "¿Puedo cancelar en cualquier momento?",

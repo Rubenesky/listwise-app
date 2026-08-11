@@ -19,6 +19,10 @@ const requestSchema = z.object({
   command: z.string().optional(),
   marketplace: z.enum(["generico", "amazon_es", "etsy", "shopify", "wallapop"]).optional().default("generico"),
   supplementalAttrs: z.record(z.string()).optional().default({}),
+  // Set by AgentChat.tsx's runAutoIterate() loop — signals this turn is part of a
+  // flat-fee auto-optimize run (see /api/agent/auto-iterate) so this endpoint
+  // must NOT deduct the normal per-turn charge on top of that flat fee.
+  source: z.literal("auto_iterate").optional(),
 });
 
 const FORMAL_TRIGGER_RE = /formal|profesional|corporativo/i;
@@ -78,7 +82,8 @@ export async function POST(req: Request) {
     if (!parsedBody.success) {
       return NextResponse.json({ error: "Datos inválidos", details: parsedBody.error.errors }, { status: 400 });
     }
-    const { message, listingId, conversationId, command, marketplace, supplementalAttrs } = parsedBody.data;
+    const { message, listingId, conversationId, command, marketplace, supplementalAttrs, source } = parsedBody.data;
+    const isAutoIterate = source === "auto_iterate";
 
     log.info({ userId, messagePreview: message.slice(0, 80) }, "Agent request received");
 
@@ -221,23 +226,29 @@ export async function POST(req: Request) {
     const startTime = Date.now();
     const newConvId = uuidv4();
 
-    // Atomically deduct 1 credit BEFORE starting the AI call to prevent TOCTOU races.
-    // Pro/Enterprise users pass through immediately (useCredits skips deduction for them).
-    // eslint-disable-next-line react-hooks/rules-of-hooks
-    const creditResult = await useCredits(userId, 1, "Consulta de agente");
-    if (!creditResult.success) {
-      log.info({ userId }, "Insufficient agent credits");
-      return NextResponse.json({
-        error: "Sin créditos",
-        upsell: true,
-        message: "Has agotado tus consultas gratuitas. Compra más consultas o actualiza a Pro.",
-        plans: [
-          { name: "20 consultas", price: 0.99 },
-          { name: "50 consultas", price: 1.99 },
-          { name: "100 consultas", price: 2.99 },
-          { name: "Plan Pro", price: 29 },
-        ],
-      }, { status: 402 });
+    // Atomically deduct 2 credits BEFORE starting the AI call to prevent TOCTOU races.
+    // Auto-iterate turns are pre-paid as a single flat 4-credit charge before the loop
+    // starts (see /api/agent/auto-iterate) — skip the per-turn charge here, or the
+    // same run would be billed twice.
+    let remainingCreditsAfterCharge: number | null = null;
+    if (!isAutoIterate) {
+      // eslint-disable-next-line react-hooks/rules-of-hooks
+      const creditResult = await useCredits(userId, 2, "Consulta de agente");
+      if (!creditResult.success) {
+        log.info({ userId }, "Insufficient agent credits");
+        return NextResponse.json({
+          error: "Sin créditos",
+          upsell: true,
+          message: "Has agotado tus consultas gratuitas. Compra más consultas o actualiza a Pro.",
+          plans: [
+            { name: "20 consultas", price: 1.99 },
+            { name: "50 consultas", price: 2.99 },
+            { name: "100 consultas", price: 3.99 },
+            { name: "Plan Pro", price: 29 },
+          ],
+        }, { status: 402 });
+      }
+      remainingCreditsAfterCharge = creditResult.remainingCredits;
     }
 
     // When formal tone is requested, inject anti-jargon guard into the AI user message.
@@ -367,25 +378,28 @@ export async function POST(req: Request) {
 
           trackGamification(userId, "agent_chat").catch((e) => log.warn({ err: e }, "trackGamification failed"));
 
-          const remainingCredits = creditResult.remainingCredits;
           const finalConvId = conversation?.id ?? newConvId;
 
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({
             done: true,
             parsed: parsedResponse,
             conversationId: finalConvId,
-            remainingCredits,
+            ...(remainingCreditsAfterCharge !== null ? { remainingCredits: remainingCreditsAfterCharge } : {}),
             isFree,
           })}\n\n`));
 
-          log.info({ userId, latencyMs: latency, command: detectedCommand, remainingCredits }, "Agent request completed");
+          log.info({ userId, latencyMs: latency, command: detectedCommand, remainingCredits: remainingCreditsAfterCharge, isAutoIterate }, "Agent request completed");
           controller.close();
         } catch (error) {
           log.error({ userId, err: error }, "Agent streaming error");
-          // Refund the pre-deducted credit since the AI call failed
-          await addCredits(userId, 1, "refund", "Reembolso por error de agente").catch((e) =>
-            log.warn({ err: e }, "Credit refund failed")
-          );
+          // Refund the pre-deducted credit since the AI call failed. Auto-iterate
+          // turns didn't pay a per-turn charge here — their flat 4-credit fee is
+          // refunded at the loop level on total failure (see /api/agent/auto-iterate).
+          if (!isAutoIterate) {
+            await addCredits(userId, 2, "refund", "Reembolso por error de agente").catch((e) =>
+              log.warn({ err: e }, "Credit refund failed")
+            );
+          }
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: "Error al procesar la respuesta" })}\n\n`));
           controller.close();
         }

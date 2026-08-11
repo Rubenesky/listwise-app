@@ -30,13 +30,13 @@ const plans = [
   {
     name: "Pro",
     price: "29€",
-    credits: "1.500 créditos/mes",
+    credits: "1.200 créditos/mes",
     description: "Para tiendas online en crecimiento",
     features: [
-      "1.500 créditos de uso al mes",
+      "1.200 créditos de uso al mes",
       "Generación avanzada con IA",
-      "🤖 Agente de Copywriting ilimitado",
-      "Análisis de competencia ilimitado",
+      "🤖 Agente de Copywriting incluido",
+      "Análisis de competencia incluido",
       "Soporte prioritario",
     ],
     priceId: "pro",
@@ -46,13 +46,13 @@ const plans = [
   {
     name: "Enterprise",
     price: "99€",
-    credits: "7.000 créditos/mes",
+    credits: "5.000 créditos/mes",
     description: "Para negocios con alto volumen",
     features: [
-      "7.000 créditos de uso al mes",
+      "5.000 créditos de uso al mes",
       "Generación avanzada con IA",
-      "🤖 Agente de Copywriting ilimitado",
-      "Análisis de competencia ilimitado",
+      "🤖 Agente de Copywriting incluido",
+      "Análisis de competencia incluido",
       "API personalizada",
       "Dedicated account manager",
       "Soporte 24/7",
@@ -67,7 +67,7 @@ const creditPacks = [
   {
     name: "Pack S",
     credits: 20,
-    price: "0,99€",
+    price: "1,99€",
     priceId: "agent_pack_s",
     description: "Para proyectos puntuales",
     popular: false,
@@ -75,7 +75,7 @@ const creditPacks = [
   {
     name: "Pack M",
     credits: 50,
-    price: "1,99€",
+    price: "2,99€",
     priceId: "agent_pack_m",
     description: "El más elegido",
     popular: true,
@@ -83,7 +83,7 @@ const creditPacks = [
   {
     name: "Pack L",
     credits: 100,
-    price: "2,99€",
+    price: "3,99€",
     priceId: "agent_pack_l",
     description: "Para alto volumen",
     popular: false,
@@ -586,10 +586,10 @@ export default function PricingPageClient({ isSignedIn }: PricingPageClientProps
               </thead>
               <tbody className="divide-y divide-gray-50 bg-white">
                 {([
-                  { label: "Créditos / mes", free: "20", pro: "1.500", ent: "7.000", tip: "Los créditos no caducan y se acumulan mes a mes" },
+                  { label: "Créditos / mes", free: "20", pro: "1.200", ent: "5.000", tip: "Los créditos no caducan y se acumulan mes a mes" },
                   { label: "Productos por subida CSV", free: "50", pro: "200", ent: "Ilimitado", tip: "Número máximo de productos por archivo CSV subido" },
-                  { label: "Agente de Copywriting", free: "20 créditos", pro: "✓ Ilimitado", ent: "✓ Ilimitado", tip: "Chat IA conversacional para refinar el copy de cada producto con instrucciones específicas" },
-                  { label: "Análisis de competidor", free: "2 créd./análisis", pro: "✓ Ilimitado", ent: "✓ Ilimitado", tip: "Analiza el listing de un competidor con IA y obtén sugerencias concretas para mejorar el tuyo" },
+                  { label: "Agente de Copywriting", free: "20 créditos", pro: "✓ Incluido", ent: "✓ Incluido", tip: "Chat IA conversacional para refinar el copy de cada producto con instrucciones específicas" },
+                  { label: "Análisis de competidor", free: "2 créd./análisis", pro: "✓ Incluido", ent: "✓ Incluido", tip: "Analiza el listing de un competidor con IA y obtén sugerencias concretas para mejorar el tuyo" },
                   { label: "Exportar resultados", free: "✓", pro: "✓", ent: "✓", tip: undefined },
                   { label: "API personalizada", free: "—", pro: "—", ent: "✓", tip: "Integra ListWise directamente en tu sistema de gestión de catálogo o ERP" },
                   { label: "Soporte", free: "Email", pro: "Prioritario", ent: "24/7 + account manager", tip: "Pro: respuesta garantizada en menos de 4h · Enterprise: gestor de cuenta dedicado" },

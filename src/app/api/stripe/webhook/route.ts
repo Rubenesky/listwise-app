@@ -166,7 +166,7 @@ export async function POST(req: Request) {
 
         // Assign plan credits and update agentPlan in users table
         try {
-          const planCredits: Record<string, number> = { pro: 1500, enterprise: 7000 };
+          const planCredits: Record<string, number> = { pro: 1200, enterprise: 5000 };
           const credits = planCredits[plan] ?? 0;
           await ensureUser(userId);
           await db.update(schema.users)
@@ -207,7 +207,7 @@ export async function POST(req: Request) {
           .set({ status: "active", currentPeriodStart: newPeriodStart, currentPeriodEnd: newPeriodEnd })
           .where(eq(schema.subscriptions.stripeCustomerId, customerId));
 
-        const planCredits: Record<string, number> = { pro: 1500, enterprise: 7000 };
+        const planCredits: Record<string, number> = { pro: 1200, enterprise: 5000 };
         const credits = planCredits[sub.plan] ?? 0;
         if (credits > 0) {
           await ensureUser(sub.userId);

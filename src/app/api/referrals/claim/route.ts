@@ -9,8 +9,8 @@ import { log } from "@/lib/logger";
 const COUPON_ID = "LISTWISE_REFERRAL_FREE_MONTH";
 
 const FALLBACK_CREDITS: Record<string, number> = {
-  free_month_pro: 1500,
-  free_month_enterprise: 7000,
+  free_month_pro: 1200,
+  free_month_enterprise: 5000,
 };
 
 export async function POST(req: Request) {
@@ -82,7 +82,7 @@ export async function POST(req: Request) {
         log.info({ userId, subscriptionId: activeSub.stripeSubscriptionId }, "Stripe coupon applied");
       } else {
         // Fallback: user not subscribed yet — give equivalent credits
-        const creditsToAdd = FALLBACK_CREDITS[claimed.type] ?? 1500;
+        const creditsToAdd = FALLBACK_CREDITS[claimed.type] ?? 1200;
         const label = claimed.type === "free_month_enterprise" ? "1 mes Enterprise gratis" : "1 mes Pro gratis";
         await addCredits(userId, creditsToAdd, "bonus", `Recompensa por referido: ${label} (${creditsToAdd} créditos)`);
         log.info({ userId, credits: creditsToAdd, type: claimed.type }, "Referral fallback credits added");

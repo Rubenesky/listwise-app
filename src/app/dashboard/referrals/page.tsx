@@ -289,8 +289,8 @@ export default function ReferralsPage() {
               credit: `${reward.amount} créditos`,
             };
             const CREDITS: Record<string, number> = {
-              free_month_pro: 1500,
-              free_month_enterprise: 7000,
+              free_month_pro: 1200,
+              free_month_enterprise: 5000,
             };
             const label = LABEL[reward.type] ?? reward.type;
             const credits = CREDITS[reward.type] ?? reward.amount;

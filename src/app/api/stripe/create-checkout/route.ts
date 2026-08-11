@@ -11,9 +11,9 @@ const PRICE_IDS: Record<string, string> = {
   // Annual plans passed as literal Stripe price IDs from the pricing page
   "price_1TncET1uySlskct3tPbtAzJA": "price_1TncET1uySlskct3tPbtAzJA",
   "price_1TncFM1uySlskct3Lin2vkKE": "price_1TncFM1uySlskct3Lin2vkKE",
-  agent_pack_s: "price_1Tm1Ki1uySlskct3jd7NLdA3",
-  agent_pack_m: "price_1Tm1M41uySlskct3fECTVMZp",
-  agent_pack_l: "price_1Tm1Mk1uySlskct3eKYmbioP",
+  agent_pack_s: "price_1U3JNo1uySlskct3HaUekWIF",
+  agent_pack_m: "price_1U3JQL1uySlskct3xY44KZGA",
+  agent_pack_l: "price_1U3JQk1uySlskct3tf85NOi9",
 };
 
 // One-time payment packs (not subscriptions)

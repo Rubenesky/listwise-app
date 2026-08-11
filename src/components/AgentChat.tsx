@@ -558,9 +558,12 @@ export default function AgentChat({ listingId, productName, inline = false, init
     inputRef.current?.focus();
   };
 
-  const sendMessage = async (overrideMessage?: string) => {
+  const sendMessage = async (overrideMessage?: string, source?: "auto_iterate"): Promise<boolean> => {
     const userMessage = overrideMessage ?? input.trim();
-    if (!userMessage || loading || isFreeWithNoCredits) return;
+    // Auto-iterate turns don't pay the per-turn charge (see route) — the flat
+    // 4-credit fee already gated the whole run before the loop started, so the
+    // "no credits" guard below doesn't apply to them.
+    if (!userMessage || loading || (source !== "auto_iterate" && isFreeWithNoCredits)) return false;
 
     // Ambiguity detection — only for user-typed messages, not chip commands
     if (!overrideMessage && isAmbiguousMessage(userMessage)) {
@@ -575,7 +578,7 @@ export default function AgentChat({ listingId, productName, inline = false, init
           clarificationOptions: CLARIFICATION_OPTIONS,
         },
       ]);
-      return;
+      return false;
     }
 
     if (!overrideMessage) setInput("");
@@ -600,7 +603,14 @@ export default function AgentChat({ listingId, productName, inline = false, init
       const response = await fetch("/api/agent/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage, listingId, conversationId, marketplace, supplementalAttrs }),
+        body: JSON.stringify({
+          message: userMessage,
+          listingId,
+          conversationId,
+          marketplace,
+          supplementalAttrs,
+          ...(source ? { source } : {}),
+        }),
         signal: controller.signal,
       });
 
@@ -616,7 +626,7 @@ export default function AgentChat({ listingId, productName, inline = false, init
             { role: "assistant", content: data.error ?? "Sin créditos disponibles." },
           ]);
         }
-        return;
+        return false;
       }
 
       if (response.status === 429) {
@@ -625,7 +635,7 @@ export default function AgentChat({ listingId, productName, inline = false, init
           ...prev.slice(0, -1),
           { role: "assistant", content: `⏳ ${data.error ?? "Demasiadas consultas. Espera un momento."}` },
         ]);
-        return;
+        return false;
       }
 
       if (!response.ok || !response.body) throw new Error("Error en la consulta");
@@ -633,6 +643,7 @@ export default function AgentChat({ listingId, productName, inline = false, init
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
+      let success = false;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -685,12 +696,14 @@ export default function AgentChat({ listingId, productName, inline = false, init
               }
               window.dispatchEvent(new Event("gamification-update"));
               if (data.conversationId) setConversationId(data.conversationId);
+              success = true;
             }
           } catch {
             // skip malformed frames
           }
         }
       }
+      return success;
     } catch (error) {
       const isAbort = error instanceof Error && error.name === "AbortError";
       setMessages((prev) => [
@@ -702,6 +715,7 @@ export default function AgentChat({ listingId, productName, inline = false, init
             : "❌ Error al procesar la consulta. Inténtalo de nuevo.",
         },
       ]);
+      return false;
     } finally {
       clearTimeout(timeoutId);
       setLoading(false);
@@ -709,14 +723,43 @@ export default function AgentChat({ listingId, productName, inline = false, init
   };
 
   const runAutoIterate = async () => {
+    // Visible confirmation before charging anything.
+    if (!confirm("Esta acción consumirá 4 créditos. ¿Continuar?")) return;
+
     const MAX_ITER = 3;
     const TARGET = 85;
     autoIterCancelRef.current = false;
+    setAutoIterStatus({ iter: 1, max: MAX_ITER, score: null }); // disables the button during the charge call too
+
+    // Single flat 4-credit charge for the whole run, before any iteration.
+    const chargeRes = await fetch("/api/agent/auto-iterate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "charge" }),
+    }).catch(() => null);
+    const chargeData = chargeRes ? await chargeRes.json().catch(() => ({})) : {};
+
+    if (!chargeRes || !chargeRes.ok) {
+      setAutoIterStatus(null);
+      if (chargeRes?.status === 402) {
+        setShowUpgradeModal(true);
+      } else {
+        setMessages((prev) => [...prev, { role: "assistant", content: "❌ No se pudo iniciar Auto-optimizar. Inténtalo de nuevo." }]);
+      }
+      return;
+    }
+    if (typeof chargeData.remainingCredits === "number") {
+      setCredits(chargeData.remainingCredits);
+      window.dispatchEvent(new CustomEvent("credits-update", { detail: { credits: chargeData.remainingCredits } }));
+    }
+
+    let hardFailure = false;
 
     for (let i = 1; i <= MAX_ITER; i++) {
       if (autoIterCancelRef.current) break;
       setAutoIterStatus({ iter: i, max: MAX_ITER, score: null });
-      await sendMessage("Optimiza el título, los bullets y la descripción para máxima conversión");
+      const ok = await sendMessage("Optimiza el título, los bullets y la descripción para máxima conversión", "auto_iterate");
+      if (!ok) { hardFailure = true; break; }
       if (autoIterCancelRef.current) break;
 
       const res = await fetch(`/api/agent/analyze?listingId=${listingId}`).catch(() => null);
@@ -743,6 +786,19 @@ export default function AgentChat({ listingId, productName, inline = false, init
         ]);
       }
     }
+
+    // Refund the flat 4-credit charge only on a hard failure — not on early
+    // success and not on user cancellation (the fixed fee stands once at
+    // least one iteration ran with real cost and value delivered).
+    if (hardFailure) {
+      await fetch("/api/agent/auto-iterate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "refund" }),
+      }).catch(() => {});
+      setMessages((prev) => [...prev, { role: "assistant", content: "❌ Auto-optimizar falló — se han reembolsado los 4 créditos." }]);
+    }
+
     setAutoIterStatus(null);
   };
 

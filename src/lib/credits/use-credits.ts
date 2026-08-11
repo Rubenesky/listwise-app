@@ -10,8 +10,10 @@ export interface UseCreditResult {
 }
 
 /**
- * Atomically deducts agentCredits from a free user and logs the transaction.
- * Pro/Enterprise users are never deducted — they return success immediately.
+ * Atomically deducts agentCredits and logs the transaction.
+ * Free users are blocked (success:false, no deduction) when their balance is
+ * insufficient. Pro/Enterprise users are deducted too (floored at 0) but are
+ * never blocked — they always get success:true, even at zero credits.
  */
 export async function useCredits(
   userId: string,
