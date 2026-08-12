@@ -7,7 +7,8 @@ import { Zap } from "lucide-react";
 const ACTION_COSTS = [
   { label: "Generar variantes", cost: 1 },
   { label: "Generar descripción", cost: 1 },
-  { label: "Chat con agente IA", cost: 1 },
+  { label: "Enriquecer con URL/PDF", cost: 0 },
+  { label: "Chat con agente IA", cost: 2 },
   { label: "Análisis de competidor", cost: 2 },
   { label: "Compartir landing", cost: 0 },
 ];
@@ -38,6 +39,7 @@ export default function CreditsPopover() {
   const [credits, setCredits] = useState<number | null>(null);
   const [open, setOpen] = useState(false);
   const [history, setHistory] = useState<Transaction[]>([]);
+  const [confirmingPurchase, setConfirmingPurchase] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
   const fetchCredits = () => {
@@ -57,6 +59,29 @@ export default function CreditsPopover() {
   useEffect(() => {
     fetchCredits();
 
+    // Returning from a successful Stripe checkout: the webhook that actually
+    // credits the account can land a few seconds after the browser redirect
+    // beats it back here, so a single fetch on mount can show a stale
+    // balance until the user happens to reload again. Poll briefly instead.
+    let pollId: ReturnType<typeof setInterval> | undefined;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("success") === "true" || params.get("credits_success") === "true") {
+      setConfirmingPurchase(true);
+      let attempts = 0;
+      pollId = setInterval(() => {
+        attempts++;
+        fetchCredits();
+        if (attempts >= 8) {
+          clearInterval(pollId);
+          setConfirmingPurchase(false);
+        }
+      }, 2000);
+      params.delete("success");
+      params.delete("credits_success");
+      const rest = params.toString();
+      window.history.replaceState({}, "", window.location.pathname + (rest ? `?${rest}` : ""));
+    }
+
     const handleUpdate = (e: Event) => {
       const ce = e as CustomEvent<{ credits: number }>;
       if (typeof ce.detail?.credits === "number" && ce.detail.credits >= 0) {
@@ -73,6 +98,7 @@ export default function CreditsPopover() {
     window.addEventListener("credits-update", handleUpdate);
     document.addEventListener("visibilitychange", handleVisibility);
     return () => {
+      if (pollId) clearInterval(pollId);
       window.removeEventListener("credits-update", handleUpdate);
       document.removeEventListener("visibilitychange", handleVisibility);
     };
@@ -103,8 +129,9 @@ export default function CreditsPopover() {
             : "text-indigo-700 bg-indigo-50 border-indigo-200 hover:bg-indigo-100"
         }`}
       >
-        <Zap className="w-3 h-3" />
+        <Zap className={`w-3 h-3 ${confirmingPurchase ? "animate-pulse" : ""}`} />
         <span>Créditos: {credits ?? "—"}</span>
+        {confirmingPurchase && <span className="text-[10px] text-gray-400 animate-pulse">confirmando…</span>}
       </button>
 
       {open && (
