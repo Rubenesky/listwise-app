@@ -17,9 +17,8 @@ Descripción: {description}
 
 REGLAS:
 - Empieza con un gancho que responda a "¿por qué me debería interesar esto?" ANTES de nombrar o describir el producto — no arranques con "Esta [producto]...", arranca con el beneficio o la necesidad que resuelve (ej: "Si buscas algo cómodo y fácil de combinar, esto puede ser justo lo que buscas.").
-- Estructura completa: gancho/beneficio → qué es → características principales → cierre.
-- Frases fluidas que unan ideas relacionadas — nada de frases telegráficas cortadas por puntos.
-- Menciona las características importantes de los bullets de forma natural, sin listarlas.
+- Estructura completa: gancho → beneficio principal → 2-3 características más importantes (NO listes todos los bullets, elige solo las más relevantes) → detalle diferencial → cierre.
+- Une ideas relacionadas con comas y conectores ("y además", "por lo que", "gracias a") en frases más largas — evita varias frases cortas seguidas separadas por puntos. Por ejemplo, en vez de "Es cómoda. Es transpirable. Tiene un diseño de árbol." escribe "Es cómoda y transpirable, y además cuenta con un diseño de árbol que le da un toque diferente."
 - Escribe medidas y unidades de forma fonéticamente amigable (ej: "200 g/m²" → "doscientos gramos por metro cuadrado").
 - Cierra con una frase que deje una impresión positiva, sin sonar a anuncio agresivo.
 - Longitud objetivo: 80-120 palabras (unos 35-50 segundos hablados) — es el punto óptimo confirmado para nota de voz de WhatsApp: ni tan corto que se quede en identificar el producto, ni tan largo que se sienta a formato catálogo.

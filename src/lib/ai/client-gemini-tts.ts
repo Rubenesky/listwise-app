@@ -23,13 +23,15 @@ No lo leas como una ficha de producto ni como un anuncio publicitario de televis
 
 Debe parecer una recomendación personal de un vendedor que conoce bien el producto.
 
-Utiliza una entonación conversacional y natural. Da ligeramente más énfasis a los beneficios que a las características técnicas.
+Interpreta el texto como una conversación natural con un comprador. No leas cada frase como una unidad independiente, ni marques artificialmente cada característica.
 
-Haz pausas naturales cuando cambie la idea, pero evita hacer una pausa después de cada frase.
+Utiliza una entonación conversacional y natural. Da ligeramente más énfasis a los beneficios que a las características técnicas. Varía ligeramente la entonación y el ritmo para que parezca que estás explicando el producto de forma espontánea. Evita una entonación descendente repetitiva al final de cada frase.
+
+Las pausas deben producirse principalmente cuando cambia la idea que estás explicando, no simplemente porque aparece un punto en el texto — evita hacer una pausa después de cada frase.
 
 Mantén un ritmo ágil y cómodo, adecuado para una nota de voz de WhatsApp.
 
-No exageres la emoción ni suenes demasiado entusiasta. La sensación debe ser de confianza y profesionalidad.
+No exageres la emoción ni suenes demasiado entusiasta. Prioriza naturalidad y confianza sobre dramatización.
 
 Texto:
 `;
