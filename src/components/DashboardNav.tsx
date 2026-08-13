@@ -41,7 +41,7 @@ const PLAN_STYLES: Record<string, {
 const navigation = [
   { name: "Dashboard", href: "/dashboard", download: false },
   { name: "🤖 Agente", href: "/agent", download: false },
-  { name: "🎙️ Perfil de Voz", href: "/dashboard/voice-profile", download: false },
+  { name: "🎨 Voz de Marca", href: "/dashboard/voice-profile", download: false },
   { name: "🔍 Competencia", href: "/dashboard/competitor", download: false },
   { name: "🎁 Invitar", href: "/dashboard/referrals", download: false },
   { name: "🏆 Gamificación", href: "/gamification", download: false },

@@ -72,11 +72,14 @@ export default function VoiceProfileManager() {
       const res = await fetch("/api/voice-profile/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ examples, name: profileName || "Mi perfil de voz" }),
+        body: JSON.stringify({ examples, name: profileName || "Mi voz de marca" }),
       });
       const data = await res.json();
       if (!res.ok || !data.success) { setError(data.error ?? "Error al analizar."); return; }
       setExamples([]); setCurrentExample(""); setProfileName(""); setShowForm(false);
+      if (typeof data.remainingCredits === "number") {
+        window.dispatchEvent(new CustomEvent("credits-update", { detail: { credits: data.remainingCredits } }));
+      }
       await fetchProfiles();
     } catch {
       setError("Error de conexión. Inténtalo de nuevo.");
@@ -93,7 +96,7 @@ export default function VoiceProfileManager() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("¿Eliminar este perfil de voz?")) return;
+    if (!confirm("¿Eliminar esta voz de marca?")) return;
     try {
       await fetch(`/api/voice-profile/${id}`, { method: "DELETE" });
       setProfiles((prev) => prev.filter((p) => p.id !== id));
@@ -108,8 +111,8 @@ export default function VoiceProfileManager() {
         className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-white/40 transition-colors"
       >
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-base">🎙️</span>
-          <span className="text-sm font-semibold text-gray-800">Perfil de Voz</span>
+          <span className="text-base">🎨</span>
+          <span className="text-sm font-semibold text-gray-800">Voz de Marca</span>
           <span className="bg-purple-600 text-white text-xs px-1.5 py-0.5 rounded-full font-medium">Nuevo</span>
           {activeProfile ? (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">
@@ -118,7 +121,7 @@ export default function VoiceProfileManager() {
             </span>
           ) : (
             <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-white/60 text-gray-500 border border-gray-200">
-              Sin perfil activo
+              Sin voz activa
             </span>
           )}
         </div>
@@ -134,12 +137,12 @@ export default function VoiceProfileManager() {
         <div className="border-t border-purple-100 px-4 pb-4 pt-3 space-y-3 bg-white/60">
           {/* Explanation */}
           <p className="text-xs text-gray-600 leading-relaxed">
-            El perfil de voz aprende el estilo de escritura de tu marca a partir de descripciones de ejemplo.
-            Una vez activo, <span className="font-medium text-purple-700">todas las generaciones adoptarán automáticamente ese tono y vocabulario.</span>
+            La voz de marca aprende el estilo de escritura de tu marca a partir de descripciones de ejemplo.
+            Una vez activa, <span className="font-medium text-purple-700">todas las generaciones adoptarán automáticamente ese tono y vocabulario.</span>
           </p>
 
           {loading ? (
-            <p className="text-sm text-gray-500 py-2">Cargando perfiles...</p>
+            <p className="text-sm text-gray-500 py-2">Cargando voces de marca...</p>
           ) : (
             <>
               {/* Active profile card */}
@@ -152,7 +155,7 @@ export default function VoiceProfileManager() {
                         {(activeProfile.profile as VoiceProfileData).brandPersonality}
                       </p>
                     </div>
-                    <span className="shrink-0 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Activo</span>
+                    <span className="shrink-0 text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">Activa</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {(activeProfile.profile as VoiceProfileData).tone && (
@@ -177,7 +180,7 @@ export default function VoiceProfileManager() {
               {/* Other profiles list */}
               {profiles.filter((p) => p.isActive === 0).length > 0 && (
                 <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Otros perfiles</p>
+                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Otras voces</p>
                   {profiles.filter((p) => p.isActive === 0).map((p) => (
                     <div key={p.id} className="flex items-center justify-between gap-2 bg-white rounded-lg border border-gray-200 px-3 py-2">
                       <span className="text-xs text-gray-700 font-medium truncate">{p.name}</span>
@@ -202,8 +205,8 @@ export default function VoiceProfileManager() {
 
               {profiles.length === 0 && !showForm && (
                 <div className="bg-white rounded-lg border border-dashed border-purple-300 p-4 text-center">
-                  <p className="text-sm text-gray-600">Aún no tienes perfiles de voz.</p>
-                  <p className="text-xs text-gray-400 mt-0.5">Añade 3 descripciones de ejemplo para crear el primero.</p>
+                  <p className="text-sm text-gray-600">Aún no tienes voces de marca.</p>
+                  <p className="text-xs text-gray-400 mt-0.5">Añade 3 descripciones de ejemplo para crear la primera.</p>
                 </div>
               )}
 
@@ -213,7 +216,7 @@ export default function VoiceProfileManager() {
                   onClick={() => handleToggle(activeProfile.id)}
                   className="text-xs text-gray-400 hover:text-gray-600 transition-colors"
                 >
-                  Desactivar perfil actual
+                  Desactivar voz actual
                 </button>
               )}
 
@@ -228,7 +231,7 @@ export default function VoiceProfileManager() {
                     type="text"
                     value={profileName}
                     onChange={(e) => setProfileName(e.target.value)}
-                    placeholder="Nombre del perfil (ej. Marca de moda)"
+                    placeholder="Nombre de la voz (ej. Marca de moda)"
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                     maxLength={80}
                   />
@@ -299,7 +302,7 @@ export default function VoiceProfileManager() {
                           </svg>
                           Analizando...
                         </span>
-                      ) : "Crear perfil de voz"}
+                      ) : "Crear voz de marca"}
                     </button>
                     <button
                       onClick={() => { setShowForm(false); setError(null); setExamples([]); setCurrentExample(""); }}
@@ -314,7 +317,7 @@ export default function VoiceProfileManager() {
                   onClick={() => setShowForm(true)}
                   className="text-sm text-purple-600 hover:text-purple-800 font-medium transition-colors flex items-center gap-1"
                 >
-                  <span>+</span> Crear nuevo perfil
+                  <span>+</span> Crear nueva voz
                 </button>
               )}
             </>

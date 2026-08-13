@@ -486,6 +486,7 @@ export default function PricingPageClient({ isSignedIn }: PricingPageClientProps
                   { action: "Generar variantes", cost: 1 },
                   { action: "Generar descripción", cost: 1 },
                   { action: "Enriquecer con URL/PDF", cost: 0 },
+                  { action: "Crear voz de marca", cost: 1 },
                   { action: "Chat con agente IA", cost: 2 },
                   { action: "Análisis de competidor", cost: 2 },
                   { action: "Subir CSV", cost: 0 },

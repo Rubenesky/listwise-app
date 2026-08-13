@@ -115,7 +115,7 @@ export const variantSelections = sqliteTable("variant_selections", {
 export const voiceProfiles = sqliteTable("voice_profiles", {
   id: text("id").primaryKey(),
   userId: text("user_id").notNull(),
-  name: text("name").notNull().default("Mi perfil de voz"),
+  name: text("name").notNull().default("Mi voz de marca"),
   profile: text("profile", { mode: "json" }).notNull(),
   isActive: integer("is_active").notNull().default(0),
   createdAt: integer("created_at").notNull().default(0),

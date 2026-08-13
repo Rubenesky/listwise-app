@@ -66,3 +66,12 @@ export const ratelimitEnrichedInput = new Ratelimit({
   analytics: false,
   prefix: "@upstash/ratelimit/enriched-input",
 });
+
+// Voice profile creation: 10 análisis por usuario por día. La acción ya cuesta
+// 1 crédito, pero esto acota ráfagas independientemente del saldo de créditos.
+export const ratelimitVoiceProfile = new Ratelimit({
+  redis,
+  limiter: Ratelimit.fixedWindow(10, "24 h"),
+  analytics: false,
+  prefix: "@upstash/ratelimit/voice-profile",
+});

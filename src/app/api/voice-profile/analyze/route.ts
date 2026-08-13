@@ -3,7 +3,9 @@ import { auth } from "@clerk/nextjs/server";
 import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { db, schema } from "@/db";
-import { groq } from "@/lib/ai/client-groq";
+import { getAIResponse, getDefaultProvider } from "@/lib/ai/providers";
+import { useCredits, addCredits } from "@/lib/credits/use-credits";
+import { ratelimitVoiceProfile } from "@/lib/rate-limit";
 import { v4 as uuidv4 } from "uuid";
 import { log } from "@/lib/logger";
 
@@ -12,7 +14,7 @@ const requestSchema = z.object({
     .array(z.string().min(10).max(800))
     .min(3, "Se necesitan al menos 3 ejemplos")
     .max(10, "Máximo 10 ejemplos"),
-  name: z.string().min(1).max(80).default("Mi perfil de voz"),
+  name: z.string().min(1).max(80).default("Mi voz de marca"),
 });
 
 const voiceProfileResponseSchema = z.object({
@@ -31,6 +33,14 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
     }
 
+    const { success: withinLimit } = await ratelimitVoiceProfile.limit(userId);
+    if (!withinLimit) {
+      return NextResponse.json(
+        { error: "Límite diario de creación de voces de marca alcanzado. Inténtalo mañana." },
+        { status: 429 }
+      );
+    }
+
     const body = await req.json();
     const parsed = requestSchema.safeParse(body);
     if (!parsed.success) {
@@ -39,6 +49,15 @@ export async function POST(req: Request) {
     }
 
     const { examples, name } = parsed.data;
+
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    const creditResult = await useCredits(userId, 1, "Crear voz de marca");
+    if (!creditResult.success) {
+      return NextResponse.json(
+        { error: "No tienes créditos suficientes para crear una voz de marca.", upsell: true },
+        { status: 402 }
+      );
+    }
 
     const prompt = `Eres un analista de branding y copywriting experto.
 Analiza estas descripciones de productos y extrae el perfil de voz de la marca.
@@ -56,46 +75,61 @@ Responde SOLO en JSON con este formato exacto:
   "suggestions": ["sugerencia 1 para mejorar", "sugerencia 2"]
 }`;
 
-    const response = await groq.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
-      messages: [{ role: "user", content: prompt }],
-      temperature: 0.3,
-      max_tokens: 500,
-      response_format: { type: "json_object" },
-    });
-
-    const rawContent = response.choices[0]?.message?.content ?? "{}";
-    let profileData: z.infer<typeof voiceProfileResponseSchema>;
     try {
-      profileData = voiceProfileResponseSchema.parse(JSON.parse(rawContent));
-    } catch {
+      const response = await getAIResponse(
+        [{ role: "user", content: prompt }],
+        getDefaultProvider(),
+        { temperature: 0.3, max_tokens: 500, response_format: { type: "json_object" } }
+      );
+
+      const completion = response as { choices: { message: { content: string | null } }[] };
+      const rawContent = completion.choices[0]?.message?.content ?? "{}";
+      const profileData = voiceProfileResponseSchema.parse(JSON.parse(rawContent));
+
+      // Deactivate all existing profiles for this user
+      await db
+        .update(schema.voiceProfiles)
+        .set({ isActive: 0 })
+        .where(eq(schema.voiceProfiles.userId, userId));
+
+      const id = uuidv4();
+      await db.insert(schema.voiceProfiles).values({
+        id,
+        userId,
+        name,
+        profile: profileData,
+        isActive: 1,
+        createdAt: Math.floor(Date.now() / 1000),
+      });
+
+      return NextResponse.json({
+        success: true,
+        id,
+        profile: profileData,
+        name,
+        remainingCredits: creditResult.remainingCredits,
+      });
+    } catch (innerError) {
+      // Credit was already charged above — refund it since the profile was
+      // never created, matching the refund-on-failure convention used
+      // everywhere else credits are pre-deducted (e.g. enrich/confirm/route.ts).
+      await addCredits(userId, 1, "refund", "Reembolso por error al crear voz de marca").catch((e) =>
+        log.warn({ err: e }, "Credit refund failed")
+      );
+      const isFormatError = innerError instanceof SyntaxError || innerError instanceof z.ZodError;
       return NextResponse.json(
-        { error: "La IA devolvió una respuesta en formato incorrecto. Inténtalo de nuevo." },
+        {
+          error: isFormatError
+            ? "La IA devolvió una respuesta en formato incorrecto. Inténtalo de nuevo."
+            : "Error al analizar la voz de marca. Inténtalo de nuevo.",
+        },
         { status: 500 }
       );
     }
-
-    // Deactivate all existing profiles for this user
-    await db
-      .update(schema.voiceProfiles)
-      .set({ isActive: 0 })
-      .where(eq(schema.voiceProfiles.userId, userId));
-
-    const id = uuidv4();
-    await db.insert(schema.voiceProfiles).values({
-      id,
-      userId,
-      name,
-      profile: profileData,
-      isActive: 1,
-      createdAt: Math.floor(Date.now() / 1000),
-    });
-
-    return NextResponse.json({ success: true, id, profile: profileData, name });
   } catch (error) {
     log.error({ err: error }, "voice-profile/analyze error");
     return NextResponse.json(
-      { error: "Error al analizar el perfil de voz. Inténtalo de nuevo." },
+      { error: "Error al analizar la voz de marca. Inténtalo de nuevo." },
       { status: 500 }
     );
   }
