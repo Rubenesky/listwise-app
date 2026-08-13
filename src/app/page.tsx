@@ -382,7 +382,7 @@ export default function HomePage() {
                 { icon: "🤖", title: "Agente de Copywriting IA", desc: "Chat conversacional para refinar títulos, bullets y descripciones con instrucciones en lenguaje natural." },
                 { icon: "⚡", title: "Procesamiento masivo CSV", desc: "Sube tu catálogo entero y obtén todos los listings optimizados en minutos." },
                 { icon: "📊", title: "SEO + GEO optimizado", desc: "Estructura y keywords diseñados para rankear en Amazon, Google y motores de búsqueda IA." },
-                { icon: "🎯", title: "Voz de marca por categoría", desc: "Prompts especializados por categoría: Moda, Electrónica, Hogar, Deporte, Alimentación, Belleza." },
+                { icon: "🎯", title: "Reglas de escritura por categoría", desc: "Prompts especializados por categoría: Moda, Electrónica, Hogar, Deporte, Alimentación, Belleza." },
                 { icon: "🔍", title: "Análisis de competidores", desc: "Detecta qué keywords usa la competencia, compara scores y recibe sugerencias para superar sus listings." },
                 { icon: "🏆", title: "Sistema de logros", desc: "Gana puntos, desbloquea niveles y obtén descuentos exclusivos al mejorar tus productos." },
                 { icon: "📁", title: "Exportación CSV", desc: "Descarga el resultado listo para subir a cualquier plataforma o feed de datos." },
