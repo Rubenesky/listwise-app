@@ -39,14 +39,14 @@ const PLAN_STYLES: Record<string, {
 };
 
 const navigation = [
-  { name: "Dashboard", href: "/dashboard", download: false },
+  { name: "📊 Dashboard", href: "/dashboard", download: false },
   { name: "🤖 Agente", href: "/agent", download: false },
   { name: "🎨 Voz de Marca", href: "/dashboard/voice-profile", download: false },
   { name: "🔍 Competencia", href: "/dashboard/competitor", download: false },
   { name: "🔊 Audio Comercial", href: "/dashboard/audio", download: false },
   { name: "🎁 Invitar", href: "/dashboard/referrals", download: false },
   { name: "🏆 Gamificación", href: "/gamification", download: false },
-  { name: "Precios", href: "/pricing", download: false },
+  { name: "🏷️ Precios", href: "/pricing", download: false },
   { name: "❓ Ayuda", href: "/dashboard/help", download: false },
   { name: "Plantilla CSV", href: "/api/template/csv", download: true },
 ];
