@@ -8,6 +8,7 @@ import { hasSections } from "@/lib/listings/render-sections";
 import { MODE_CONFIG, type GenerationMode } from "@/lib/ai/prompts";
 import DescriptionSections from "@/components/DescriptionSections";
 import VoiceProfileManager from "@/components/VoiceProfileManager";
+import AudioFeatureBanner from "@/components/AudioFeatureBanner";
 import InfoTooltip from "@/components/InfoTooltip";
 import GamificationWidget from "@/components/GamificationWidget";
 import CreditsPopover from "@/components/CreditsPopover";
@@ -1206,6 +1207,13 @@ export default function DashboardPage() {
 
         {/* Voice profile */}
         <VoiceProfileManager />
+
+        {/* Audio feature */}
+        <AudioFeatureBanner
+          listings={listings
+            .filter((l) => l.status === "COMPLETED")
+            .map((l) => ({ id: l.id, productName: l.productName, generatedTitle: l.generatedTitle }))}
+        />
 
         {/* Progress bar */}
         {isProcessing && batchTotal > 0 && (
