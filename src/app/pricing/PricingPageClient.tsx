@@ -489,6 +489,7 @@ export default function PricingPageClient({ isSignedIn }: PricingPageClientProps
                   { action: "Crear voz de marca", cost: 1 },
                   { action: "Chat con agente IA", cost: 2 },
                   { action: "Análisis de competidor", cost: 2 },
+                  { action: "Generar audio", cost: 2 },
                   { action: "Subir CSV", cost: 0 },
                   { action: "Compartir landing", cost: 0 },
                 ].map(({ action, cost }) => (

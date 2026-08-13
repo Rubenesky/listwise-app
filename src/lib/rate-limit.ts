@@ -75,3 +75,12 @@ export const ratelimitVoiceProfile = new Ratelimit({
   analytics: false,
   prefix: "@upstash/ratelimit/voice-profile",
 });
+
+// Audio generation (TTS) de un listing: 15 generaciones por usuario por día.
+// Cuesta 2 créditos, esto acota ráfagas independientemente del saldo.
+export const ratelimitAudioGeneration = new Ratelimit({
+  redis,
+  limiter: Ratelimit.fixedWindow(15, "24 h"),
+  analytics: false,
+  prefix: "@upstash/ratelimit/audio-generation",
+});

@@ -104,6 +104,7 @@ export default function DashboardPage() {
   const editDescriptionHasSections = useMemo(() => hasSections(editDescription), [editDescription]);
   const [saving, setSaving] = useState(false);
   const [sharing, setSharing] = useState<string | null>(null);
+  const [generatingAudio, setGeneratingAudio] = useState<string | null>(null);
   const [pagination, setPagination] = useState({
     page: 1,
     limit: 20,
@@ -397,6 +398,38 @@ export default function DashboardPage() {
       alert("Error de red al generar el enlace. Inténtalo de nuevo.");
     } finally {
       setSharing(null);
+    }
+  };
+
+  const handleGenerateAudio = async (listingId: string) => {
+    setGeneratingAudio(listingId);
+    try {
+      const res = await fetch(`/api/listings/${listingId}/audio`, { method: "POST" });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        alert(data.error || "Error al generar el audio.");
+        return;
+      }
+      const remaining = res.headers.get("X-Remaining-Credits");
+      if (remaining !== null) {
+        const n = Number(remaining);
+        if (!Number.isNaN(n)) {
+          window.dispatchEvent(new CustomEvent("credits-update", { detail: { credits: n } }));
+        }
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = res.headers.get("X-Filename") || "listing.wav";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch {
+      alert("Error de red al generar el audio. Inténtalo de nuevo.");
+    } finally {
+      setGeneratingAudio(null);
     }
   };
 
@@ -1489,6 +1522,16 @@ export default function DashboardPage() {
                                   title="Compartir"
                                 >
                                   {sharing === listing.id ? "..." : "🔗"}
+                                </button>
+                              )}
+                              {listing.status === "COMPLETED" && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleGenerateAudio(listing.id); }}
+                                  disabled={generatingAudio === listing.id}
+                                  className="px-2 py-1 text-xs text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+                                  title="Generar audio (2 créditos)"
+                                >
+                                  {generatingAudio === listing.id ? "..." : "🔊"}
                                 </button>
                               )}
                               <button
