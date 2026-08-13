@@ -10,6 +10,11 @@ const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
 export const GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts";
 const DEFAULT_VOICE = "Kore";
 const MAX_INPUT_CHARS = 5000;
+// A real listening review measured the raw output peaking at -0.0003 dBFS
+// (essentially touching the digital ceiling) — safe headroom for whatever
+// plays it back next (WhatsApp, phone speakers, etc.), no audible quality
+// tradeoff at this size.
+const OUTPUT_GAIN_DB = -1.5;
 
 // Detailed style instruction (not a separate API parameter — Gemini's native
 // TTS reads style cues from the input text itself). A vague one-liner like
@@ -33,6 +38,8 @@ Mantén un ritmo ágil y cómodo, adecuado para una nota de voz de WhatsApp.
 
 No exageres la emoción ni suenes demasiado entusiasta. Prioriza naturalidad y confianza sobre dramatización.
 
+La locución debe sentirse espontánea y conversacional, como si estuvieras recomendando personalmente el producto a un comprador interesado. No intentes sonar más persuasivo aumentando la energía. La persuasión debe venir de la naturalidad, la seguridad y el énfasis sutil en los beneficios.
+
 Texto:
 `;
 
@@ -50,6 +57,19 @@ interface GeminiAudioResponse {
       }>;
     };
   }>;
+}
+
+// Scales 16-bit PCM samples by a dB gain (negative = quieter), clamping to
+// avoid wraparound. Applied once, before wrapping in a WAV header.
+function applyGain(pcm: Buffer, gainDb: number): Buffer {
+  const factor = Math.pow(10, gainDb / 20);
+  const out = Buffer.alloc(pcm.length);
+  for (let i = 0; i + 1 < pcm.length; i += 2) {
+    const sample = pcm.readInt16LE(i);
+    const scaled = Math.max(-32768, Math.min(32767, Math.round(sample * factor)));
+    out.writeInt16LE(scaled, i);
+  }
+  return out;
 }
 
 // Gemini's native TTS returns raw PCM (typically 16-bit signed little-endian,
@@ -122,5 +142,6 @@ export async function generateSpeech(text: string): Promise<{ buffer: Buffer; mi
 
   const rateMatch = mimeType.match(/rate=(\d+)/);
   const sampleRate = rateMatch ? parseInt(rateMatch[1], 10) : 24000;
-  return { buffer: wrapPcmAsWav(rawBuffer, sampleRate), mimeType: "audio/wav" };
+  const gained = applyGain(rawBuffer, OUTPUT_GAIN_DB);
+  return { buffer: wrapPcmAsWav(gained, sampleRate), mimeType: "audio/wav" };
 }
