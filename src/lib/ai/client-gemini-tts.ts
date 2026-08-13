@@ -11,6 +11,15 @@ export const GEMINI_TTS_MODEL = "gemini-2.5-flash-preview-tts";
 const DEFAULT_VOICE = "Kore";
 const MAX_INPUT_CHARS = 5000;
 
+// Detailed style instruction (not a separate API parameter — Gemini's native
+// TTS reads style cues from the input text itself). A vague one-liner like
+// "read this enthusiastically" underperformed a specific, concrete
+// instruction in a real listening review of generated audio.
+const STYLE_INSTRUCTION = `Lee el siguiente texto como un vendedor profesional que está recomendando un producto a un cliente por WhatsApp. Habla en español natural de España, con un tono cercano, seguro y profesional. No suenes como un locutor de anuncio ni como una lectura de una ficha técnica. Utiliza una entonación conversacional y dinámica. Destaca ligeramente los beneficios importantes y evita dar el mismo énfasis a todas las frases. Haz pausas naturales entre ideas, pero no después de cada frase. Mantén un ritmo cómodo y claro, sin correr.
+
+Texto:
+`;
+
 function getApiKey(): string {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("GEMINI_API_KEY no está configurada");
@@ -54,7 +63,7 @@ function wrapPcmAsWav(pcm: Buffer, sampleRate: number, channels = 1, bitsPerSamp
 
 export async function generateSpeech(text: string): Promise<{ buffer: Buffer; mimeType: string }> {
   const apiKey = getApiKey();
-  const trimmed = text.slice(0, MAX_INPUT_CHARS);
+  const trimmed = (STYLE_INSTRUCTION + text).slice(0, MAX_INPUT_CHARS);
 
   const url = `${GEMINI_BASE}/${GEMINI_TTS_MODEL}:generateContent`;
   const body = {

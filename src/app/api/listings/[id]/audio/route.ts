@@ -5,6 +5,7 @@ import { db, schema } from "@/db";
 import { useCredits, addCredits } from "@/lib/credits/use-credits";
 import { ratelimitAudioGeneration } from "@/lib/rate-limit";
 import { generateSpeech } from "@/lib/ai/client-gemini-tts";
+import { generateSpokenScript } from "@/lib/ai/generate-audio-script";
 import { log } from "@/lib/logger";
 
 const AUDIO_CREDITS = 2;
@@ -44,8 +45,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       );
     }
 
-    const text = [title, ...bullets, description].filter(Boolean).join(". ");
-
     // eslint-disable-next-line react-hooks/rules-of-hooks
     const creditResult = await useCredits(userId, AUDIO_CREDITS, "Generar audio del listing");
     if (!creditResult.success) {
@@ -56,7 +55,12 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     try {
-      const { buffer, mimeType } = await generateSpeech(text);
+      // Feeding the raw listing straight into TTS reads like a spec sheet —
+      // rewrite it into a proper spoken sales script first (see
+      // generate-audio-script.ts for the reasoning, backed by a real
+      // listening review of the previous raw-concatenation approach).
+      const script = await generateSpokenScript({ title, bullets, description });
+      const { buffer, mimeType } = await generateSpeech(script);
       log.info({ userId, listingId: id, bytes: buffer.length }, "Audio de listing generado");
 
       const filename = `${(listing.productName || "listing").replace(/[^a-z0-9]+/gi, "-").toLowerCase()}.wav`;
