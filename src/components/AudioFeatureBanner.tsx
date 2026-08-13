@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import ShareButtons from "@/components/ShareButtons";
 
 interface AudioListing {
   id: string;
@@ -9,24 +8,14 @@ interface AudioListing {
   generatedTitle: string | null;
 }
 
-interface ShareData {
-  shareUrl: string;
-  shareLinks: { whatsapp: string; twitter: string; linkedin: string; email: string };
-}
-
 export default function AudioFeatureBanner({ listings }: { listings: AudioListing[] }) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedId, setSelectedId] = useState("");
   const [generatingAudio, setGeneratingAudio] = useState(false);
-  const [sharing, setSharing] = useState(false);
-  const [shareData, setShareData] = useState<ShareData | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  const selectedListing = listings.find((l) => l.id === selectedId);
 
   const handleSelect = (id: string) => {
     setSelectedId(id);
-    setShareData(null);
     setError(null);
   };
 
@@ -61,36 +50,6 @@ export default function AudioFeatureBanner({ listings }: { listings: AudioListin
       setError("Error de red al generar el audio. Inténtalo de nuevo.");
     } finally {
       setGeneratingAudio(false);
-    }
-  };
-
-  const handleShare = async () => {
-    if (!selectedId || !selectedListing) return;
-    setError(null);
-    setSharing(true);
-    try {
-      const res = await fetch(`/api/listings/${selectedId}/share`, { method: "POST" });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Error al generar el enlace de compartir.");
-        return;
-      }
-      const title = selectedListing.generatedTitle ?? selectedListing.productName;
-      const encodedUrl = encodeURIComponent(data.url);
-      const encodedTitle = encodeURIComponent(title);
-      setShareData({
-        shareUrl: data.url,
-        shareLinks: {
-          whatsapp: `https://wa.me/?text=${encodedTitle}%20${encodedUrl}`,
-          twitter: `https://twitter.com/intent/tweet?text=${encodedTitle}&url=${encodedUrl}`,
-          linkedin: `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`,
-          email: `mailto:?subject=${encodedTitle}&body=Mira este producto en ListWise: ${encodedUrl}`,
-        },
-      });
-    } catch {
-      setError("Error de red al generar el enlace. Inténtalo de nuevo.");
-    } finally {
-      setSharing(false);
     }
   };
 
@@ -140,31 +99,16 @@ export default function AudioFeatureBanner({ listings }: { listings: AudioListin
               </select>
 
               {selectedId && (
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    onClick={handleGenerateAudio}
-                    disabled={generatingAudio}
-                    className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:bg-gray-300 transition-colors font-medium"
-                  >
-                    {generatingAudio ? "Generando…" : "🔊 Generar audio"}
-                  </button>
-                  <button
-                    onClick={handleShare}
-                    disabled={sharing}
-                    className="px-3 py-2 border border-gray-300 text-gray-700 text-sm rounded-lg hover:bg-gray-50 disabled:opacity-50 transition-colors font-medium"
-                  >
-                    {sharing ? "Generando enlace…" : "🔗 Obtener enlace para compartir"}
-                  </button>
-                </div>
+                <button
+                  onClick={handleGenerateAudio}
+                  disabled={generatingAudio}
+                  className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:bg-gray-300 transition-colors font-medium"
+                >
+                  {generatingAudio ? "Generando…" : "🔊 Generar audio"}
+                </button>
               )}
 
               {error && <p className="text-xs text-red-600">{error}</p>}
-
-              {shareData && (
-                <div className="pt-2 border-t border-gray-100">
-                  <ShareButtons shareUrl={shareData.shareUrl} shareLinks={shareData.shareLinks} />
-                </div>
-              )}
             </div>
           )}
         </div>

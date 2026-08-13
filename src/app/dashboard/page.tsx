@@ -1526,10 +1526,10 @@ export default function DashboardPage() {
                                 <button
                                   onClick={(e) => { e.stopPropagation(); handleShare(listing.id); }}
                                   disabled={sharing === listing.id}
-                                  className="px-2 py-1 text-xs text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
+                                  className="px-2.5 py-1 text-xs text-blue-600 hover:text-blue-800 font-medium transition-colors disabled:opacity-50"
                                   title="Compartir"
                                 >
-                                  {sharing === listing.id ? "..." : "🔗"}
+                                  {sharing === listing.id ? "..." : "🔗 Compartir"}
                                 </button>
                               )}
                               {listing.status === "COMPLETED" && (
