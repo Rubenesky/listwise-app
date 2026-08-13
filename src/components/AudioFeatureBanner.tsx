@@ -8,7 +8,15 @@ interface AudioListing {
   generatedTitle: string | null;
 }
 
-export default function AudioFeatureBanner({ listings }: { listings: AudioListing[] }) {
+interface AudioFeatureBannerProps {
+  listings: AudioListing[];
+  // "card": collapsible dashboard card with its own header (default).
+  // "inline": just the content, no header/toggle — for the dedicated page,
+  // which already provides its own <h1>.
+  variant?: "card" | "inline";
+}
+
+export default function AudioFeatureBanner({ listings, variant = "card" }: AudioFeatureBannerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedId, setSelectedId] = useState("");
   const [generatingAudio, setGeneratingAudio] = useState(false);
@@ -53,6 +61,57 @@ export default function AudioFeatureBanner({ listings }: { listings: AudioListin
     }
   };
 
+  const content = (
+    <div className={variant === "card" ? "border-t border-blue-100 px-4 pb-4 pt-3 space-y-3 bg-white/60" : "space-y-3"}>
+      <div>
+        <p className="text-sm font-semibold text-gray-800">
+          Tu ficha, lista para hablar como un vendedor de verdad.
+        </p>
+        <p className="text-xs text-gray-600 leading-relaxed mt-1">
+          Genera en segundos un audio comercial con IA a partir del título, los bullets y la descripción que ya
+          tienes — sin tono de anuncio, listo para enviar por WhatsApp u otras plataformas.{" "}
+          <span className="font-medium text-blue-700">2 créditos por generación.</span>
+        </p>
+      </div>
+
+      {listings.length === 0 ? (
+        <div className="bg-white rounded-lg border border-dashed border-blue-300 p-4 text-center">
+          <p className="text-sm text-gray-600">Aún no tienes productos completados.</p>
+          <p className="text-xs text-gray-400 mt-0.5">Genera tu primer listing para poder crear su audio comercial.</p>
+        </div>
+      ) : (
+        <div className="space-y-3 border border-blue-200 rounded-xl p-3 bg-white">
+          <select
+            value={selectedId}
+            onChange={(e) => handleSelect(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">Elige un producto…</option>
+            {listings.map((l) => (
+              <option key={l.id} value={l.id}>{l.generatedTitle ?? l.productName}</option>
+            ))}
+          </select>
+
+          {selectedId && (
+            <button
+              onClick={handleGenerateAudio}
+              disabled={generatingAudio}
+              className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:bg-gray-300 transition-colors font-medium"
+            >
+              {generatingAudio ? "Generando…" : "🔊 Generar audio"}
+            </button>
+          )}
+
+          {error && <p className="text-xs text-red-600">{error}</p>}
+        </div>
+      )}
+    </div>
+  );
+
+  if (variant === "inline") {
+    return content;
+  }
+
   return (
     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl shadow-sm overflow-hidden">
       <button
@@ -61,7 +120,7 @@ export default function AudioFeatureBanner({ listings }: { listings: AudioListin
       >
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-base">🎙️</span>
-          <span className="text-sm font-semibold text-gray-800">Nota de voz para WhatsApp</span>
+          <span className="text-sm font-semibold text-gray-800">Audio Comercial</span>
           <span className="bg-blue-600 text-white text-xs px-1.5 py-0.5 rounded-full font-medium">Nuevo</span>
         </div>
         <svg
@@ -72,47 +131,7 @@ export default function AudioFeatureBanner({ listings }: { listings: AudioListin
         </svg>
       </button>
 
-      {isOpen && (
-        <div className="border-t border-blue-100 px-4 pb-4 pt-3 space-y-3 bg-white/60">
-          <p className="text-xs text-gray-600 leading-relaxed">
-            Convierte cualquier producto completado en una nota de voz profesional en segundos —
-            perfecta para enviarla por WhatsApp a un comprador interesado, sin escribir nada.{" "}
-            <span className="font-medium text-blue-700">2 créditos por generación.</span>
-          </p>
-
-          {listings.length === 0 ? (
-            <div className="bg-white rounded-lg border border-dashed border-blue-300 p-4 text-center">
-              <p className="text-sm text-gray-600">Aún no tienes productos completados.</p>
-              <p className="text-xs text-gray-400 mt-0.5">Genera tu primer listing para poder crear su nota de voz.</p>
-            </div>
-          ) : (
-            <div className="space-y-3 border border-blue-200 rounded-xl p-3 bg-white">
-              <select
-                value={selectedId}
-                onChange={(e) => handleSelect(e.target.value)}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              >
-                <option value="">Elige un producto…</option>
-                {listings.map((l) => (
-                  <option key={l.id} value={l.id}>{l.generatedTitle ?? l.productName}</option>
-                ))}
-              </select>
-
-              {selectedId && (
-                <button
-                  onClick={handleGenerateAudio}
-                  disabled={generatingAudio}
-                  className="px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 disabled:bg-gray-300 transition-colors font-medium"
-                >
-                  {generatingAudio ? "Generando…" : "🔊 Generar audio"}
-                </button>
-              )}
-
-              {error && <p className="text-xs text-red-600">{error}</p>}
-            </div>
-          )}
-        </div>
-      )}
+      {isOpen && content}
     </div>
   );
 }

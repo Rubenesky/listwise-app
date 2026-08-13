@@ -43,6 +43,7 @@ const navigation = [
   { name: "🤖 Agente", href: "/agent", download: false },
   { name: "🎨 Voz de Marca", href: "/dashboard/voice-profile", download: false },
   { name: "🔍 Competencia", href: "/dashboard/competitor", download: false },
+  { name: "🔊 Audio Comercial", href: "/dashboard/audio", download: false },
   { name: "🎁 Invitar", href: "/dashboard/referrals", download: false },
   { name: "🏆 Gamificación", href: "/gamification", download: false },
   { name: "Precios", href: "/pricing", download: false },
