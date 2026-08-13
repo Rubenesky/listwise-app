@@ -15,7 +15,21 @@ const MAX_INPUT_CHARS = 5000;
 // TTS reads style cues from the input text itself). A vague one-liner like
 // "read this enthusiastically" underperformed a specific, concrete
 // instruction in a real listening review of generated audio.
-const STYLE_INSTRUCTION = `Lee el siguiente texto como un vendedor profesional que está recomendando un producto a un cliente por WhatsApp. Habla en español natural de España, con un tono cercano, seguro y profesional. No suenes como un locutor de anuncio ni como una lectura de una ficha técnica. Utiliza una entonación conversacional y dinámica. Destaca ligeramente los beneficios importantes y evita dar el mismo énfasis a todas las frases. Haz pausas naturales entre ideas, pero no después de cada frase. Mantén un ritmo cómodo y claro, sin correr.
+const STYLE_INSTRUCTION = `Lee este texto como un vendedor profesional hablando directamente con un cliente por WhatsApp.
+
+Habla en español natural de España, con un tono cercano, seguro, agradable y profesional.
+
+No lo leas como una ficha de producto ni como un anuncio publicitario de televisión.
+
+Debe parecer una recomendación personal de un vendedor que conoce bien el producto.
+
+Utiliza una entonación conversacional y natural. Da ligeramente más énfasis a los beneficios que a las características técnicas.
+
+Haz pausas naturales cuando cambie la idea, pero evita hacer una pausa después de cada frase.
+
+Mantén un ritmo ágil y cómodo, adecuado para una nota de voz de WhatsApp.
+
+No exageres la emoción ni suenes demasiado entusiasta. La sensación debe ser de confianza y profesionalidad.
 
 Texto:
 `;
