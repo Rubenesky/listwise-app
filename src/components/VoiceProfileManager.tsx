@@ -113,7 +113,6 @@ export default function VoiceProfileManager() {
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-base">🎨</span>
           <span className="text-sm font-semibold text-gray-800">Voz de Marca</span>
-          <span className="bg-purple-600 text-white text-xs px-1.5 py-0.5 rounded-full font-medium">Nuevo</span>
           {activeProfile ? (
             <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-700 border border-green-200">
               <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block animate-pulse" />
@@ -261,12 +260,12 @@ export default function VoiceProfileManager() {
                           {examples.length} ejemplo{examples.length !== 1 ? "s" : ""}
                           {examples.length < 3 && <span className="text-orange-500 ml-1">(mínimo 3)</span>}
                         </p>
-                        <p className="text-xs text-gray-400">{Math.min(Math.round((examples.length / 5) * 100), 100)}%</p>
+                        <p className="text-xs text-gray-400">{Math.min(Math.round((examples.length / 10) * 100), 100)}%</p>
                       </div>
                       <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
                         <div
                           className="h-full bg-purple-500 rounded-full transition-all"
-                          style={{ width: `${Math.min((examples.length / 5) * 100, 100)}%` }}
+                          style={{ width: `${Math.min((examples.length / 10) * 100, 100)}%` }}
                         />
                       </div>
                       <div className="space-y-1">

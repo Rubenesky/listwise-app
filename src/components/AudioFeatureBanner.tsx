@@ -15,7 +15,7 @@ interface ShareData {
 }
 
 export default function AudioFeatureBanner({ listings }: { listings: AudioListing[] }) {
-  const [isOpen, setIsOpen] = useState(true);
+  const [isOpen, setIsOpen] = useState(false);
   const [selectedId, setSelectedId] = useState("");
   const [generatingAudio, setGeneratingAudio] = useState(false);
   const [sharing, setSharing] = useState(false);
