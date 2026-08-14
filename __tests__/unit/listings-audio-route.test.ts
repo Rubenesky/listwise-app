@@ -8,6 +8,7 @@ jest.mock("@/lib/rate-limit", () => ({
 jest.mock("@/lib/credits/use-credits", () => ({ useCredits: jest.fn(), addCredits: jest.fn() }));
 jest.mock("@/lib/ai/generate-audio-script", () => ({ generateSpokenScript: jest.fn() }));
 jest.mock("@/lib/ai/client-gemini-tts", () => ({ generateSpeech: jest.fn() }));
+jest.mock("@/lib/redis", () => ({ redis: { set: jest.fn() } }));
 
 const mockListingSelect = jest.fn();
 jest.mock("@/db", () => ({
@@ -24,6 +25,7 @@ import { ratelimitAudioGeneration } from "@/lib/rate-limit";
 import { useCredits, addCredits } from "@/lib/credits/use-credits";
 import { generateSpokenScript } from "@/lib/ai/generate-audio-script";
 import { generateSpeech } from "@/lib/ai/client-gemini-tts";
+import { redis } from "@/lib/redis";
 
 function makeParams(id = "listing-1") {
   return { params: Promise.resolve({ id }) };
@@ -48,6 +50,7 @@ describe("POST /api/listings/[id]/audio", () => {
     mockListingSelect.mockReset();
     (auth as unknown as jest.Mock).mockResolvedValue({ userId: "user-1" });
     (ratelimitAudioGeneration.limit as jest.Mock).mockResolvedValue({ success: true });
+    (redis.set as jest.Mock).mockResolvedValue("OK");
     mockListingSelect.mockResolvedValueOnce([BASE_LISTING]);
     (useCredits as jest.Mock).mockResolvedValue({ success: true, remainingCredits: 8 });
     (generateSpokenScript as jest.Mock).mockResolvedValue("Guion de venta natural.");
@@ -65,6 +68,13 @@ describe("POST /api/listings/[id]/audio", () => {
     (ratelimitAudioGeneration.limit as jest.Mock).mockResolvedValue({ success: false });
     const res = await POST(makeRequest(), makeParams());
     expect(res.status).toBe(429);
+    expect(useCredits).not.toHaveBeenCalled();
+  });
+
+  it("returns 409 when a generation for the same listing is already in flight", async () => {
+    (redis.set as jest.Mock).mockResolvedValue(null); // NX lock already held
+    const res = await POST(makeRequest(), makeParams());
+    expect(res.status).toBe(409);
     expect(useCredits).not.toHaveBeenCalled();
   });
 

@@ -112,14 +112,21 @@ export async function generateSpeech(text: string): Promise<{ buffer: Buffer; mi
     },
   };
 
+  // Without a bound, a hung Gemini request blocks indefinitely — if the
+  // platform then kills the request before this resolves, the route's
+  // refund-on-failure catch never runs and the user keeps a charge with no
+  // audio. Bounding it here guarantees the catch always fires.
   const res = await fetch(url, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(30000),
   });
 
   if (!res.ok) {
-    const errText = await res.text();
+    // Truncated: Gemini's safety-filter error bodies can echo back part of
+    // the submitted text, which would otherwise land in logs verbatim.
+    const errText = (await res.text()).slice(0, 200);
     log.error({ status: res.status, err: errText }, "Gemini TTS request failed");
     throw new Error(`Gemini TTS ${res.status}: ${errText}`);
   }

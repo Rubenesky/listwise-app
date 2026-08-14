@@ -27,14 +27,40 @@ REGLAS:
 
 Responde SOLO con el guion, sin comillas ni explicaciones ni encabezados.`;
 
+// ~150 words of headroom over the 80-120 word target the prompt asks for —
+// enough slack for normal variance, but bounded so a model that ignores the
+// length rule doesn't produce a script long enough to get cut mid-word by
+// generateSpeech()'s hard MAX_INPUT_CHARS truncation.
+const MAX_SCRIPT_CHARS = 900;
+
+// If the script runs long, cut at the last full sentence instead of an
+// arbitrary character offset — an abrupt mid-word cutoff is far more
+// noticeable (and worse for the "professional salesperson" tone) than a
+// slightly shorter script.
+function truncateAtSentenceBoundary(text: string, maxChars: number): string {
+  if (text.length <= maxChars) return text;
+  const window = text.slice(0, maxChars);
+  const lastBoundary = Math.max(window.lastIndexOf("."), window.lastIndexOf("!"), window.lastIndexOf("?"));
+  if (lastBoundary > 0) return window.slice(0, lastBoundary + 1);
+  const lastSpace = window.lastIndexOf(" ");
+  return lastSpace > 0 ? window.slice(0, lastSpace) : window;
+}
+
 export async function generateSpokenScript(params: {
   title: string;
   bullets: string[];
   description: string;
 }): Promise<string> {
-  const prompt = SCRIPT_PROMPT.replace("{title}", params.title)
-    .replace("{bullets}", params.bullets.map((b) => `- ${b}`).join("\n"))
-    .replace("{description}", params.description);
+  // Single regex pass over the ORIGINAL template so a title/description that
+  // happens to contain literal "{bullets}"/"{description}" text can't get
+  // re-matched by a later replacement (chained .replace() calls would have
+  // rescanned the growing string and picked up injected placeholder text).
+  const values: Record<string, string> = {
+    "{title}": params.title,
+    "{bullets}": params.bullets.map((b) => `- ${b}`).join("\n"),
+    "{description}": params.description,
+  };
+  const prompt = SCRIPT_PROMPT.replace(/\{title\}|\{bullets\}|\{description\}/g, (match) => values[match]);
 
   const response = await getAIResponse(
     [{ role: "user", content: prompt }],
@@ -45,5 +71,5 @@ export async function generateSpokenScript(params: {
   const completion = response as { choices: { message: { content: string | null } }[] };
   const script = completion.choices[0]?.message?.content?.trim();
   if (!script) throw new Error("No se pudo generar el guion del audio");
-  return script;
+  return truncateAtSentenceBoundary(script, MAX_SCRIPT_CHARS);
 }

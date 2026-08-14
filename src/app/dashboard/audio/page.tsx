@@ -13,12 +13,16 @@ interface DashboardListing {
 export default function AudioComercialPage() {
   const [listings, setListings] = useState<DashboardListing[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     fetch("/api/listings/dashboard?limit=100")
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) throw new Error("Failed to load listings");
+        return r.json();
+      })
       .then((data) => setListings(data.listings ?? []))
-      .catch(() => {})
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
   }, []);
 
@@ -36,6 +40,10 @@ export default function AudioComercialPage() {
       </div>
       {loading ? (
         <p className="text-sm text-gray-500">Cargando productos...</p>
+      ) : loadError ? (
+        <p className="text-sm text-red-600">
+          No se pudieron cargar tus productos. Recarga la página para intentarlo de nuevo.
+        </p>
       ) : (
         <AudioFeatureBanner listings={completed} variant="inline" />
       )}

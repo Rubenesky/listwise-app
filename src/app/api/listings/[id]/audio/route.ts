@@ -6,6 +6,7 @@ import { useCredits, addCredits } from "@/lib/credits/use-credits";
 import { ratelimitAudioGeneration } from "@/lib/rate-limit";
 import { generateSpeech } from "@/lib/ai/client-gemini-tts";
 import { generateSpokenScript } from "@/lib/ai/generate-audio-script";
+import { redis } from "@/lib/redis";
 import { log } from "@/lib/logger";
 
 const AUDIO_CREDITS = 2;
@@ -28,6 +29,19 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     }
 
     const { id } = await params;
+
+    // Two near-simultaneous requests for the same listing (e.g. two open
+    // tabs) would otherwise both pass the checks below and double-charge —
+    // the daily rate limit doesn't prevent that, it only bounds total volume.
+    const lockKey = `audio-lock:${userId}:${id}`;
+    const acquiredLock = await redis.set(lockKey, "1", { nx: true, ex: 20 });
+    if (!acquiredLock) {
+      return NextResponse.json(
+        { error: "Ya hay una generación de audio en curso para este producto." },
+        { status: 409 }
+      );
+    }
+
     const [listing] = await db
       .select()
       .from(schema.listings)
