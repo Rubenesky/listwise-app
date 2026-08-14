@@ -61,7 +61,7 @@ interface GeminiAudioResponse {
 
 // Scales 16-bit PCM samples by a dB gain (negative = quieter), clamping to
 // avoid wraparound. Applied once, before wrapping in a WAV header.
-function applyGain(pcm: Buffer, gainDb: number): Buffer {
+export function applyGain(pcm: Buffer, gainDb: number): Buffer {
   const factor = Math.pow(10, gainDb / 20);
   const out = Buffer.alloc(pcm.length);
   for (let i = 0; i + 1 < pcm.length; i += 2) {
@@ -75,7 +75,7 @@ function applyGain(pcm: Buffer, gainDb: number): Buffer {
 // Gemini's native TTS returns raw PCM (typically 16-bit signed little-endian,
 // mono) wrapped in an inlineData part, not a ready-to-play container format.
 // Media players need a WAV header to know how to interpret those bytes.
-function wrapPcmAsWav(pcm: Buffer, sampleRate: number, channels = 1, bitsPerSample = 16): Buffer {
+export function wrapPcmAsWav(pcm: Buffer, sampleRate: number, channels = 1, bitsPerSample = 16): Buffer {
   const blockAlign = channels * (bitsPerSample / 8);
   const byteRate = sampleRate * blockAlign;
   const header = Buffer.alloc(44);
