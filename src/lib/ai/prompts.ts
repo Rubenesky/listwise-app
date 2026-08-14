@@ -45,30 +45,39 @@ export const MODE_CONFIG: Record<GenerationMode, { label: string; systemPrompt: 
   },
 };
 
-// Prescriptive hook type per category — tells the model exactly which opener to use
-// Avoids defaulting to "Imagina" for every product
+// Prescriptive hook type per category — tells the model exactly which opener
+// to use, avoiding a default bias toward "Imagina" for every product.
+//
+// Each instruction lists thematic ANGLES, not a ready-made example sentence
+// to quote. A real production bug (2026-08-14) showed the model copying a
+// quoted literal example near-verbatim across every product in a category —
+// it even reused the technique's own label word ("declaración") inside the
+// generated copy. Giving angles instead of finished text removes the surface
+// for verbatim copying; buildUserPrompt() also appends a shared guardrail
+// telling the model to pick one angle, write its own phrasing, and not
+// default to the same angle/construction every time.
 const REQUIRED_HOOK_TYPE: Record<string, { type: string; instruction: string }> = {
-  "Ropa":            { type: "bold",     instruction: 'Declaración audaz: "Esto no es otra sudadera/camiseta/[prenda genérica]." — define por oposición al cliché de la categoría.' },
-  "Moda":            { type: "bold",     instruction: 'Declaración audaz que rompe el cliché de moda genérica.' },
-  "Deportes":        { type: "scene",    instruction: 'Escena inmersiva: "Son las [hora] de la mañana y [situación de entrenamiento/esfuerzo vivida por el comprador]."' },
-  "Deporte Extremo": { type: "scene",    instruction: 'Escena inmersiva en el momento de máxima exigencia física.' },
-  "Electrónica":     { type: "benefit",  instruction: 'Beneficio directo con dato concreto: "[número o dato específico] que cambia [rutina diaria]."' },
-  "Cocina":          { type: "benefit",  instruction: 'Beneficio directo: "[resultado concreto de cocinar con este producto]." — nada de imaginación, hechos.' },
-  "Hogar":           { type: "question", instruction: '¿Cuántas veces has [problema doméstico concreto] sin encontrar la solución adecuada?' },
-  "Iluminación":     { type: "scene",    instruction: 'Escena inmersiva con la diferencia de luz/ambiente antes vs después.' },
-  "Belleza":         { type: "question", instruction: 'Pregunta retórica que nombra el problema exacto que el comprador ya conoce.' },
-  "Bienestar":       { type: "scene",    instruction: 'Escena inmersiva del momento de pausa y descanso que el producto hace posible.' },
-  "Salud":           { type: "benefit",  instruction: 'Beneficio directo con dato o resultado medible.' },
-  "Bebé":            { type: "scene",    instruction: 'Escena inmersiva desde la perspectiva del padre/madre en el momento de necesidad.' },
-  "Mascotas":        { type: "question", instruction: '¿Cuántas noches has visto a tu [perro/gato/mascota] [problema específico] sin poder hacer nada?' },
-  "Accesorios":      { type: "bold",     instruction: 'Declaración audaz que rompe el cliché de la categoría.' },
-  "Oficina":         { type: "question", instruction: 'Pregunta retórica sobre el problema de productividad o incomodidad que el comprador vive a diario.' },
-  "Jardín":          { type: "scene",    instruction: 'Escena inmersiva de disfrutar el jardín/exterior en el momento ideal.' },
-  "Juguetes":        { type: "scene",    instruction: 'Escena inmersiva de la sonrisa o el descubrimiento del niño usando el juguete.' },
-  "Automóvil":       { type: "benefit",  instruction: 'Beneficio directo con dato de funcionamiento real.' },
-  "POD":             { type: "bold",     instruction: 'Declaración audaz sobre la singularidad y exclusividad del producto personalizado.' },
-  "Boda":            { type: "scene",    instruction: 'Escena inmersiva en ese momento único del día que el producto hace perfecto.' },
-  "Navidad":         { type: "benefit",  instruction: 'Beneficio directo enfocado en la reacción emocional del receptor del regalo.' },
+  "Ropa":            { type: "bold",     instruction: "Contraste con el cliché de prenda genérica de la categoría (sudadera/camiseta/pantalón básico). Ángulos: negar el cliché directamente, invitar a dejar atrás lo genérico, afirmar el carácter de quien la lleva." },
+  "Moda":            { type: "bold",     instruction: "Contraste con el cliché de moda genérica. Ángulos: negar lo predecible, contraponer tendencia pasajera vs. pieza con carácter, afirmar identidad de estilo propio." },
+  "Deportes":        { type: "scene",    instruction: "Escena inmersiva de esfuerzo o entrenamiento real. Ángulos: un momento concreto del día (madrugada, tarde tras el trabajo), la sensación física durante el esfuerzo, el instante justo antes o después del reto." },
+  "Deporte Extremo": { type: "scene",    instruction: "Escena en el momento de máxima exigencia física. Ángulos: los segundos previos al reto, la tensión del cuerpo en el límite, la calma que da llevar el equipo adecuado en ese instante." },
+  "Electrónica":     { type: "benefit",  instruction: "Beneficio directo con dato concreto, sin metáfora. Ángulos: una cifra u horas que ahorra en la rutina diaria, comparación directa con la molestia que resuelve, un resultado medible desde el primer uso." },
+  "Cocina":          { type: "benefit",  instruction: "Resultado concreto de cocinar con este producto, sin apelar a la imaginación. Ángulos: el plato que sale mejor o más rápido, el tiempo que se ahorra en la preparación, la reacción de quien lo prueba." },
+  "Hogar":           { type: "question", instruction: "Pregunta retórica sobre un problema doméstico concreto. Ángulos: la tarea que se repite sin solución satisfactoria, la frustración de un objeto que no cumple su función, el momento del día en que más se nota el problema." },
+  "Iluminación":     { type: "scene",    instruction: "Contraste de ambiente antes y después de encender. Ángulos: la habitación que cambia de carácter, el momento del día en que más se nota la diferencia, la sensación de espacio que transmite la luz." },
+  "Belleza":         { type: "question", instruction: "Pregunta retórica que nombra el problema exacto que el comprador ya conoce. Ángulos: la rutina diaria que no da el resultado esperado, la inseguridad concreta frente al espejo, un producto anterior que decepcionó." },
+  "Bienestar":       { type: "scene",    instruction: "Escena del momento de pausa que el producto hace posible. Ángulos: el instante exacto en que el día se detiene, la sensación física de soltar tensión, el ritual que se repite cada vez." },
+  "Salud":           { type: "benefit",  instruction: "Beneficio directo con dato o resultado medible. Ángulos: la mejora concreta que se nota, el hábito que se vuelve más fácil de mantener, el resultado a corto plazo frente al esfuerzo que sustituye." },
+  "Bebé":            { type: "scene",    instruction: "Escena desde la perspectiva de quien cuida al bebé. Ángulos: el momento de necesidad real (noche, salida, cambio), la tranquilidad de tener resuelto ese instante, el gesto cotidiano que se simplifica." },
+  "Mascotas":        { type: "question", instruction: "Pregunta retórica desde la experiencia de cuidar a la mascota. Ángulos: la situación repetida que preocupa al dueño, el momento del día en que el problema es más evidente, la impotencia de no tener solución hasta ahora." },
+  "Accesorios":      { type: "bold",     instruction: "Contraste con el cliché de accesorio genérico. Ángulos: negar el cliché, contraponer lo funcional-pero-anodino frente a esta pieza, afirmar el detalle que marca la diferencia." },
+  "Oficina":         { type: "question", instruction: "Pregunta retórica sobre productividad o incomodidad diaria. Ángulos: la interrupción o molestia que se repite cada jornada, el tiempo perdido por no tener la solución adecuada, la incomodidad física acumulada." },
+  "Jardín":          { type: "scene",    instruction: "Escena de disfrutar el exterior en su mejor momento. Ángulos: la hora del día en que más se disfruta el jardín, el gesto de sentarse o recibir a alguien, el contraste entre un jardín descuidado y uno cuidado." },
+  "Juguetes":        { type: "scene",    instruction: "Escena del descubrimiento o la sonrisa del niño. Ángulos: el instante exacto en que lo prueba por primera vez, la reacción de quien lo mira jugar, el momento del día en que más se usa." },
+  "Automóvil":       { type: "benefit",  instruction: "Beneficio directo con dato de funcionamiento real. Ángulos: el problema del día a día que deja de ocurrir, una cifra o mejora concreta, la tranquilidad de tenerlo resuelto en cada trayecto." },
+  "POD":             { type: "bold",     instruction: "Singularidad del producto personalizado. Ángulos: contraste entre producción en masa y pieza única, afirmar que existe solo porque el comprador lo creó, no hay otro igual en el mundo." },
+  "Boda":            { type: "scene",    instruction: "Escena del momento único que el producto hace perfecto. Ángulos: un instante concreto del día (preparativos, ceremonia, celebración), el detalle que solo la pareja notará, la sensación de que todo está en su lugar." },
+  "Navidad":         { type: "benefit",  instruction: "Beneficio directo enfocado en la reacción emocional del receptor del regalo. Ángulos: el gesto de abrir el regalo, la sorpresa concreta que provoca, el motivo exacto por el que este regalo acierta." },
 };
 
 // Emotional archetype by category — guides the emotional hook in paragraph 1
@@ -305,7 +314,7 @@ export function buildUserPrompt(product: {
   // Prescriptive hook type — overrides model's default bias toward "Imagina"
   const requiredHook = REQUIRED_HOOK_TYPE[category];
   if (requiredHook) {
-    prompt += `\nTipo de apertura OBLIGATORIO para este producto (hook_type: "${requiredHook.type}"):\n${requiredHook.instruction}\nNO uses "Imagina" como primera palabra si el tipo requerido es question, bold o benefit.\n`;
+    prompt += `\nTipo de apertura OBLIGATORIO para este producto (hook_type: "${requiredHook.type}"):\n${requiredHook.instruction}\nElige UNO de los ángulos y redacta tu propia frase original para este producto concreto. No cites ningún ejemplo ni lo trates como plantilla fija, no reutilices la palabra que nombra la técnica (p.ej. no escribas literalmente "declaración", "escena" o similar como si fuera parte del copy), y no repitas siempre el mismo ángulo o construcción gramatical entre productos distintos.\nNO uses "Imagina" como primera palabra si el tipo requerido es question, bold o benefit.\n`;
   }
 
   // Category keyword suggestions — conditional, not mandatory
