@@ -6,6 +6,7 @@ import { useUserPlan } from "@/lib/hooks/useUserPlan";
 import { calcHealthScore } from "@/lib/listings/health-score";
 import { hasSections } from "@/lib/listings/render-sections";
 import { MODE_CONFIG, type GenerationMode } from "@/lib/ai/prompts";
+import { isChecklistStep2Done, isChecklistStep3Done, isChecklistAllDone } from "@/lib/dashboard/checklist";
 import DescriptionSections from "@/components/DescriptionSections";
 import VoiceProfileManager from "@/components/VoiceProfileManager";
 import AudioFeatureBanner from "@/components/AudioFeatureBanner";
@@ -147,9 +148,9 @@ export default function DashboardPage() {
   // React Hooks — the two useEffects right after — must run unconditionally
   // on every render, never after a conditional return.
   const currentCount = pagination.total || listings.length;
-  const checklistStep2Done = everUploaded || currentCount > 0;
-  const checklistStep3Done = usedAgent;
-  const checklistAllDone = checklistStep2Done && checklistStep3Done;
+  const checklistStep2Done = isChecklistStep2Done({ everUploaded, currentCount });
+  const checklistStep3Done = isChecklistStep3Done({ usedAgent });
+  const checklistAllDone = isChecklistAllDone({ everUploaded, currentCount, usedAgent });
 
   useEffect(() => {
     if (currentCount > 0 && !everUploaded) {
