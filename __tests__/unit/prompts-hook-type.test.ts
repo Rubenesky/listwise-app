@@ -16,10 +16,16 @@ import { buildUserPrompt, buildSystemPrompt } from "@/lib/ai/prompts";
 // A second fix banned the specific words ("Esto no es", "declaración") and
 // STILL did not fully resolve it: two of four re-tested products dodged the
 // word-level ban while keeping the same grammatical shape ("Un bolso no es
-// solo un contenedor; es...", "No es solo una mochila...; es..."). The real
-// fix bans the STRUCTURE "[algo] no es X; es Y" in any phrasing, not just
-// specific tokens. The tests below cover the per-category, static, and
-// structural sources of the bug.
+// solo un contenedor; es...", "No es solo una mochila...; es..."). A third
+// fix banned the STRUCTURE "[algo] no es X; es Y" in any phrasing and
+// suggested "Deja atrás..."/"Olvídate de..." as example imperative verbs —
+// which eliminated the negation structure but caused a NEW convergence: 3 of
+// 4 re-tested products opened with "[imperativo de dejar atrás lo genérico].
+// [Producto] redefine [beneficio]", reusing "redefine" every time. Giving ANY
+// concrete example verb, even as an "alternative", becomes a new template.
+// The fix below removes example verbs entirely (describe the technique, not
+// a fill-in-the-blank phrase) and bans "redefine" the same way "declaración"
+// was banned. The tests below cover all four rounds' regressions.
 const CATEGORIES_WITH_REQUIRED_HOOK = [
   "Ropa", "Moda", "Deportes", "Deporte Extremo", "Electrónica", "Cocina",
   "Hogar", "Iluminación", "Belleza", "Bienestar", "Salud", "Bebé",
@@ -76,17 +82,34 @@ describe("SYSTEM_PROMPT static templates (present for every product, any categor
   it("bans the [algo] no es X; es Y structure in any phrasing, in the hook-type list and CONTRAST FRAME", () => {
     expect(systemPrompt).toContain('PROHIBIDO usar la forma "[algo] no es X; es Y" en cualquier fraseo (esto incluye variantes como "Un bolso no es solo...", "No es solo una mochila..." — no solo "Esto no es...")');
   });
+
+  it("bans the word \"redefine\" alongside \"declaración\"", () => {
+    expect(systemPrompt).toContain('PROHIBIDO en cualquier parte de la descripción: la palabra "declaración" (ej: "es una declaración de estilo/funcionalidad") y la palabra "redefine"');
+  });
+
+  it("includes AUTOVERIFICACION item 14 catching the 'imperativo + [producto] redefine' template even without the literal banned words", () => {
+    expect(systemPrompt).toContain('¿El gancho tiene la forma "[imperativo de dejar atrás/olvidar lo genérico]. [Producto] + verbo que anuncia su diferencial (redefine, transforma, eleva...)."?');
+  });
+
+  it("no longer offers concrete example verbs (\"Deja atrás...\", \"Olvídate de...\") for the bold hook type", () => {
+    expect(systemPrompt).not.toContain('"Deja atrás..."');
+    expect(systemPrompt).not.toContain('"Olvídate de..."');
+  });
 });
 
 describe("REQUIRED_HOOK_TYPE 'bold' categories (Ropa, Moda, Accesorios, POD)", () => {
   it.each(["Ropa", "Moda", "Accesorios", "POD"])(
-    "bans the [algo] no es X; es Y structure and drops the risky 'negar directamente' angle for %s",
+    "bans the [algo] no es X; es Y structure, the words declaración/redefine, and drops example verbs for %s",
     (category) => {
       const prompt = buildUserPrompt({ productName: "Producto de prueba", category, mode: "creative" });
       expect(prompt).toMatch(/SIN usar la forma "\[algo\] no es X; es Y"/);
+      expect(prompt).toMatch(/SIN usar las palabras "declaración" o "redefine"/);
       // The old angle phrasing that led the model straight to "X no es Y; es Z"
       // must be gone — replaced by an imperative/direct-affirmation angle.
       expect(prompt).not.toMatch(/Ángulos:\s*negar (el cliché( directamente)?|lo predecible),/);
+      // Round 3's example verbs must be gone too — they became the new template.
+      expect(prompt).not.toContain('"Deja atrás..."');
+      expect(prompt).not.toContain('"Olvídate de..."');
     }
   );
 });
