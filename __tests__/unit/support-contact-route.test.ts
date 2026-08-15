@@ -29,7 +29,7 @@ describe("POST /api/support/contact", () => {
       primaryEmailAddress: { emailAddress: "ada@example.com" },
     });
     (ratelimitSupportContact.limit as jest.Mock).mockResolvedValue({ success: true });
-    (sendEmail as jest.Mock).mockResolvedValue(undefined);
+    (sendEmail as jest.Mock).mockResolvedValue({ success: true });
   });
 
   it("returns 401 when not authenticated", async () => {
@@ -74,5 +74,16 @@ describe("POST /api/support/contact", () => {
     (sendEmail as jest.Mock).mockRejectedValue(new Error("Resend down"));
     const res = await POST(makeRequest({ message: "Necesito ayuda con mi cuenta" }));
     expect(res.status).toBe(500);
+  });
+
+  it("returns 502 with a real error — not a false success — when sendEmail resolves with success: false", async () => {
+    // This is the realistic failure mode: sendEmail() catches the Resend API
+    // error internally (bad key, unverified sender domain, etc.) and resolves
+    // with success: false rather than throwing.
+    (sendEmail as jest.Mock).mockResolvedValue({ success: false });
+    const res = await POST(makeRequest({ message: "Necesito ayuda con mi cuenta" }));
+    const body = await res.json();
+    expect(res.status).toBe(502);
+    expect(body.success).not.toBe(true);
   });
 });

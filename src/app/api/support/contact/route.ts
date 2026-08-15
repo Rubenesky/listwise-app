@@ -34,7 +34,7 @@ export async function POST(req: Request) {
     const fromName = user?.fullName || user?.username || "Usuario ListWise";
     const fromEmail = user?.primaryEmailAddress?.emailAddress ?? "sin email";
 
-    await sendEmail({
+    const result = await sendEmail({
       to: SUPPORT_INBOX,
       subject: `[Soporte ListWise] ${fromName}`,
       html: `
@@ -44,6 +44,18 @@ export async function POST(req: Request) {
         <p>${escapeHtml(parsed.data.message).replace(/\n/g, "<br>")}</p>
       `,
     });
+
+    if (!result.success) {
+      // sendEmail() swallows the underlying Resend error (logged server-side)
+      // so it never throws — check its result explicitly, otherwise a failed
+      // send (bad API key, unverified sender domain, etc.) would silently
+      // report "sent" to the user while the message never arrives.
+      log.error({ userId }, "Support contact email failed to send");
+      return NextResponse.json(
+        { error: "No se pudo enviar el mensaje. Escríbenos directamente si el problema persiste." },
+        { status: 502 }
+      );
+    }
 
     log.info({ userId }, "Mensaje de soporte enviado");
     return NextResponse.json({ success: true });

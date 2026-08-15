@@ -27,8 +27,16 @@ describe("sendEmail", () => {
 
   it("skips sending when RESEND_API_KEY is not set", async () => {
     delete process.env.RESEND_API_KEY;
-    await sendEmail({ to: "user@example.com", subject: "Test", html: "<p>hi</p>" });
+    const result = await sendEmail({ to: "user@example.com", subject: "Test", html: "<p>hi</p>" });
     expect(mockSend).not.toHaveBeenCalled();
+    expect(result).toEqual({ success: false });
+  });
+
+  it("returns success: true when resend.emails.send succeeds", async () => {
+    process.env.RESEND_API_KEY = "re_test_key";
+    mockSend.mockResolvedValue({ data: { id: "email-id-001" }, error: null });
+    const result = await sendEmail({ to: "user@example.com", subject: "Test", html: "<p>hi</p>" });
+    expect(result).toEqual({ success: true });
   });
 
   it("calls resend.emails.send when RESEND_API_KEY is set", async () => {
@@ -48,17 +56,17 @@ describe("sendEmail", () => {
     expect(mockSend.mock.calls[0][0].from).toBeTruthy();
   });
 
-  it("logs error but does not throw when resend returns an error object", async () => {
+  it("logs error and returns success: false (without throwing) when resend returns an error object", async () => {
     process.env.RESEND_API_KEY = "re_test_key";
     mockSend.mockResolvedValue({ data: null, error: { message: "invalid email" } });
-    await expect(sendEmail({ to: "bad-email", subject: "Test", html: "<p>test</p>" })).resolves.toBeUndefined();
+    await expect(sendEmail({ to: "bad-email", subject: "Test", html: "<p>test</p>" })).resolves.toEqual({ success: false });
     expect(mockLogError).toHaveBeenCalled();
   });
 
-  it("swallows exceptions thrown by resend", async () => {
+  it("swallows exceptions thrown by resend and returns success: false", async () => {
     process.env.RESEND_API_KEY = "re_test_key";
     mockSend.mockRejectedValue(new Error("network error"));
-    await expect(sendEmail({ to: "user@example.com", subject: "Test", html: "<p>test</p>" })).resolves.toBeUndefined();
+    await expect(sendEmail({ to: "user@example.com", subject: "Test", html: "<p>test</p>" })).resolves.toEqual({ success: false });
     expect(mockLogError).toHaveBeenCalled();
   });
 
