@@ -84,3 +84,12 @@ export const ratelimitAudioGeneration = new Ratelimit({
   analytics: false,
   prefix: "@upstash/ratelimit/audio-generation",
 });
+
+// Formulario de contacto de soporte: 5 mensajes por usuario por día — evita
+// llenar el buzón de soporte por error/spam accidental.
+export const ratelimitSupportContact = new Ratelimit({
+  redis,
+  limiter: Ratelimit.fixedWindow(5, "24 h"),
+  analytics: false,
+  prefix: "@upstash/ratelimit/support-contact",
+});

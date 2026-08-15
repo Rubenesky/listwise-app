@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import SupportContactModal from "@/components/SupportContactModal";
 
 interface FAQItem {
   q: string;
@@ -232,6 +233,7 @@ function FAQAccordion({ items }: { items: FAQItem[] }) {
 export default function HelpPage() {
   const [search, setSearch] = useState("");
   const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [showContactModal, setShowContactModal] = useState(false);
 
   const filtered = search.trim()
     ? FAQ_SECTIONS.map((section) => ({
@@ -321,9 +323,9 @@ export default function HelpPage() {
         <p className="text-sm font-semibold text-blue-900 mb-3">📖 Guías en el blog</p>
         <div className="space-y-2">
           {[
-            { title: "Cómo optimizar tus listings para Amazon en 2025", href: "/blog/como-optimizar-listings-amazon-2025" },
-            { title: "Guía completa de descripción de productos para Etsy", href: "/blog/guia-descripcion-productos-etsy" },
-            { title: "SEO para Wallapop: cómo vender más con mejores títulos", href: "/blog/seo-wallapop-titulos-descripciones" },
+            { title: "Cómo generar descripciones de productos para Amazon con IA", href: "/blog/como-generar-descripciones-productos-amazon-ia" },
+            { title: "Cómo optimizar tus listings de Etsy con IA en 2026", href: "/blog/optimizar-listings-etsy-ia" },
+            { title: "SEO para ecommerce: cómo optimizar tus fichas de producto", href: "/blog/seo-para-ecommerce-como-optimizar-fichas-producto" },
           ].map(({ title, href }) => (
             <Link key={href} href={href} className="flex items-center gap-2 text-sm text-blue-700 hover:text-blue-900 hover:underline">
               <span className="text-blue-400">→</span>
@@ -339,12 +341,12 @@ export default function HelpPage() {
         <p className="text-xs text-purple-600 mb-3">
           Escríbenos y te ayudamos en menos de 24h.
         </p>
-        <a
-          href="mailto:soporte@listwise.app"
+        <button
+          onClick={() => setShowContactModal(true)}
           className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white text-xs font-medium rounded-lg hover:bg-purple-700 transition-colors"
         >
           Contactar soporte
-        </a>
+        </button>
       </div>
 
       <div className="mt-4 text-center">
@@ -352,6 +354,8 @@ export default function HelpPage() {
           ← Volver al Dashboard
         </Link>
       </div>
+
+      {showContactModal && <SupportContactModal onClose={() => setShowContactModal(false)} />}
     </div>
   );
 }
