@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import InfoTooltip from "@/components/InfoTooltip";
 
 interface ProductInfo {
   productName: string;
@@ -114,7 +115,10 @@ export default function CreateFromSourceForm({ selectedMode, marketplace, priceS
 
   return (
     <div className="w-full space-y-3">
-      <p className="text-sm font-medium text-gray-700">o crea un producto desde una URL o un PDF</p>
+      <div className="flex items-center gap-1.5">
+        <p className="text-sm font-medium text-gray-700">o crea un producto desde una URL o un PDF</p>
+        <InfoTooltip content="Pega la URL de la ficha de un proveedor (o sube su PDF) y la IA extrae automáticamente el nombre, la categoría y los atributos del producto para rellenar el formulario — te ahorra escribirlo a mano antes de generar la ficha." />
+      </div>
 
       {(state === "idle" || state === "error") && (
         <div className="space-y-2">
