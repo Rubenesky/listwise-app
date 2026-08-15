@@ -697,6 +697,10 @@ export default function AgentChat({ listingId, productName, inline = false, init
               window.dispatchEvent(new Event("gamification-update"));
               if (data.conversationId) setConversationId(data.conversationId);
               success = true;
+              // Lets the dashboard's onboarding checklist know this step is
+              // genuinely done — sticky, so it survives even if listings are
+              // later deleted (matches the "Subir CSV" step's own persistence).
+              localStorage.setItem("listwise_used_agent_v1", "true");
             }
           } catch {
             // skip malformed frames

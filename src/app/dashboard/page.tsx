@@ -117,6 +117,17 @@ export default function DashboardPage() {
     if (typeof window !== "undefined") return localStorage.getItem("listwise_checklist_dismissed") === "true";
     return false;
   });
+  // Sticky checklist-step flags — once true, stay true even if the listing
+  // that triggered them is later deleted, so the checklist doesn't reappear
+  // for an account that has clearly already onboarded.
+  const [everUploaded, setEverUploaded] = useState(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("listwise_step_upload_v1") === "true";
+    return false;
+  });
+  const [usedAgent] = useState(() => {
+    if (typeof window !== "undefined") return localStorage.getItem("listwise_used_agent_v1") === "true";
+    return false;
+  });
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | ListingStatus>("all");
   const [copiedField, setCopiedField] = useState<string | null>(null);
@@ -131,6 +142,32 @@ export default function DashboardPage() {
     return !localStorage.getItem("lw_onboarding_v1_done");
   });
   const [demoLoading, setDemoLoading] = useState(false);
+
+  // Computed early (before the loading-guard early return below) because
+  // React Hooks — the two useEffects right after — must run unconditionally
+  // on every render, never after a conditional return.
+  const currentCount = pagination.total || listings.length;
+  const checklistStep2Done = everUploaded || currentCount > 0;
+  const checklistStep3Done = usedAgent;
+  const checklistAllDone = checklistStep2Done && checklistStep3Done;
+
+  useEffect(() => {
+    if (currentCount > 0 && !everUploaded) {
+      localStorage.setItem("listwise_step_upload_v1", "true");
+      setEverUploaded(true);
+    }
+  }, [currentCount, everUploaded]);
+
+  useEffect(() => {
+    // Once every step is genuinely done, hide the checklist for good — same
+    // permanent mechanism as the manual "✕" dismiss, so it can't reappear
+    // just because completedCount later drops back to 0 (e.g. listings
+    // deleted during testing).
+    if (checklistAllDone && !checklistDismissed) {
+      localStorage.setItem("listwise_checklist_dismissed", "true");
+      setChecklistDismissed(true);
+    }
+  }, [checklistAllDone, checklistDismissed]);
 
   const dismissChecklist = () => {
     localStorage.setItem("listwise_checklist_dismissed", "true");
@@ -583,7 +620,6 @@ export default function DashboardPage() {
 
   const planLabel = PLAN_LABELS[plan] || "Gratuito";
   const planColor = PLAN_COLORS[plan] || "bg-gray-100 text-gray-700";
-  const currentCount = pagination.total || listings.length;
   const hasPendingOrProcessing = pendingOrProcessingCount > 0;
 
   return (
@@ -879,8 +915,12 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Activation checklist — solo para usuarios sin completados */}
-        {completedCount === 0 && !checklistDismissed && (
+        {/* Activation checklist — se oculta para siempre (vía checklistDismissed,
+            persistido) en cuanto se completan sus 3 pasos, o si el usuario la
+            cierra manualmente. No depende de completedCount en vivo: ese valor
+            puede volver a 0 si se borran listings, y no queremos que una cuenta
+            que ya se ha onboardeado vuelva a ver esto. */}
+        {!checklistDismissed && (
           <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
             <div className="flex items-center justify-between mb-3">
               <p className="font-semibold text-blue-900 text-sm">🚀 Primeros pasos — empieza en 3 minutos</p>
@@ -889,8 +929,8 @@ export default function DashboardPage() {
             <div className="space-y-2">
               {[
                 { label: "Crear tu cuenta", done: true, href: null },
-                { label: "Subir tu primer CSV y generar un listing", done: currentCount > 0, href: null },
-                { label: "Refinar con el Agente de Copywriting", done: false, href: "/agent" },
+                { label: "Subir tu primer CSV y generar un listing", done: checklistStep2Done, href: null },
+                { label: "Refinar con el Agente de Copywriting", done: checklistStep3Done, href: "/agent" },
               ].map(({ label, done, href }) => (
                 <div key={label} className="flex items-center gap-2.5">
                   <span className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-xs font-bold transition-colors ${
