@@ -39,7 +39,7 @@ const FAQ_SECTIONS: FAQSection[] = [
     items: [
       {
         q: "¿Qué son los créditos?",
-        a: "Los créditos son la moneda interna de ListWise. Cada acción consume una cantidad: generar un producto gasta 1 crédito, el análisis de competidor gasta 2 créditos. Los créditos nunca caducan.",
+        a: "Los créditos son la moneda interna de ListWise. Cada acción consume una cantidad: generar un producto gasta 1 crédito, crear una Voz de Marca gasta 1 crédito, generar un audio comercial gasta 2 créditos. Los créditos nunca caducan.",
       },
       {
         q: "¿Cómo consigo créditos?",
@@ -51,7 +51,7 @@ const FAQ_SECTIONS: FAQSection[] = [
       },
       {
         q: "¿Qué pasa si me quedo sin créditos?",
-        a: "No podrás generar nuevos contenidos ni analizar competidores hasta recargar. Puedes comprar un plan o invitar amigos para obtener créditos gratis.",
+        a: "No podrás generar nuevos contenidos ni usar el Agente hasta recargar. Puedes comprar un plan o invitar amigos para obtener créditos gratis.",
       },
     ],
   },
@@ -87,7 +87,7 @@ const FAQ_SECTIONS: FAQSection[] = [
       },
       {
         q: "¿Cuántos créditos gasta el Agente?",
-        a: "Los créditos del Agente son independientes de los créditos de generación. El plan Free incluye 20 créditos de agente. Los planes Pro y Enterprise incluyen más créditos de agente.",
+        a: "El Agente usa el mismo saldo de créditos que el resto de acciones — cada mensaje cuesta 2 créditos. No hay una asignación separada por función: el saldo se comparte entre generación, Agente, Voz de Marca y Audio Comercial.",
       },
       {
         q: "¿Qué diferencia hay entre el generador CSV y el Agente?",
@@ -96,24 +96,46 @@ const FAQ_SECTIONS: FAQSection[] = [
     ],
   },
   {
-    title: "Análisis de Competidor",
-    icon: "🔍",
+    title: "Voz de Marca",
+    icon: "🎨",
     items: [
       {
-        q: "¿Qué hace el analizador de competidor?",
-        a: "Analiza el listing de un producto de un competidor (título, descripción, bullets, precio, tono de venta) y genera recomendaciones concretas para mejorar tu propio listing comparativamente.",
+        q: "¿Qué es la Voz de Marca?",
+        a: "Es un perfil de estilo entrenado con ejemplos reales de tus propias descripciones, para que las nuevas fichas de producto suenen con el tono, vocabulario y personalidad de tu marca en vez de un estilo genérico.",
       },
       {
-        q: "¿Funciona con cualquier URL?",
-        a: "Con la mayoría de tiendas online: Amazon, Shopify, Etsy, Zalando, Mango, Zara, etc. Para SHEIN y plataformas con protección anti-bot muy agresiva, el análisis usa los datos disponibles del URL (que ya incluyen el título del producto).",
+        q: "¿Cómo se crea una Voz de Marca?",
+        a: "Ve a 'Voz de Marca' en el menú y pega entre 3 y 10 descripciones de productos que ya representen cómo escribe tu marca. La IA analiza el tono, el vocabulario y la estructura de frases para crear el perfil. Cuesta 1 crédito.",
       },
       {
-        q: "¿Cuánto cuesta cada análisis?",
-        a: "2 créditos por análisis. No hay límite diario — el único límite son tus créditos disponibles.",
+        q: "¿Cómo se aplica a mis productos?",
+        a: "Una vez creada y activada, se aplica automáticamente a las nuevas descripciones que generes — no hace falta seleccionarla cada vez.",
       },
       {
-        q: "Los resultados de SHEIN parecen limitados, ¿por qué?",
-        a: "SHEIN usa Cloudflare con protección anti-bot de nivel enterprise. Sin scrapers premium, el análisis se basa en el título del URL (que ya es el título real del producto) y aplica el análisis sobre ese dato. Para análisis completos con precio y descripción de SHEIN, necesitarías un proveedor de scraping premium.",
+        q: "¿Puedo tener varias Voces de Marca?",
+        a: "Sí. Puedes crear varias (por ejemplo, una por línea de producto), pero solo una puede estar activa a la vez.",
+      },
+    ],
+  },
+  {
+    title: "Audio Comercial",
+    icon: "🔊",
+    items: [
+      {
+        q: "¿Qué es Audio Comercial?",
+        a: "Convierte cualquier ficha de producto ya generada en un audio comercial con IA — natural, sin sonar a anuncio ni a voz robótica — listo para enviar por WhatsApp u otras plataformas.",
+      },
+      {
+        q: "¿Cómo lo genero?",
+        a: "Desde la sección 'Audio Comercial' del menú, elige un producto ya completado y pulsa 'Generar audio'. La IA reescribe el contenido como un guion hablado natural y lo convierte en voz en segundos.",
+      },
+      {
+        q: "¿Cuánto cuesta?",
+        a: "2 créditos por generación.",
+      },
+      {
+        q: "¿El audio se guarda en mi cuenta?",
+        a: "No. Se genera al momento y se descarga directamente a tu dispositivo — no queda almacenado en ListWise, así que si lo necesitas de nuevo tendrás que generarlo otra vez (con su coste correspondiente).",
       },
     ],
   },

@@ -10,7 +10,6 @@ const ACTION_COSTS = [
   { label: "Enriquecer con URL/PDF", cost: 0 },
   { label: "Crear voz de marca", cost: 1 },
   { label: "Chat con agente IA", cost: 2 },
-  { label: "Análisis de competidor", cost: 2 },
   { label: "Generar audio", cost: 2 },
   { label: "Compartir landing", cost: 0 },
 ];
