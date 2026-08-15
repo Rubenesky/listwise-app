@@ -11,8 +11,15 @@ import { buildUserPrompt, buildSystemPrompt } from "@/lib/ai/prompts";
 // Es una declaración de..." — because SYSTEM_PROMPT itself has two static
 // blocks (the "tipos de apertura" list and CONTRAST FRAME) with the exact
 // same literal quotable example, present for every product regardless of
-// category. The tests below cover both the per-category and the static
-// sources of the bug.
+// category.
+//
+// A second fix banned the specific words ("Esto no es", "declaración") and
+// STILL did not fully resolve it: two of four re-tested products dodged the
+// word-level ban while keeping the same grammatical shape ("Un bolso no es
+// solo un contenedor; es...", "No es solo una mochila...; es..."). The real
+// fix bans the STRUCTURE "[algo] no es X; es Y" in any phrasing, not just
+// specific tokens. The tests below cover the per-category, static, and
+// structural sources of the bug.
 const CATEGORIES_WITH_REQUIRED_HOOK = [
   "Ropa", "Moda", "Deportes", "Deporte Extremo", "Electrónica", "Cocina",
   "Hogar", "Iluminación", "Belleza", "Bienestar", "Salud", "Bebé",
@@ -62,7 +69,24 @@ describe("SYSTEM_PROMPT static templates (present for every product, any categor
     expect(systemPrompt).toContain('"Esto no es"');
   });
 
-  it("includes the AUTOVERIFICACION check for the exact bug pattern", () => {
-    expect(systemPrompt).toContain('¿La descripción usa la construcción "Esto no es [producto] más. Es una declaración de..." o contiene la palabra "declaración" en cualquier parte?');
+  it("includes the AUTOVERIFICACION check for the structural pattern, not just specific words", () => {
+    expect(systemPrompt).toContain('¿Alguna frase de la descripción tiene la forma "[algo] no es X; es Y" — con CUALQUIER fraseo o sujeto, no solo "Esto no es"');
   });
+
+  it("bans the [algo] no es X; es Y structure in any phrasing, in the hook-type list and CONTRAST FRAME", () => {
+    expect(systemPrompt).toContain('PROHIBIDO usar la forma "[algo] no es X; es Y" en cualquier fraseo (esto incluye variantes como "Un bolso no es solo...", "No es solo una mochila..." — no solo "Esto no es...")');
+  });
+});
+
+describe("REQUIRED_HOOK_TYPE 'bold' categories (Ropa, Moda, Accesorios, POD)", () => {
+  it.each(["Ropa", "Moda", "Accesorios", "POD"])(
+    "bans the [algo] no es X; es Y structure and drops the risky 'negar directamente' angle for %s",
+    (category) => {
+      const prompt = buildUserPrompt({ productName: "Producto de prueba", category, mode: "creative" });
+      expect(prompt).toMatch(/SIN usar la forma "\[algo\] no es X; es Y"/);
+      // The old angle phrasing that led the model straight to "X no es Y; es Z"
+      // must be gone — replaced by an imperative/direct-affirmation angle.
+      expect(prompt).not.toMatch(/Ángulos:\s*negar (el cliché( directamente)?|lo predecible),/);
+    }
+  );
 });
