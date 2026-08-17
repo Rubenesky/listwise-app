@@ -21,7 +21,11 @@ export async function sendSupportEmailViaGmail({
     return { success: false };
   }
 
-  const transporter = nodemailer.createTransport({
+  // nodemailer's TS types don't declare `family`, but it's forwarded to
+  // Node's underlying socket connection at runtime. Building the options as
+  // a variable (instead of an inline literal) avoids TypeScript's excess-
+  // property check on the unfamiliar field while staying otherwise typed.
+  const transportOptions = {
     service: "gmail",
     auth: { user, pass: appPassword },
     // Without these, a blocked outbound SMTP port (common on PaaS hosts —
@@ -30,7 +34,12 @@ export async function sendSupportEmailViaGmail({
     connectionTimeout: 10000,
     greetingTimeout: 10000,
     socketTimeout: 10000,
-  });
+    // Real failure hit in production: Node resolved smtp.gmail.com to an
+    // IPv6 address and got ENETUNREACH — Render has no outbound IPv6 route.
+    // Forcing IPv4 avoids that resolution path entirely.
+    family: 4,
+  };
+  const transporter = nodemailer.createTransport(transportOptions);
 
   try {
     await transporter.sendMail({ from: user, to: user, subject, html });

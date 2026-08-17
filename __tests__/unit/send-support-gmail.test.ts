@@ -63,6 +63,14 @@ describe("sendSupportEmailViaGmail", () => {
     );
   });
 
+  it("forces IPv4 to avoid the real ENETUNREACH failure hit when Node resolved smtp.gmail.com over IPv6 on Render", async () => {
+    process.env.GMAIL_SUPPORT_USER = "support@gmail.com";
+    process.env.GMAIL_SUPPORT_APP_PASSWORD = "app-pass";
+    mockSendMail.mockResolvedValue({});
+    await sendSupportEmailViaGmail({ subject: "Test", html: "<p>test</p>" });
+    expect(mockCreateTransport).toHaveBeenCalledWith(expect.objectContaining({ family: 4 }));
+  });
+
   it("swallows SMTP exceptions and returns success: false instead of throwing", async () => {
     process.env.GMAIL_SUPPORT_USER = "support@gmail.com";
     process.env.GMAIL_SUPPORT_APP_PASSWORD = "app-pass";
