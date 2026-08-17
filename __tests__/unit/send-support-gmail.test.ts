@@ -1,10 +1,15 @@
 const mockSendMail = jest.fn();
 const mockCreateTransport = jest.fn((_options?: unknown) => ({ sendMail: mockSendMail }));
+const mockResolve4 = jest.fn();
 const mockLogError = jest.fn();
 const mockLogWarn = jest.fn();
 
 jest.mock("nodemailer", () => ({
   createTransport: (options: unknown) => mockCreateTransport(options),
+}));
+
+jest.mock("node:dns/promises", () => ({
+  resolve4: (...args: [string]) => mockResolve4(...args),
 }));
 
 jest.mock("@/lib/logger", () => ({
@@ -19,6 +24,7 @@ describe("sendSupportEmailViaGmail", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     process.env = { ...origEnv };
+    mockResolve4.mockResolvedValue(["142.250.1.109"]);
   });
 
   afterEach(() => {
@@ -59,16 +65,30 @@ describe("sendSupportEmailViaGmail", () => {
     mockSendMail.mockResolvedValue({});
     await sendSupportEmailViaGmail({ subject: "Test", html: "<p>test</p>" });
     expect(mockCreateTransport).toHaveBeenCalledWith(
-      expect.objectContaining({ service: "gmail", auth: { user: "support@gmail.com", pass: "app-pass" } })
+      expect.objectContaining({ auth: { user: "support@gmail.com", pass: "app-pass" } })
     );
   });
 
-  it("forces IPv4 to avoid the real ENETUNREACH failure hit when Node resolved smtp.gmail.com over IPv6 on Render", async () => {
+  it("resolves smtp.gmail.com's A record itself and connects to that literal IPv4 address, keeping TLS servername correct", async () => {
+    // Real production failure: nodemailer resolves both A and AAAA records
+    // and picks one at random — there is no "prefer IPv4" option it reads.
+    // Render has no outbound IPv6 route, so a random AAAA pick fails with
+    // ENETUNREACH. Resolving the A record ourselves and connecting to that
+    // literal IP sidesteps nodemailer's own dual-family DNS logic entirely.
     process.env.GMAIL_SUPPORT_USER = "support@gmail.com";
     process.env.GMAIL_SUPPORT_APP_PASSWORD = "app-pass";
+    mockResolve4.mockResolvedValue(["142.250.1.109"]);
     mockSendMail.mockResolvedValue({});
     await sendSupportEmailViaGmail({ subject: "Test", html: "<p>test</p>" });
-    expect(mockCreateTransport).toHaveBeenCalledWith(expect.objectContaining({ family: 4 }));
+    expect(mockResolve4).toHaveBeenCalledWith("smtp.gmail.com");
+    expect(mockCreateTransport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        host: "142.250.1.109",
+        port: 465,
+        secure: true,
+        tls: { servername: "smtp.gmail.com" },
+      })
+    );
   });
 
   it("swallows SMTP exceptions and returns success: false instead of throwing", async () => {
@@ -76,6 +96,15 @@ describe("sendSupportEmailViaGmail", () => {
     process.env.GMAIL_SUPPORT_APP_PASSWORD = "app-pass";
     mockSendMail.mockRejectedValue(new Error("Invalid login"));
     await expect(sendSupportEmailViaGmail({ subject: "Test", html: "<p>test</p>" })).resolves.toEqual({ success: false });
+    expect(mockLogError).toHaveBeenCalled();
+  });
+
+  it("swallows a DNS resolution failure too, returning success: false instead of throwing", async () => {
+    process.env.GMAIL_SUPPORT_USER = "support@gmail.com";
+    process.env.GMAIL_SUPPORT_APP_PASSWORD = "app-pass";
+    mockResolve4.mockRejectedValue(new Error("ENOTFOUND smtp.gmail.com"));
+    await expect(sendSupportEmailViaGmail({ subject: "Test", html: "<p>test</p>" })).resolves.toEqual({ success: false });
+    expect(mockCreateTransport).not.toHaveBeenCalled();
     expect(mockLogError).toHaveBeenCalled();
   });
 });
