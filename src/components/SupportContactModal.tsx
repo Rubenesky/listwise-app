@@ -20,11 +20,14 @@ export default function SupportContactModal({ onClose }: Props) {
     }
     setError(null);
     setStatus("sending");
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 35000);
     try {
       const res = await fetch("/api/support/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: message.trim() }),
+        signal: controller.signal,
       });
       const data = await res.json();
       if (!res.ok) {
@@ -33,9 +36,12 @@ export default function SupportContactModal({ onClose }: Props) {
         return;
       }
       setStatus("sent");
-    } catch {
-      setError("Error de red. Inténtalo de nuevo.");
+    } catch (err) {
+      const isAbort = err instanceof Error && err.name === "AbortError";
+      setError(isAbort ? "El envío tardó demasiado. Inténtalo de nuevo." : "Error de red. Inténtalo de nuevo.");
       setStatus("error");
+    } finally {
+      clearTimeout(timeoutId);
     }
   };
 

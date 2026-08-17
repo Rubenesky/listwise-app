@@ -24,6 +24,12 @@ export async function sendSupportEmailViaGmail({
   const transporter = nodemailer.createTransport({
     service: "gmail",
     auth: { user, pass: appPassword },
+    // Without these, a blocked outbound SMTP port (common on PaaS hosts —
+    // Render, Heroku, etc. often restrict 465/587 to curb spam) hangs the
+    // request indefinitely instead of failing with a diagnosable error.
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
   });
 
   try {
