@@ -1,12 +1,10 @@
 import { NextResponse } from "next/server";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import { z } from "zod";
-import { sendEmail } from "@/lib/email/send";
+import { sendSupportEmailViaGmail } from "@/lib/email/send-support-gmail";
 import { ratelimitSupportContact } from "@/lib/rate-limit";
 import { escapeHtml } from "@/lib/sanitize";
 import { log } from "@/lib/logger";
-
-const SUPPORT_INBOX = "dcrubben25@gmail.com";
 
 const bodySchema = z.object({
   message: z.string().trim().min(10, "El mensaje es demasiado corto.").max(2000),
@@ -34,8 +32,7 @@ export async function POST(req: Request) {
     const fromName = user?.fullName || user?.username || "Usuario ListWise";
     const fromEmail = user?.primaryEmailAddress?.emailAddress ?? "sin email";
 
-    const result = await sendEmail({
-      to: SUPPORT_INBOX,
+    const result = await sendSupportEmailViaGmail({
       subject: `[Soporte ListWise] ${fromName}`,
       html: `
         <p><strong>De:</strong> ${escapeHtml(fromName)} (${escapeHtml(fromEmail)})</p>
@@ -46,10 +43,10 @@ export async function POST(req: Request) {
     });
 
     if (!result.success) {
-      // sendEmail() swallows the underlying Resend error (logged server-side)
-      // so it never throws — check its result explicitly, otherwise a failed
-      // send (bad API key, unverified sender domain, etc.) would silently
-      // report "sent" to the user while the message never arrives.
+      // sendSupportEmailViaGmail() swallows the underlying SMTP error (logged
+      // server-side) so it never throws — check its result explicitly,
+      // otherwise a failed send (missing app password, revoked, etc.) would
+      // silently report "sent" to the user while the message never arrives.
       log.error({ userId }, "Support contact email failed to send");
       return NextResponse.json(
         { error: "No se pudo enviar el mensaje. Escríbenos directamente si el problema persiste." },
