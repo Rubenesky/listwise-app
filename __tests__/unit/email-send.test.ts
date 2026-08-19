@@ -78,4 +78,11 @@ describe("sendEmail", () => {
     const from = mockSend.mock.calls[0][0].from as string;
     expect(from).toContain("listwise.app");
   });
+
+  it("uses the per-call from override instead of the default when provided", async () => {
+    process.env.RESEND_API_KEY = "re_test_key";
+    mockSend.mockResolvedValue({ data: {}, error: null });
+    await sendEmail({ to: "user@example.com", subject: "Test", html: "<p>test</p>", from: "ListWise <onboarding@resend.dev>" });
+    expect(mockSend).toHaveBeenCalledWith(expect.objectContaining({ from: "ListWise <onboarding@resend.dev>" }));
+  });
 });
