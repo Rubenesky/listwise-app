@@ -1,7 +1,10 @@
 import { Resend } from "resend";
 import { log } from "@/lib/logger";
 
-const FROM = process.env.FROM_EMAIL ?? "ListWise <hola@listwise.app>";
+// listwise.app isn't verified in Resend yet — default to the sandbox
+// sender (no verification needed) until domain verification is done.
+// See src/app/api/support/contact/route.ts for the same workaround.
+const FROM = process.env.FROM_EMAIL ?? "ListWise <onboarding@resend.dev>";
 
 export async function sendEmail({
   to,

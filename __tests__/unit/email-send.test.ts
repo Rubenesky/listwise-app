@@ -70,13 +70,13 @@ describe("sendEmail", () => {
     expect(mockLogError).toHaveBeenCalled();
   });
 
-  it("defaults from address to ListWise brand when FROM_EMAIL is not set", async () => {
+  it("defaults from address to the Resend sandbox sender when FROM_EMAIL is not set", async () => {
     process.env.RESEND_API_KEY = "re_test_key";
     delete process.env.FROM_EMAIL;
     mockSend.mockResolvedValue({ data: {}, error: null });
     await sendEmail({ to: "user@example.com", subject: "Test", html: "<p>test</p>" });
     const from = mockSend.mock.calls[0][0].from as string;
-    expect(from).toContain("listwise.app");
+    expect(from).toContain("onboarding@resend.dev");
   });
 
   it("uses the per-call from override instead of the default when provided", async () => {
