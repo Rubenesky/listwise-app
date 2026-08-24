@@ -11,6 +11,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/health",
   "/api/stripe/webhook(.*)",
   "/api/webhooks/clerk(.*)",
+  "/api/leads(.*)",
   "/sitemap.xml",
   "/robots.txt",
   "/share(.*)",
