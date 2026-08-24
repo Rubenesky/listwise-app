@@ -25,7 +25,7 @@ const bodySchema = z.object({
   primaryKeyword: z.string().optional(),
   mode: z.string(),
   marketplace: z
-    .union([z.enum(["amazon", "etsy", "shopify", "general"]), z.literal("")])
+    .union([z.enum(["amazon", "etsy", "shopify", "prestashop", "general"]), z.literal("")])
     .optional()
     .transform((v) => (v ? v : undefined)),
   priceSegment: z

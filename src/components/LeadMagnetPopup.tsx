@@ -9,7 +9,7 @@ const SS_DISMISSED = "lw_lead_v1_dismissed";
 
 const EXCLUDED_PREFIXES = ["/dashboard", "/admin", "/sign-in", "/sign-up"];
 
-const MARKETPLACES = ["Amazon", "Etsy", "eBay", "Shopify", "WooCommerce", "Wallapop", "Otro"];
+const MARKETPLACES = ["Amazon", "Etsy", "eBay", "Shopify", "PrestaShop", "WooCommerce", "Wallapop", "Otro"];
 
 export default function LeadMagnetPopup() {
   const { isLoaded, isSignedIn } = useUser();

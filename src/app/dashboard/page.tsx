@@ -1188,7 +1188,7 @@ export default function DashboardPage() {
         <div>
           <div className="flex items-center gap-1.5 mb-2">
             <label className="text-sm font-medium text-gray-700">Marketplace destino</label>
-            <InfoTooltip content="El prompt se adapta al estilo y estructura de cada plataforma. Amazon prioriza keywords; Etsy prioriza autenticidad; Shopify prioriza lifestyle." />
+            <InfoTooltip content="El prompt se adapta al estilo y estructura de cada plataforma. Amazon prioriza keywords; Etsy prioriza autenticidad; Shopify prioriza lifestyle; PrestaShop prioriza SEO orgánico." />
           </div>
           <div className="flex gap-2 flex-wrap">
             {([
@@ -1196,6 +1196,7 @@ export default function DashboardPage() {
               { id: "amazon", label: "📦 Amazon" },
               { id: "etsy", label: "🌿 Etsy" },
               { id: "shopify", label: "🛒 Shopify" },
+              { id: "prestashop", label: "🛍️ PrestaShop" },
             ] as const).map(({ id, label }) => (
               <button
                 key={id}

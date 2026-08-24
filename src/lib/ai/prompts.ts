@@ -1,5 +1,5 @@
 export type GenerationMode = "creative" | "professional" | "seo" | "tecnica";
-export type Marketplace = "amazon" | "etsy" | "shopify" | "general";
+export type Marketplace = "amazon" | "etsy" | "shopify" | "prestashop" | "general";
 export type PriceSegment = "economy" | "mid" | "premium";
 
 export interface VoiceProfileData {
@@ -115,6 +115,7 @@ const MARKETPLACE_GUIDE: Record<Marketplace, string> = {
   amazon:  "Amazon — título hasta 150 chars con keyword principal en los primeros 40 chars. Bullets con especificaciones técnicas primero. El comprador compara fichas técnicas.",
   etsy:    "Etsy — título ≤70 chars, natural y descriptivo (el algoritmo favorece títulos que suenan como búsquedas reales). Bullets narrativos. El comprador valora historia y autenticidad.",
   shopify: "Shopify — título ≤80 chars orientado a lifestyle y marca. Bullets de beneficio puro, menos técnicos. El comprador viene de un anuncio o referencia de marca.",
+  prestashop: "PrestaShop — nombre de producto ≤70 chars (idealmente 50-60), con la keyword principal incluida: se indexa como meta-título en Google, cada ficha debe ser única. La primera frase de la descripción debe funcionar como resumen SEO autónomo (reutilizable como descripción corta de categoría) antes de desarrollar el resto en detalle. Tono claro e informativo — el comprador decide por confianza y datos concretos, no por storytelling largo.",
   general: "Marketplace general — título 60-80 chars equilibrando keyword y beneficio.",
 };
 
