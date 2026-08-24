@@ -101,6 +101,7 @@ export default function PricingPageClient({ isSignedIn }: PricingPageClientProps
   const [subscriptionModal, setSubscriptionModal] = useState<{ message: string; currentPlan: string } | null>(null);
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly");
   const [productsPerMonth, setProductsPerMonth] = useState(50);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -148,6 +149,23 @@ export default function PricingPageClient({ isSignedIn }: PricingPageClientProps
       alert("Error al procesar el pago. Inténtalo de nuevo.");
     } finally {
       setLoading(null);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    setPortalLoading(true);
+    try {
+      const response = await fetch("/api/stripe/create-portal-session", { method: "POST" });
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert("Error al abrir el portal de facturación: " + (data.error || "Error desconocido"));
+      }
+    } catch {
+      alert("Error al abrir el portal de facturación. Inténtalo de nuevo.");
+    } finally {
+      setPortalLoading(false);
     }
   };
 
@@ -260,6 +278,15 @@ export default function PricingPageClient({ isSignedIn }: PricingPageClientProps
                 créditos extra al suscribirte
               </span>
             </div>
+          )}
+          {(plan === "pro" || plan === "enterprise") && (
+            <button
+              onClick={handleManageSubscription}
+              disabled={portalLoading}
+              className="mt-4 text-sm text-gray-500 hover:text-gray-700 underline underline-offset-2 disabled:opacity-50"
+            >
+              {portalLoading ? "Abriendo portal..." : "Gestionar o cancelar mi suscripción"}
+            </button>
           )}
         </div>
 
