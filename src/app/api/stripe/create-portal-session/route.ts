@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import Stripe from "stripe";
 import { db, schema } from "@/db";
 import { eq } from "drizzle-orm";
+import { ratelimitPortalSession } from "@/lib/rate-limit";
 import { log } from "@/lib/logger";
 
 export async function POST() {
@@ -13,6 +14,11 @@ export async function POST() {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "No autenticado" }, { status: 401 });
+    }
+
+    const { success: withinLimit } = await ratelimitPortalSession.limit(userId);
+    if (!withinLimit) {
+      return NextResponse.json({ error: "Demasiadas peticiones. Inténtalo de nuevo en unos minutos." }, { status: 429 });
     }
 
     const [subscription] = await db

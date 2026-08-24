@@ -93,3 +93,12 @@ export const ratelimitSupportContact = new Ratelimit({
   analytics: false,
   prefix: "@upstash/ratelimit/support-contact",
 });
+
+// Sesión del portal de facturación de Stripe: 20 por usuario por hora — evita
+// llamadas repetidas a la API de Stripe si algo en el cliente reintenta en bucle.
+export const ratelimitPortalSession = new Ratelimit({
+  redis,
+  limiter: Ratelimit.slidingWindow(20, "1 h"),
+  analytics: false,
+  prefix: "@upstash/ratelimit/portal-session",
+});
