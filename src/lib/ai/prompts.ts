@@ -115,7 +115,7 @@ const MARKETPLACE_GUIDE: Record<Marketplace, string> = {
   amazon:  "Amazon — título hasta 150 chars con keyword principal en los primeros 40 chars. Bullets con especificaciones técnicas primero. El comprador compara fichas técnicas.",
   etsy:    "Etsy — título ≤70 chars, natural y descriptivo (el algoritmo favorece títulos que suenan como búsquedas reales). Bullets narrativos. El comprador valora historia y autenticidad.",
   shopify: "Shopify — título ≤80 chars orientado a lifestyle y marca. Bullets de beneficio puro, menos técnicos. El comprador viene de un anuncio o referencia de marca.",
-  prestashop: "PrestaShop — nombre de producto ≤70 chars (idealmente 50-60), con la keyword principal incluida: se indexa como meta-título en Google, cada ficha debe ser única. La primera frase de la descripción debe funcionar como resumen SEO autónomo (reutilizable como descripción corta de categoría) antes de desarrollar el resto en detalle. Tono claro e informativo — el comprador decide por confianza y datos concretos, no por storytelling largo.",
+  prestashop: "PrestaShop — nombre de producto ≤65 chars, apuntando a 50-60 (nunca te acerques al límite duro de 70), con la keyword principal incluida: se indexa como meta-título en Google, cada ficha debe ser única. La primera frase de la descripción debe funcionar como resumen SEO autónomo (reutilizable como descripción corta de categoría) antes de desarrollar el resto en detalle. Tono claro e informativo — el comprador decide por confianza y datos concretos, no por storytelling largo.",
   general: "Marketplace general — título 60-80 chars equilibrando keyword y beneficio.",
 };
 
@@ -319,6 +319,10 @@ export function buildUserPrompt(product: {
   const requiredHook = REQUIRED_HOOK_TYPE[category];
   if (requiredHook) {
     prompt += `\nTipo de apertura OBLIGATORIO para este producto (hook_type: "${requiredHook.type}"):\n${requiredHook.instruction}\nElige UNO de los ángulos y redacta tu propia frase original para este producto concreto. No cites ningún ejemplo ni lo trates como plantilla fija, no reutilices la palabra que nombra la técnica (p.ej. no escribas literalmente "declaración", "escena" o similar como si fuera parte del copy), y no repitas siempre el mismo ángulo, verbo o construcción gramatical entre productos distintos.\nPROHIBIDO en cualquier fraseo: la forma "[algo] no es X; es Y" (ej: "Esto no es...", "Un/una [producto] no es...", "No es solo..."). Cambiar solo las palabras sin cambiar esa estructura de negación+afirmación no es válido — usa un imperativo o una afirmación directa sin negación previa, con un verbo distinto cada vez.\nPROHIBIDO en cualquier parte: las palabras "declaración" y "redefine".\nNO uses "Imagina" como primera palabra si el tipo requerido es question, bold o benefit.\n`;
+
+    if (product.marketplace === "prestashop") {
+      prompt += `\nEXCEPCIÓN PrestaShop: el hook de arriba pasa a ser la SEGUNDA frase de la descripción, no la primera. Antepón una frase distinta que NO sea un gancho emocional/retórico — debe nombrar el producto, su categoría o uso, y el beneficio principal en tono informativo y concreto, funcionando sola como resumen SEO autónomo (reutilizable como descripción corta de categoría). El hook obligatorio se desarrolla justo después, en la segunda frase.\n`;
+    }
   }
 
   // Category keyword suggestions — conditional, not mandatory
