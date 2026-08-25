@@ -42,6 +42,7 @@ interface ListingRow {
   primaryKeyword: string | null;
   hookType: string | null;
   qualityFlags: QualityFlags | null;
+  attributes: Record<string, string> | null;
   enrichmentStatus: string | null;
   enrichmentError: string | null;
 }

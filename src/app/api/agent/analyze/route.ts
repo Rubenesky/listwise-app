@@ -3,7 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { eq, and } from "drizzle-orm";
 import { log } from "@/lib/logger";
-import { analyzeTitle, analyzeBullets, scoreDescription } from "@/lib/listings/health-score";
+import { analyzeTitle, analyzeBullets, scoreDescription, analyzeSpecificity } from "@/lib/listings/health-score";
 
 export async function GET(req: Request) {
   try {
@@ -29,7 +29,9 @@ export async function GET(req: Request) {
     const titleA = analyzeTitle(listing.generatedTitle);
     const bulletsA = analyzeBullets(bullets);
     const descA = scoreDescription(listing);
-    const total = titleA.score + bulletsA.score + descA.score;
+    const combinedText = [bullets?.join(" ") ?? "", listing.generatedDescription ?? ""].join(" ");
+    const specificity = analyzeSpecificity(combinedText, listing.attributes as Record<string, string> | null);
+    const total = Math.max(0, titleA.score + bulletsA.score + descA.score - specificity.penalty);
 
     const attrStr = JSON.stringify(listing.attributes ?? {}).toLowerCase();
     const missingAttrs: string[] = [];

@@ -32,6 +32,7 @@ export async function GET(req: Request) {
           primaryKeyword: schema.listings.primaryKeyword,
           hookType: schema.listings.hookType,
           qualityFlags: schema.listings.qualityFlags,
+          attributes: schema.listings.attributes,
         })
         .from(schema.listings)
         .where(eq(schema.listings.userId, userId))

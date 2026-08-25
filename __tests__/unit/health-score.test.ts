@@ -1,4 +1,4 @@
-import { calcHealthScore, analyzeDescriptionTecnica, analyzeDescription, analyzeBullets, analyzeTitle } from "@/lib/listings/health-score";
+import { calcHealthScore, analyzeDescriptionTecnica, analyzeDescription, analyzeBullets, analyzeTitle, analyzeSpecificity } from "@/lib/listings/health-score";
 
 const TECNICA_DESCRIPTION = [
   "Gancho breve presentando el producto.",
@@ -201,5 +201,80 @@ describe("calcHealthScore mode dispatch", () => {
       generatedDescription: SHORT_DESCRIPTION,
     });
     expect(score).toBeGreaterThan(0);
+  });
+});
+
+describe("generic/template phrase penalty", () => {
+  // Regression (2026-08-25, PrestaShop test round): real generations opened
+  // with clichéd hooks ("Deja atrás las prendas que solo cubren") that say
+  // nothing about the specific product — the old scorer had no way to catch
+  // this since it only checked structural rules (length, hook_type present),
+  // not whether the opening was actually generic.
+  it("penalizes a title containing a generic/template phrase", () => {
+    const clean = analyzeTitle("Zapatillas Running Amortiguación Premium Soporte Diario y Recuperación Muscular");
+    const generic = analyzeTitle("La Mejor Opción en Zapatillas Running para tu Entrenamiento y Recuperación Diaria");
+    expect(generic.notes.join(" ")).toMatch(/frase genérica/);
+    expect(generic.score).toBeLessThan(clean.score);
+  });
+
+  it("penalizes a description whose opening sentence is a generic hook", () => {
+    const generic = analyzeDescription(
+      "Deja atrás las prendas que solo cubren. El resultado es un estilo renovado para tu día a día."
+    );
+    expect(generic.notes.join(" ")).toMatch(/apertura genérica/);
+  });
+
+  it("does not penalize a specific, non-generic opening", () => {
+    const specific = analyzeDescription(
+      "Esta chaqueta vaquera oversize incorpora forro sherpa para mantener el calor en climas fríos. El resultado es una prenda cómoda para el uso diario."
+    );
+    expect(specific.notes.join(" ")).not.toMatch(/apertura genérica/);
+  });
+});
+
+describe("analyzeBullets redundancy penalty", () => {
+  // Distinct bullets covering different aspects of the product — no overlap.
+  it("does not penalize bullets that cover distinct topics", () => {
+    const result = analyzeBullets([
+      "AMORTIGUACIÓN PREMIUM: absorbe el impacto en cada zancada",
+      "TRANSPIRABILIDAD: malla que evita el sobrecalentamiento del pie",
+      "SUELA ANTIDESLIZANTE: agarre seguro en superficies húmedas",
+      "PESO LIGERO: 250g por unidad para carreras de larga distancia",
+    ]);
+    expect(result.notes.join(" ")).not.toMatch(/similares entre sí/);
+  });
+
+  it("penalizes bullets that restate the same idea in different words", () => {
+    const result = analyzeBullets([
+      "COMODIDAD TOTAL: sensación de confort en cada paso que das",
+      "MÁXIMO CONFORT: sensación de comodidad en cada paso que das",
+      "ADAPTABILIDAD: se ajusta a distintos ritmos de carrera",
+      "USO DIARIO: pensado para entrenamientos regulares",
+    ]);
+    expect(result.notes.join(" ")).toMatch(/similares entre sí/);
+  });
+});
+
+describe("analyzeSpecificity", () => {
+  it("does not penalize when the product has no confirmed attributes", () => {
+    const result = analyzeSpecificity("Copy genérico sin ningún dato concreto del producto.", null);
+    expect(result.penalty).toBe(0);
+    expect(result.note).toBeNull();
+  });
+
+  it("penalizes copy that ignores the product's confirmed attributes", () => {
+    const result = analyzeSpecificity(
+      "Un producto de altísima calidad, perfecto para el día a día.",
+      { color: "Azul marino", material: "Algodón orgánico" }
+    );
+    expect(result.penalty).toBeGreaterThan(0);
+  });
+
+  it("does not penalize copy that reflects the confirmed attributes", () => {
+    const result = analyzeSpecificity(
+      "Disponible en Azul marino, confeccionado en Algodón orgánico para el uso diario.",
+      { color: "Azul marino", material: "Algodón orgánico" }
+    );
+    expect(result.penalty).toBe(0);
   });
 });
