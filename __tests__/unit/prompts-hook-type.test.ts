@@ -113,3 +113,34 @@ describe("REQUIRED_HOOK_TYPE 'bold' categories (Ropa, Moda, Accesorios, POD)", (
     }
   );
 });
+
+describe("PrestaShop marketplace hook/SEO-summary override", () => {
+  // Regression (2026-08-25): a real staging test showed the category
+  // hook_type instruction ("Deja atrás las prendas que solo cubren...")
+  // overriding the PrestaShop guide's request for an SEO-summary opening
+  // sentence — the hook always wins unless explicitly demoted for this
+  // marketplace.
+  it("demotes the required hook to the second sentence when marketplace is prestashop", () => {
+    const prompt = buildUserPrompt({ productName: "Chaqueta vaquera", category: "Ropa", marketplace: "prestashop", mode: "creative" });
+    expect(prompt).toContain("EXCEPCIÓN PrestaShop");
+    expect(prompt).toContain("pasa a ser la SEGUNDA frase");
+  });
+
+  it("does not add the override for other marketplaces with the same category", () => {
+    for (const marketplace of ["amazon", "etsy", "shopify", "general", undefined] as const) {
+      const prompt = buildUserPrompt({ productName: "Chaqueta vaquera", category: "Ropa", marketplace, mode: "creative" });
+      expect(prompt).not.toContain("EXCEPCIÓN PrestaShop");
+    }
+  });
+
+  it("does not add the override for prestashop when the category has no required hook", () => {
+    const prompt = buildUserPrompt({ productName: "Producto genérico", category: "General", marketplace: "prestashop", mode: "creative" });
+    expect(prompt).not.toContain("EXCEPCIÓN PrestaShop");
+  });
+
+  it("includes the PrestaShop marketplace guidance in the prompt", () => {
+    const prompt = buildUserPrompt({ productName: "Chaqueta vaquera", category: "Ropa", marketplace: "prestashop", mode: "creative" });
+    expect(prompt).toContain("PrestaShop");
+    expect(prompt).toContain("resumen SEO autónomo");
+  });
+});

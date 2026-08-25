@@ -2,8 +2,9 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 
-// Rutas públicas (no requieren autenticación)
-const isPublicRoute = createRouteMatcher([
+// Rutas públicas (no requieren autenticación). Exportado para test de
+// regresión — ver __tests__/unit/middleware-public-routes.test.ts.
+export const PUBLIC_ROUTE_PATTERNS = [
   "/",
   "/sign-in(.*)",
   "/sign-up(.*)",
@@ -18,7 +19,9 @@ const isPublicRoute = createRouteMatcher([
   "/share(.*)",
   "/api/og(.*)",
   "/blog(.*)",
-]);
+];
+
+const isPublicRoute = createRouteMatcher(PUBLIC_ROUTE_PATTERNS);
 
 export default clerkMiddleware(async (auth, req) => {
   const requestId = uuidv4();
