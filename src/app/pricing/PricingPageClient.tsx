@@ -102,6 +102,10 @@ export default function PricingPageClient({ isSignedIn }: PricingPageClientProps
   const [billingCycle, setBillingCycle] = useState<"monthly" | "annual">("monthly");
   const [productsPerMonth, setProductsPerMonth] = useState(50);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [cancelInfo, setCancelInfo] = useState<{ cancelAtPeriodEnd: boolean; currentPeriodEnd: number | null }>({
+    cancelAtPeriodEnd: false,
+    currentPeriodEnd: null,
+  });
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -116,6 +120,17 @@ export default function PricingPageClient({ isSignedIn }: PricingPageClientProps
       }
     }
   }, []);
+
+  useEffect(() => {
+    if (!isSignedIn || (plan !== "pro" && plan !== "enterprise")) return;
+    fetch("/api/user/plan")
+      .then((res) => res.json())
+      .then((data) => setCancelInfo({
+        cancelAtPeriodEnd: !!data.cancelAtPeriodEnd,
+        currentPeriodEnd: data.currentPeriodEnd ?? null,
+      }))
+      .catch(() => {});
+  }, [isSignedIn, plan]);
 
   const handleSubscribe = async (priceId: string) => {
     if (!isSignedIn) {
@@ -280,13 +295,23 @@ export default function PricingPageClient({ isSignedIn }: PricingPageClientProps
             </div>
           )}
           {(plan === "pro" || plan === "enterprise") && (
-            <button
-              onClick={handleManageSubscription}
-              disabled={portalLoading}
-              className="mt-4 text-sm text-gray-500 hover:text-gray-700 underline underline-offset-2 disabled:opacity-50"
-            >
-              {portalLoading ? "Abriendo portal..." : "Gestionar o cancelar mi suscripción"}
-            </button>
+            <div className="mt-4">
+              {cancelInfo.cancelAtPeriodEnd && cancelInfo.currentPeriodEnd && (
+                <p className="mb-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-4 py-1.5 inline-block">
+                  Tu plan finaliza el{" "}
+                  {new Date(cancelInfo.currentPeriodEnd * 1000).toLocaleDateString("es-ES")} — no se renovará
+                </p>
+              )}
+              <div>
+                <button
+                  onClick={handleManageSubscription}
+                  disabled={portalLoading}
+                  className="text-sm text-gray-500 hover:text-gray-700 underline underline-offset-2 disabled:opacity-50"
+                >
+                  {portalLoading ? "Abriendo portal..." : "Gestionar o cancelar mi suscripción"}
+                </button>
+              </div>
+            </div>
           )}
         </div>
 

@@ -217,6 +217,18 @@ export async function POST(req: Request) {
         break;
       }
 
+      case "customer.subscription.updated": {
+        const subscription = event.data.object as Stripe.Subscription;
+        const customerId = subscription.customer as string;
+
+        await db.update(schema.subscriptions)
+          .set({ cancelAtPeriodEnd: subscription.cancel_at_period_end ? 1 : 0 })
+          .where(eq(schema.subscriptions.stripeCustomerId, customerId));
+
+        log.info({ customerId, cancelAtPeriodEnd: subscription.cancel_at_period_end }, "Subscription updated");
+        break;
+      }
+
       case "customer.subscription.deleted": {
         const subscription = event.data.object as Stripe.Subscription;
         const customerId = subscription.customer as string;
@@ -231,7 +243,7 @@ export async function POST(req: Request) {
           const canceledPlan = user[0].plan;
           await db
             .update(schema.subscriptions)
-            .set({ status: "canceled" })
+            .set({ status: "canceled", cancelAtPeriodEnd: 0 })
             .where(eq(schema.subscriptions.id, user[0].id));
           log.info({ userId: user[0].userId, plan: canceledPlan }, "Subscription canceled");
 

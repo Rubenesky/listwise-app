@@ -34,6 +34,8 @@ export async function GET() {
     return NextResponse.json({
       plan,
       status: subscription.length > 0 ? subscription[0].status : "active",
+      cancelAtPeriodEnd: subscription.length > 0 ? !!subscription[0].cancelAtPeriodEnd : false,
+      currentPeriodEnd: subscription.length > 0 ? subscription[0].currentPeriodEnd : null,
     });
   } catch (error) {
     log.error({ err: error }, "user/plan error");

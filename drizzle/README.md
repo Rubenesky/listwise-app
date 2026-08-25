@@ -22,3 +22,4 @@ Most files are idempotent (`CREATE TABLE`/`CREATE INDEX` with `IF NOT EXISTS` / 
 | `0001_indexes_and_cleanup.sql` | Adds composite indexes on `agent_analytics` and `competitor_analyses`; drops dead `agent_credits` table | Pending |
 | `0002_add_generation_mode.sql` | Adds `generation_mode` column to `listings` | Applied to `listwise-db` on 2026-07-24 |
 | `0003_add_enriched_sources.sql` | Crea la tabla `enriched_sources` (Input Enriquecido) | Pending — **must run before deploying the code that reads/writes it** |
+| `0004_add_cancel_at_period_end.sql` | Adds `cancel_at_period_end` column to `subscriptions` | Pending — **must run before deploying the code that reads/writes it** |

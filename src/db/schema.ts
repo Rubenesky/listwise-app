@@ -267,6 +267,7 @@ export const subscriptions = sqliteTable("subscriptions", {
   status: text("status").notNull(),
   currentPeriodStart: integer("current_period_start"),
   currentPeriodEnd: integer("current_period_end"),
+  cancelAtPeriodEnd: integer("cancel_at_period_end").notNull().default(0),
   createdAt: integer("created_at").default(0),
 }, (table) => ({
   userIdIdx: index("idx_subscriptions_user_id").on(table.userId),
