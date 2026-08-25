@@ -235,6 +235,19 @@ export async function POST(req: Request) {
             .where(eq(schema.subscriptions.id, user[0].id));
           log.info({ userId: user[0].userId, plan: canceledPlan }, "Subscription canceled");
 
+          // Sync Clerk metadata back to free — otherwise useUserPlan() keeps
+          // reading the stale "paid" plan from publicMetadata forever, since
+          // it only re-checks the DB when metadata is empty.
+          try {
+            const clerk = await clerkClient();
+            const clerkUser = await clerk.users.getUser(user[0].userId);
+            await clerk.users.updateUserMetadata(user[0].userId, {
+              publicMetadata: { ...clerkUser.publicMetadata, plan: "free" },
+            });
+          } catch (metaErr) {
+            log.warn({ err: metaErr, userId: user[0].userId }, "Could not sync Clerk metadata on cancellation");
+          }
+
           // Churn prevention email
           try {
             const clerk = await clerkClient();
