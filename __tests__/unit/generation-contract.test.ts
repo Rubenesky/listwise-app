@@ -272,4 +272,27 @@ describe("generateBestOfN", () => {
     expect(onAttempt).toHaveBeenCalledWith(0, first, expect.arrayContaining([expect.stringMatching(/3 bullets/)]));
     expect(onAttempt).toHaveBeenCalledWith(1, second, []);
   });
+
+  // Regression (2026-08-27, live-demo prep): Promise.all fails the entire
+  // batch the instant ANY one candidate rejects (invalid JSON, extra text,
+  // failed schema validation) — even when the other candidates parsed fine.
+  // A real bulk CSV upload hit this: 4 of 21 products were marked FAILED in
+  // the DB even though ~2 of their 3 parallel candidates almost certainly
+  // generated valid content that got discarded along with the one bad one.
+  it("keeps the batch alive when only some candidates fail to parse — picks the best of the ones that succeeded", async () => {
+    const worse = { bullets: ["a", "b", "c"], description: words(50) }; // 2 issues
+    const better = { bullets: ["a", "b", "c", "d"], description: words(150) }; // 0 issues
+    const generate = jest
+      .fn()
+      .mockResolvedValueOnce(worse)
+      .mockRejectedValueOnce(new Error("La IA no devolvió datos en el formato correcto."))
+      .mockResolvedValueOnce(better);
+    const result = await generateBestOfN(generate, 3);
+    expect(result).toBe(better);
+  });
+
+  it("still throws when every candidate fails to parse (unchanged fail-closed behavior)", async () => {
+    const generate = jest.fn().mockRejectedValue(new Error("JSON inválido"));
+    await expect(generateBestOfN(generate, 3)).rejects.toThrow("JSON inválido");
+  });
 });

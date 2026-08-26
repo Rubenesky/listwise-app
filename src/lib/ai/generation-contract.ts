@@ -144,15 +144,36 @@ export async function generateBestOfN<T extends { bullets: string[]; description
   n: number,
   onAttempt?: (index: number, result: T, issues: string[]) => void
 ): Promise<T> {
-  const results = await Promise.all(Array.from({ length: n }, () => generate()));
-  let best = results[0];
-  let bestIssues = describeContentContractFailure(results[0]);
-  onAttempt?.(0, results[0], bestIssues);
-  for (let i = 1; i < results.length; i++) {
-    const issues = describeContentContractFailure(results[i]);
-    onAttempt?.(i, results[i], issues);
+  // Promise.allSettled instead of Promise.all: one candidate rejecting
+  // (invalid JSON, extra text, failed schema validation) used to fail the
+  // whole batch instantly, discarding the other candidates even when they
+  // parsed fine. A real bulk CSV upload lost 4/21 products this way. Keep
+  // and rank whichever candidates actually succeeded; only propagate an
+  // error if every single one failed.
+  // Cast: T is constrained to a plain object (never thenable), so Awaited<T>
+  // and T are structurally identical — but TS's generic inference doesn't
+  // simplify Awaited<T> back to T on its own, which trips typechecking below.
+  const settled = (await Promise.allSettled(
+    Array.from({ length: n }, () => generate())
+  )) as PromiseSettledResult<T>[];
+  const fulfilled = settled
+    .map((outcome, index) => ({ outcome, index }))
+    .filter((entry): entry is { outcome: PromiseFulfilledResult<T>; index: number } => entry.outcome.status === "fulfilled");
+
+  if (fulfilled.length === 0) {
+    const firstRejected = settled.find((outcome): outcome is PromiseRejectedResult => outcome.status === "rejected")!;
+    throw firstRejected.reason;
+  }
+
+  let best = fulfilled[0].outcome.value;
+  let bestIssues = describeContentContractFailure(best);
+  onAttempt?.(fulfilled[0].index, best, bestIssues);
+  for (let i = 1; i < fulfilled.length; i++) {
+    const candidate = fulfilled[i].outcome.value;
+    const issues = describeContentContractFailure(candidate);
+    onAttempt?.(fulfilled[i].index, candidate, issues);
     if (issues.length < bestIssues.length) {
-      best = results[i];
+      best = candidate;
       bestIssues = issues;
     }
   }
