@@ -1,3 +1,12 @@
+import { PRODUCT_CATEGORIES } from "@/lib/ai/prompts";
+
+// Canonical categories (Ropa, POD, Boda, Navidad, Deporte Extremo, ...) —
+// these are the exact values the AI generation prompts recognize and have
+// dedicated copy rules for, so typing one of them must never trigger an
+// "unrecognized category" warning even though most aren't in the informal
+// synonym list below.
+const CANONICAL_CATEGORIES = new Set(PRODUCT_CATEGORIES.map((c) => c.toLowerCase()));
+
 export const SUPPORTED_CATEGORIES = new Set([
   "ropa", "moda", "calzado", "accesorios", "complementos",
   "electrónica", "electronica", "tecnología", "tecnologia",
@@ -75,7 +84,7 @@ export function validateRows(records: Record<string, string>[]): ValidationResul
 
     if (hasCategory && record.category?.trim()) {
       const normalized = record.category.trim().toLowerCase();
-      if (!SUPPORTED_CATEGORIES.has(normalized)) {
+      if (!SUPPORTED_CATEGORIES.has(normalized) && !CANONICAL_CATEGORIES.has(normalized)) {
         warnings.push(
           `Fila ${row}: categoría "${record.category}" no está en la lista de ` +
           `categorías conocidas — se procesará igualmente`

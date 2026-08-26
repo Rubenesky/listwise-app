@@ -1,5 +1,6 @@
 import { extractProductInfoFromText } from "@/lib/ai/extract-product-info";
 import { getAIResponse } from "@/lib/ai/providers";
+import { PRODUCT_CATEGORIES } from "@/lib/ai/prompts";
 
 jest.mock("@/lib/ai/providers", () => ({
   getAIResponse: jest.fn(),
@@ -171,6 +172,23 @@ describe("extractProductInfoFromText", () => {
     mockGetAIResponse.mockResolvedValue({ choices: [{ message: { content: "{}" } }] });
     await extractProductInfoFromText("texto");
     expect(mockGetAIResponse.mock.calls[0][1]).toBe("gemini");
+  });
+
+  // Regression: this prompt's category list (Lista B) was hand-maintained
+  // separately from prompts.ts's REQUIRED_HOOK_TYPE/EMOTIONAL_ARCHETYPE/
+  // categoryGuides (Lista A, 21 categories with dedicated copy rules).
+  // 14 of those 21 categories (e.g. "Moda", "Bebé", "POD", "Navidad") could
+  // never be produced by this extraction prompt, so URL/PDF-sourced listings
+  // in those categories silently never got their specialized hook type or
+  // emotional archetype. Source the list from prompts.ts instead of
+  // duplicating it so the two can't drift apart again.
+  it("asks the model to classify using every canonical category from prompts.ts, not a smaller hardcoded subset", async () => {
+    mockGetAIResponse.mockResolvedValue({ choices: [{ message: { content: "{}" } }] });
+    await extractProductInfoFromText("texto");
+    const promptSent = mockGetAIResponse.mock.calls[0][0][0].content as string;
+    for (const category of PRODUCT_CATEGORIES) {
+      expect(promptSent).toContain(category);
+    }
   });
 
   it("truncates an oversized attribute value to 200 chars", async () => {

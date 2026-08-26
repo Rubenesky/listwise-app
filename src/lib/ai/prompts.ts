@@ -105,6 +105,13 @@ const EMOTIONAL_ARCHETYPE: Record<string, string> = {
   "Navidad":         "ALEGRÍA Y GENEROSIDAD: el momento en que el regalo llega justo",
 };
 
+// Single source of truth for which categories have dedicated copy rules
+// above. extract-product-info.ts's classification prompt and
+// validate-rows.ts's CSV warning both read this instead of maintaining
+// their own separate category lists, which is what let them drift out of
+// sync with this one and with each other.
+export const PRODUCT_CATEGORIES = Object.keys(EMOTIONAL_ARCHETYPE);
+
 const PRICE_SEGMENT_GUIDE: Record<PriceSegment, string> = {
   economy: "Tono: práctico y directo. El comprador busca la mejor relación calidad-precio. Énfasis en durabilidad, funcionalidad y valor. Evita lenguaje aspiracional excesivo — sería incongruente con el precio.",
   mid:     "Tono: cálido y seguro. El comprador quiere calidad real sin pagar de más. Equilibra beneficio emocional y especificaciones técnicas. Lenguaje accesible pero con criterio.",

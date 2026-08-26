@@ -1,5 +1,6 @@
 import { getAIResponse } from "@/lib/ai/providers";
 import { log } from "@/lib/logger";
+import { PRODUCT_CATEGORIES } from "@/lib/ai/prompts";
 
 export interface ProductInfo {
   productName: string;
@@ -32,7 +33,7 @@ export async function extractProductInfoFromText(text: string): Promise<ProductI
     `Devuelve SOLO un JSON válido con esta estructura exacta: ` +
     `{"productName": string (nombre descriptivo del producto en español, máx 100 chars — NO incluyas la marca o fabricante, ` +
     `describe el producto de forma genérica, ej. "Zapatilla de Running con Amortiguación" en vez de "Zapatilla Asics Novablast"), ` +
-    `"category": string (una de EXACTAMENTE, respetando mayúsculas: Ropa, Electrónica, Hogar, Deportes, Alimentación, Belleza, Juguetes, Mascotas, Otro), ` +
+    `"category": string (una de EXACTAMENTE, respetando mayúsculas: ${PRODUCT_CATEGORIES.join(", ")}, General), ` +
     `"attributes": {clave: valor} (máximo 6 atributos clave como material, color, dimensiones, uso, etc., SOLO datos EXPLÍCITAMENTE mencionados en el texto — ` +
     `si el texto no menciona especificaciones reales del producto (ej. solo repite el nombre sin más detalle), no inventes atributos plausibles ` +
     `("producción artesanal", "reciclable", etc. no son válidos si no aparecen en el texto) y deja attributes como un objeto vacío {}), ` +

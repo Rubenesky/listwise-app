@@ -1,4 +1,5 @@
 import { validateRows, isValidPrice } from "@/lib/csv/validate-rows";
+import { PRODUCT_CATEGORIES } from "@/lib/ai/prompts";
 
 describe("isValidPrice", () => {
   it("accepts integer prices", () => {
@@ -89,6 +90,19 @@ describe("validateRows", () => {
   it("does not warn on recognized category", () => {
     const { warnings } = validateRows([{ productName: "Test", category: "ropa" }]);
     expect(warnings).toHaveLength(0);
+  });
+
+  // Regression: SUPPORTED_CATEGORIES (this file's synonym list) was
+  // maintained independently of prompts.ts's canonical 21-category list
+  // (REQUIRED_HOOK_TYPE/EMOTIONAL_ARCHETYPE/categoryGuides). Typing the
+  // *exact* category name the AI generation prompts themselves use — e.g.
+  // "POD", "Boda", "Navidad", "Deporte Extremo" — incorrectly warned as
+  // "not recognized" because those four were never added here.
+  it("does not warn on any canonical category defined in prompts.ts", () => {
+    for (const category of PRODUCT_CATEGORIES) {
+      const { warnings } = validateRows([{ productName: "Test", category }]);
+      expect(warnings).toEqual([]);
+    }
   });
 
   it("warns on invalid JSON attributes (non-blocking)", () => {
