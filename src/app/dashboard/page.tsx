@@ -197,6 +197,11 @@ export default function DashboardPage() {
       await fetch(`/api/listings/${id}`, { method: "DELETE" });
       setListings((prev) => prev.filter((l) => l.id !== id));
       if (selectedListingId === id) closeModal();
+      // Local filter above only updates the grid — pagination.stats (the
+      // failed-count badge and the "Reintentar/Eliminar fallidos" bar) is
+      // separate state that only a fresh fetch reconciles, otherwise it
+      // stays stale until a manual page refresh.
+      await fetchListings(currentPageRef.current);
     } finally {
       setDeletingId(null);
     }
@@ -208,6 +213,7 @@ export default function DashboardPage() {
     try {
       await fetch("/api/listings/bulk", { method: "DELETE" });
       setListings((prev) => prev.filter((l) => l.status !== "FAILED"));
+      await fetchListings(currentPageRef.current);
     } finally {
       setBulkWorking(false);
     }
