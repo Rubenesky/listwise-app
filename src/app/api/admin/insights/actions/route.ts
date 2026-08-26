@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { count, desc } from "drizzle-orm";
 import { log } from "@/lib/logger";
+import { requireAdmin } from "@/lib/auth/require-admin";
 
 export async function GET() {
   try {
-    const { userId } = await auth();
-    const adminId = process.env.ADMIN_USER_ID ?? "";
-    if (!userId || !adminId || userId !== adminId) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-    }
+    const denied = await requireAdmin();
+    if (denied) return denied;
 
     const actionCounts = await db
       .select({ action: schema.gamificationHistory.action, count: count() })

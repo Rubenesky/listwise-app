@@ -1,5 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 
 // Rutas públicas (no requieren autenticación). Exportado para test de
@@ -23,7 +23,15 @@ export const PUBLIC_ROUTE_PATTERNS = [
 
 const isPublicRoute = createRouteMatcher(PUBLIC_ROUTE_PATTERNS);
 
-export default clerkMiddleware(async (auth, req) => {
+const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
+
+// Named + exported so the admin-guard branch is directly unit-testable
+// without mocking clerkMiddleware's own wrapping — see
+// __tests__/unit/middleware-admin-guard.test.ts.
+// (clerkMiddleware is overloaded, so `Parameters<typeof clerkMiddleware>[0]`
+// resolves to the wrong overload — typed explicitly instead.)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const middlewareHandler = async (auth: any, req: NextRequest) => {
   const requestId = uuidv4();
   const { userId } = await auth();
   const isPublic = isPublicRoute(req);
@@ -33,6 +41,17 @@ export default clerkMiddleware(async (auth, req) => {
     const res = NextResponse.redirect(new URL("/sign-in", req.url));
     res.headers.set("x-request-id", requestId);
     return res;
+  }
+
+  // Defensa en profundidad: bloquear páginas admin a usuarios no-admin en la capa edge.
+  // Las rutas /api/admin/* tienen su propio guard (requireAdmin) que devuelve JSON 403.
+  if (isAdminRoute(req) && userId) {
+    const adminId = process.env.ADMIN_USER_ID ?? "";
+    if (!adminId || userId !== adminId) {
+      const res = NextResponse.redirect(new URL("/dashboard", req.url));
+      res.headers.set("x-request-id", requestId);
+      return res;
+    }
   }
 
   // Si está autenticado y está en landing o sign-in/sign-up, redirigir a dashboard
@@ -50,7 +69,9 @@ export default clerkMiddleware(async (auth, req) => {
   const res = NextResponse.next();
   res.headers.set("x-request-id", requestId);
   return res;
-});
+};
+
+export default clerkMiddleware(middlewareHandler);
 
 export const config = {
   matcher: [

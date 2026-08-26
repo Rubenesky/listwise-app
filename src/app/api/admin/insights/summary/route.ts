@@ -1,17 +1,14 @@
 import { NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import { db, schema } from "@/db";
 import { count, sum, sql } from "drizzle-orm";
 import { LEVELS } from "@/lib/gamification/constants";
 import { log } from "@/lib/logger";
+import { requireAdmin } from "@/lib/auth/require-admin";
 
 export async function GET() {
   try {
-    const { userId } = await auth();
-    const adminId = process.env.ADMIN_USER_ID ?? "";
-    if (!userId || !adminId || userId !== adminId) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
-    }
+    const denied = await requireAdmin();
+    if (denied) return denied;
 
     const thirtyDaysAgo = Math.floor(Date.now() / 1000) - 30 * 24 * 60 * 60;
 
