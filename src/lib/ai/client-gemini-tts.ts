@@ -97,6 +97,68 @@ export function wrapPcmAsWav(pcm: Buffer, sampleRate: number, channels = 1, bits
   return Buffer.concat([header, pcm]);
 }
 
+// gemini-2.5-flash-preview-tts is a preview model — real usage showed
+// occasional transient 500/429s that succeed on a plain retry a moment
+// later. A single retry recovers most of those without meaningfully
+// slowing down the common case (a transient error itself returns fast;
+// only a genuine hang eats the timeout budget below). Not retried: 4xx
+// errors other than 408/429 (a malformed request or safety block fails
+// the exact same way again — retrying just adds latency for nothing).
+const MAX_TTS_ATTEMPTS = 2;
+const RETRYABLE_STATUS = new Set([408, 429, 500, 502, 503, 504]);
+const RETRY_DELAY_MS = 500;
+// The first attempt keeps the original 30s ceiling (unchanged, proven
+// timeout for the common success path). The retry gets a shorter 10s
+// budget — if Gemini is having a bad moment, a quick second try either
+// recovers fast or fails fast, instead of doubling the worst-case wait.
+const FIRST_ATTEMPT_TIMEOUT_MS = 30000;
+const RETRY_ATTEMPT_TIMEOUT_MS = 10000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function fetchTtsWithRetry(url: string, apiKey: string, body: unknown): Promise<GeminiAudioResponse> {
+  let lastError: Error = new Error("Gemini TTS: fallo desconocido");
+
+  for (let attempt = 1; attempt <= MAX_TTS_ATTEMPTS; attempt++) {
+    const isRetry = attempt > 1;
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
+        body: JSON.stringify(body),
+        // Without a bound, a hung Gemini request blocks indefinitely — if the
+        // platform then kills the request before this resolves, the route's
+        // refund-on-failure catch never runs and the user keeps a charge with
+        // no audio. Bounding it here guarantees the catch always fires.
+        signal: AbortSignal.timeout(isRetry ? RETRY_ATTEMPT_TIMEOUT_MS : FIRST_ATTEMPT_TIMEOUT_MS),
+      });
+
+      if (res.ok) return (await res.json()) as GeminiAudioResponse;
+
+      // Truncated: Gemini's safety-filter error bodies can echo back part of
+      // the submitted text, which would otherwise land in logs verbatim.
+      const errText = (await res.text()).slice(0, 200);
+      lastError = new Error(`Gemini TTS ${res.status}: ${errText}`);
+      if (!RETRYABLE_STATUS.has(res.status)) {
+        log.error({ status: res.status, err: errText }, "Gemini TTS request failed (not retried)");
+        throw lastError;
+      }
+      log.warn({ status: res.status, attempt, err: errText }, "Gemini TTS request failed, will retry");
+    } catch (err) {
+      if (err === lastError) throw err; // non-retryable status thrown above — propagate immediately
+      lastError = err instanceof Error ? err : new Error(String(err));
+      log.warn({ err: lastError, attempt }, "Gemini TTS request errored, will retry");
+    }
+
+    if (attempt < MAX_TTS_ATTEMPTS) await sleep(RETRY_DELAY_MS);
+  }
+
+  log.error({ err: lastError }, "Gemini TTS failed after all retries");
+  throw lastError;
+}
+
 export async function generateSpeech(text: string): Promise<{ buffer: Buffer; mimeType: string }> {
   const apiKey = getApiKey();
   const trimmed = (STYLE_INSTRUCTION + text).slice(0, MAX_INPUT_CHARS);
@@ -112,26 +174,7 @@ export async function generateSpeech(text: string): Promise<{ buffer: Buffer; mi
     },
   };
 
-  // Without a bound, a hung Gemini request blocks indefinitely — if the
-  // platform then kills the request before this resolves, the route's
-  // refund-on-failure catch never runs and the user keeps a charge with no
-  // audio. Bounding it here guarantees the catch always fires.
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "x-goog-api-key": apiKey },
-    body: JSON.stringify(body),
-    signal: AbortSignal.timeout(30000),
-  });
-
-  if (!res.ok) {
-    // Truncated: Gemini's safety-filter error bodies can echo back part of
-    // the submitted text, which would otherwise land in logs verbatim.
-    const errText = (await res.text()).slice(0, 200);
-    log.error({ status: res.status, err: errText }, "Gemini TTS request failed");
-    throw new Error(`Gemini TTS ${res.status}: ${errText}`);
-  }
-
-  const data = (await res.json()) as GeminiAudioResponse;
+  const data = await fetchTtsWithRetry(url, apiKey, body);
   const inlineData = data.candidates?.[0]?.content?.parts?.[0]?.inlineData;
   if (!inlineData?.data) {
     throw new Error("Gemini TTS no devolvió datos de audio");

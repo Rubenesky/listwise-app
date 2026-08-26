@@ -1,4 +1,4 @@
-import { applyGain, wrapPcmAsWav } from "@/lib/ai/client-gemini-tts";
+import { applyGain, wrapPcmAsWav, generateSpeech } from "@/lib/ai/client-gemini-tts";
 
 describe("applyGain", () => {
   it("leaves samples unchanged at 0 dB", () => {
@@ -66,5 +66,107 @@ describe("wrapPcmAsWav", () => {
     const blockAlign = 2 * (16 / 8);
     expect(wav.readUInt16LE(32)).toBe(blockAlign);
     expect(wav.readUInt32LE(28)).toBe(24000 * blockAlign); // byteRate
+  });
+});
+
+// Regression (2026-08-27, live-demo prep): gemini-2.5-flash-preview-tts is a
+// preview model — a real user hit two 500s across three consecutive audio
+// generations for different products, with zero retry anywhere in this
+// path. Added a single bounded retry for transient failures only (network
+// errors, timeouts, 408/429/5xx) — a genuinely bad request (4xx other than
+// 408/429) must fail on the first attempt, not waste time retrying
+// something that will fail identically again.
+describe("generateSpeech retry behavior", () => {
+  const originalKey = process.env.GEMINI_API_KEY;
+  const originalFetch = global.fetch;
+
+  beforeEach(() => {
+    process.env.GEMINI_API_KEY = "test-key";
+  });
+
+  afterEach(() => {
+    process.env.GEMINI_API_KEY = originalKey;
+    global.fetch = originalFetch;
+    jest.restoreAllMocks();
+  });
+
+  function mockAudioResponse() {
+    return {
+      ok: true,
+      json: async () => ({
+        candidates: [
+          {
+            content: {
+              parts: [
+                {
+                  inlineData: {
+                    mimeType: "audio/L16;rate=24000",
+                    data: Buffer.from([1, 2, 3, 4]).toString("base64"),
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      }),
+    };
+  }
+
+  function mockErrorResponse(status: number, text = "error") {
+    return { ok: false, status, text: async () => text };
+  }
+
+  it("succeeds on the first attempt without retrying", async () => {
+    const fetchMock = jest.fn().mockResolvedValue(mockAudioResponse());
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const result = await generateSpeech("Hola, este es un guion de prueba.");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.buffer.length).toBeGreaterThan(0);
+  });
+
+  it("retries once on a transient 500 and succeeds on the second attempt", async () => {
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce(mockErrorResponse(500, "internal error"))
+      .mockResolvedValueOnce(mockAudioResponse());
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const result = await generateSpeech("Hola, este es un guion de prueba.");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.buffer.length).toBeGreaterThan(0);
+  });
+
+  it("retries once on a 429 rate limit", async () => {
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce(mockErrorResponse(429, "rate limited"))
+      .mockResolvedValueOnce(mockAudioResponse());
+    global.fetch = fetchMock as unknown as typeof fetch;
+    await generateSpeech("Texto");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not retry on a non-retryable 400 — fails fast on the first attempt", async () => {
+    const fetchMock = jest.fn().mockResolvedValue(mockErrorResponse(400, "bad request"));
+    global.fetch = fetchMock as unknown as typeof fetch;
+    await expect(generateSpeech("Texto")).rejects.toThrow("Gemini TTS 400");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("gives up after exhausting the bounded retry budget and throws the last error", async () => {
+    const fetchMock = jest.fn().mockResolvedValue(mockErrorResponse(503, "unavailable"));
+    global.fetch = fetchMock as unknown as typeof fetch;
+    await expect(generateSpeech("Texto")).rejects.toThrow("Gemini TTS 503");
+    expect(fetchMock).toHaveBeenCalledTimes(2); // bounded — not unbounded retrying
+  });
+
+  it("retries on a network/timeout error, not just an HTTP error status", async () => {
+    const fetchMock = jest
+      .fn()
+      .mockRejectedValueOnce(new Error("network error"))
+      .mockResolvedValueOnce(mockAudioResponse());
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const result = await generateSpeech("Texto");
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(result.buffer.length).toBeGreaterThan(0);
   });
 });
