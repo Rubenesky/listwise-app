@@ -97,14 +97,16 @@ export function wrapPcmAsWav(pcm: Buffer, sampleRate: number, channels = 1, bits
   return Buffer.concat([header, pcm]);
 }
 
-// gemini-2.5-flash-preview-tts is a preview model — real usage showed
-// occasional transient 500/429s that succeed on a plain retry a moment
-// later. A single retry recovers most of those without meaningfully
-// slowing down the common case (a transient error itself returns fast;
-// only a genuine hang eats the timeout budget below). Not retried: 4xx
-// errors other than 408/429 (a malformed request or safety block fails
-// the exact same way again — retrying just adds latency for nothing).
-const MAX_TTS_ATTEMPTS = 2;
+// gemini-2.5-flash-preview-tts is a preview model — Google's own docs
+// acknowledge it occasionally fails (e.g. returning text tokens instead of
+// audio) and explicitly recommend retry logic as the mitigation. Real usage
+// here showed the same pattern as connection-level timeouts, not just fast
+// error responses. 3 attempts (1 original + 2 retries) gives more chances
+// to land outside a bad window without pushing worst-case latency over a
+// minute. Not retried: 4xx errors other than 408/429 (a malformed request
+// or safety block fails the exact same way again — retrying just adds
+// latency for nothing).
+const MAX_TTS_ATTEMPTS = 3;
 const RETRYABLE_STATUS = new Set([408, 429, 500, 502, 503, 504]);
 const RETRY_DELAY_MS = 500;
 // The first attempt keeps the original 30s ceiling (unchanged, proven

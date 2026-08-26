@@ -156,7 +156,19 @@ describe("generateSpeech retry behavior", () => {
     const fetchMock = jest.fn().mockResolvedValue(mockErrorResponse(503, "unavailable"));
     global.fetch = fetchMock as unknown as typeof fetch;
     await expect(generateSpeech("Texto")).rejects.toThrow("Gemini TTS 503");
-    expect(fetchMock).toHaveBeenCalledTimes(2); // bounded — not unbounded retrying
+    expect(fetchMock).toHaveBeenCalledTimes(3); // bounded — not unbounded retrying
+  });
+
+  it("recovers on the third attempt after two transient failures", async () => {
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce(mockErrorResponse(503, "unavailable"))
+      .mockResolvedValueOnce(mockErrorResponse(500, "internal error"))
+      .mockResolvedValueOnce(mockAudioResponse());
+    global.fetch = fetchMock as unknown as typeof fetch;
+    const result = await generateSpeech("Texto");
+    expect(fetchMock).toHaveBeenCalledTimes(3);
+    expect(result.buffer.length).toBeGreaterThan(0);
   });
 
   it("retries on a network/timeout error, not just an HTTP error status", async () => {
