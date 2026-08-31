@@ -75,15 +75,16 @@ Responde SOLO en JSON con este formato exacto:
   "suggestions": ["sugerencia 1 para mejorar", "sugerencia 2"]
 }`;
 
+    let rawContent = "";
     try {
       const response = await getAIResponse(
         [{ role: "user", content: prompt }],
         getDefaultProvider(),
-        { temperature: 0.3, max_tokens: 500, response_format: { type: "json_object" } }
+        { temperature: 0.3, max_tokens: 1500, response_format: { type: "json_object" } }
       );
 
       const completion = response as { choices: { message: { content: string | null } }[] };
-      const rawContent = completion.choices[0]?.message?.content ?? "{}";
+      rawContent = completion.choices[0]?.message?.content ?? "{}";
       const profileData = voiceProfileResponseSchema.parse(JSON.parse(rawContent));
 
       // Deactivate all existing profiles for this user
@@ -117,6 +118,9 @@ Responde SOLO en JSON con este formato exacto:
         log.warn({ err: e }, "Credit refund failed")
       );
       const isFormatError = innerError instanceof SyntaxError || innerError instanceof z.ZodError;
+      if (isFormatError) {
+        log.warn({ err: innerError, rawContent }, "voice-profile/analyze: AI response failed JSON parse/validation");
+      }
       return NextResponse.json(
         {
           error: isFormatError
