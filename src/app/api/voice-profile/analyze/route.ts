@@ -80,7 +80,35 @@ Responde SOLO en JSON con este formato exacto:
       const response = await getAIResponse(
         [{ role: "user", content: prompt }],
         getDefaultProvider(),
-        { temperature: 0.3, max_tokens: 1500, response_format: { type: "json_object" } }
+        {
+          temperature: 0.3,
+          max_tokens: 1500,
+          response_format: {
+            type: "json_schema",
+            json_schema: {
+              name: "voice_profile",
+              schema: {
+                type: "object",
+                properties: {
+                  tone: { type: "string" },
+                  vocabulary: { type: "string" },
+                  sentenceStructure: { type: "string" },
+                  keyWords: { type: "array", items: { type: "string" } },
+                  brandPersonality: { type: "string" },
+                  suggestions: { type: "array", items: { type: "string" } },
+                },
+                required: [
+                  "tone",
+                  "vocabulary",
+                  "sentenceStructure",
+                  "keyWords",
+                  "brandPersonality",
+                  "suggestions",
+                ],
+              },
+            },
+          },
+        }
       );
 
       const completion = response as { choices: { message: { content: string | null } }[] };

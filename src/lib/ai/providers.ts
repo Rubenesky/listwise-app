@@ -44,7 +44,16 @@ export function getDefaultProvider(): AIProvider {
 export async function getAIResponse(
   messages: { role: string; content: string }[],
   providerName?: AIProvider,
-  options?: { temperature?: number; max_tokens?: number; response_format?: { type: string } }
+  options?: {
+    temperature?: number;
+    max_tokens?: number;
+    response_format?: {
+      type: string;
+      // json_schema is honored by the Gemini client (maps to generationConfig.responseSchema);
+      // other providers only look at response_format.type.
+      json_schema?: { name: string; schema: Record<string, unknown> };
+    };
+  }
 ): Promise<ReturnType<typeof groq.chat.completions.create>> {
   const selected = providerName ?? getDefaultProvider();
   const config = providers[selected];

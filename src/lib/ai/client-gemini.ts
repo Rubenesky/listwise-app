@@ -9,6 +9,8 @@ type GeminiRequest = {
     temperature?: number;
     maxOutputTokens?: number;
     responseMimeType?: string;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    responseSchema?: Record<string, any>;
     thinkingConfig?: { thinkingBudget: number };
   };
 };
@@ -34,6 +36,8 @@ function buildRequest(params: {
   temperature?: number;
   maxOutputTokens?: number;
   jsonMode?: boolean;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  responseSchema?: Record<string, any>;
 }): GeminiRequest {
   const systemMsg = params.messages.find((m) => m.role === "system")?.content;
   const nonSystem = params.messages.filter((m) => m.role !== "system");
@@ -49,6 +53,9 @@ function buildRequest(params: {
       temperature: params.temperature,
       maxOutputTokens: params.maxOutputTokens ?? 4096,
       responseMimeType: params.jsonMode ? "application/json" : "text/plain",
+      // Gemini otherwise only treats the prompt's JSON shape as a suggestion, and can
+      // legitimately omit fields or use the wrong types — responseSchema enforces it.
+      ...(params.responseSchema ? { responseSchema: params.responseSchema } : {}),
       thinkingConfig: { thinkingBudget: 0 },
     },
   };
@@ -91,13 +98,17 @@ export const gemini = {
       create: async (params: any): Promise<any> => {
         const apiKey = getApiKey();
         const model: string = params.model ?? GEMINI_MODEL;
-        const isJson = params.response_format?.type === "json_object";
+        const isJson =
+          params.response_format?.type === "json_object" || params.response_format?.type === "json_schema";
+        const responseSchema =
+          params.response_format?.type === "json_schema" ? params.response_format.json_schema?.schema : undefined;
 
         const body = buildRequest({
           messages: params.messages,
           temperature: params.temperature,
           maxOutputTokens: params.max_tokens,
           jsonMode: isJson,
+          responseSchema,
         });
 
         const text = await geminiPost(model, apiKey, body);
