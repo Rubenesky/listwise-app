@@ -119,7 +119,10 @@ Responde SOLO en JSON con este formato exacto:
       );
       const isFormatError = innerError instanceof SyntaxError || innerError instanceof z.ZodError;
       if (isFormatError) {
-        log.warn({ err: innerError, rawContent }, "voice-profile/analyze: AI response failed JSON parse/validation");
+        log.warn(
+          { err: innerError, rawContentLength: rawContent.length, rawContentPreview: rawContent.slice(0, 200) },
+          "voice-profile/analyze: AI response failed JSON parse/validation"
+        );
       }
       return NextResponse.json(
         {
